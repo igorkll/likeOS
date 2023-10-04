@@ -3,28 +3,35 @@ local serialization = require("serialization")
 
 --------------------------------
 
-local registry = {unloadable = true, data = {}, path = "/data/registry.dat"}
-if fs.exists(registry.path) then
-    local content = fs.readFile(registry.path)
-    if content then
-        local result = {pcall(serialization.unserialize, content)}
-        if result[1] and type(result[2]) == "table" then
-            registry.data = result[2]
+local function new(path, data)
+    local lreg = {path = path, data = data or {}}
+    if fs.exists(lreg.path) then
+        local content = fs.readFile(lreg.path)
+        if content then
+            local result = {pcall(serialization.unserialize, content)}
+            if result[1] and type(result[2]) == "table" then
+                lreg.data = result[2]
+            end
         end
     end
-end
 
-function registry.save()
-    fs.writeFile(registry.path, serialization.serialize(registry.data))
-end
-
-setmetatable(registry, {__newindex = function(tbl, key, value)
-    if registry.data[key] ~= value then
-        registry.data[key] = value
-        registry.save()
+    function lreg.save()
+        fs.writeFile(lreg.path, serialization.serialize(lreg.data))
     end
-end, __index = function(tbl, key)
-    return registry.data[key]
-end})
+    
+    setmetatable(lreg, {__newindex = function(_, key, value)
+        if lreg.data[key] ~= value then
+            lreg.data[key] = value
+            lreg.save()
+        end
+    end, __index = function(_, key)
+        return lreg.data[key]
+    end})
 
+    return lreg
+end
+
+local registry = new("/data/registry.dat")
+rawset(registry, "new", new)
+rawset(registry, "unloadable", true)
 return registry
