@@ -347,7 +347,8 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
             --graphic._fill(gpu, xpos, ypos, sizeX, sizeY, background, self.isPal, foreground, self.isPal, " ")
             if createdX then
                 --graphic._set(gpu, createdX, y, background, self.isPal, foreground, self.isPal, preStr)
-                gpu.set(createdX, y, preStr)
+                local lx, ly = self:toRealPos(createdX, y)
+                gpu.set(lx, ly, preStr)
             end
 
             --[[
