@@ -2,7 +2,7 @@
 --данная либа позваляет регать виртуальные компаненты
 --подгружаеться автоматически на этапе загрузки ядра, чтобы избежать проблем с неопределениям виртуальных компонентов
 
---нада добавить: возможность подключения к getDeviceInfo
+--нада добавить: возможность подключения к getDeviceInfo(сделал)
 
 local component = require("component")
 local computer = require("computer")
@@ -11,6 +11,16 @@ local proxylist = {}
 local proxyobjs = {}
 local typelist = {}
 local doclist = {}
+local infolist = {}
+
+local getDeviceInfo = computer.getDeviceInfo
+function computer.getDeviceInfo()
+  local info = getDeviceInfo()
+  for addr, cinfo in pairs(infolist) do
+    info[addr] = cinfo
+  end
+  return info
+end
 
 local oproxy = component.proxy
 function component.proxy(address)
@@ -127,10 +137,13 @@ local componentCallback =
 
 local vcomponent = {}
 
-function vcomponent.register(address, ctype, proxy, doc)
+function vcomponent.register(address, ctype, proxy, doc, info)
   checkArg(1,address,"string")
   checkArg(2,ctype,"string")
   checkArg(3,proxy,"table")
+  checkArg(4,doc,"table", "nil")
+  checkArg(5,info,"table", "nil")
+
   if proxylist[address] ~= nil then
     return nil, "component already at address"
   elseif component.type(address) ~= nil then
@@ -150,6 +163,7 @@ function vcomponent.register(address, ctype, proxy, doc)
   proxyobjs[address] = proxyobj
   typelist[address] = ctype
   doclist[address] = doc
+  infolist[address] = info
   computer.pushSignal("component_added",address,ctype)
   return true
 end
@@ -168,6 +182,7 @@ function vcomponent.unregister(address)
   proxyobjs[address] = nil
   typelist[address] = nil
   doclist[address] = nil
+  infolist[address] = nil
   computer.pushSignal("component_removed",address,thetype)
   return true
 end
