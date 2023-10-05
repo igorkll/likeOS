@@ -277,6 +277,7 @@ end
 
 menu(bootloader.coreversion .. " recovery",
     {
+        "Run System Recovery Script",
         "Wipe Data / Factory Reset",
         "Run Script From Url",
         "Run Script From Disk",
@@ -286,6 +287,21 @@ menu(bootloader.coreversion .. " recovery",
         "Info",
     }, 
     {
+        function ()
+            local path = "/system/recoveryScript.lua" --скрипт востановления системы, у каждой оськи на базе likeOS должен быть
+            if bootloader.bootfs.exists(path) then
+                local env = bootloader.createEnv()
+                env.bootloader = bootloader
+                local code, err = bootloader.loadfile(path, nil, env)
+                if code then
+                    code()
+                else
+                    info(err or "Unknown Syntax Error")
+                end
+            else
+                info("The System Does Not Provide A Script For Recovery")
+            end
+        end,
         function (str)
             menu(str,
                 {
