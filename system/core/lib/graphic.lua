@@ -177,7 +177,7 @@ local function toRealPos(self, x, y)
     return self.x + (x - 1), self.y + (y - 1)
 end
 
-local function read(self, x, y, sizeX, background, foreground, preStr, hidden, buffer, clickCheck, syntax)
+local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hidden, buffer, clickCheck, syntax)
     local createdX
     if preStr then
         createdX = x
@@ -475,7 +475,6 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
 
         graphic.update(self.screen)
     end
-    redraw()
 
     local function isEmpty(str)
         for i = 1, unicode.len(str) do
@@ -750,6 +749,12 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
     end}
 end
 
+local function read(...)
+    local reader = readNoDraw(...)
+    reader.redraw()
+    return reader
+end
+
 function graphic.createWindow(screen, x, y, sizeX, sizeY, selected, isPal)
     local obj = {
         screen = screen,
@@ -760,6 +765,7 @@ function graphic.createWindow(screen, x, y, sizeX, sizeY, selected, isPal)
         cursorX = 1,
         cursorY = 1,
 
+        readNoDraw = readNoDraw,
         read = read,
         toRealPos = toRealPos,
         set = set,
