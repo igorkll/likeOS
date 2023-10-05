@@ -59,6 +59,26 @@ function event.yield()
     computer.pullSignal(event.minTime)
 end
 
+function event.events(timeout, types, maxcount) --получает эвенты пока сыпуться
+    timeout = timeout or 0.1
+    local eventList = {}
+    local lastEventTime = computer.uptime()
+    while true do
+        local ctime = computer.uptime()
+        local eventData = {computer.pullSignal(timeout)}
+        if #eventData > 0 and (not types or types[eventData[1]]) then
+            lastEventTime = ctime
+            table.insert(eventList, eventData)
+            if maxcount and #eventList >= maxcount then
+                break
+            end
+        elseif ctime - lastEventTime > timeout then
+            break
+        end
+    end
+    return eventList
+end
+
 function event.wait() --ждать то тех пор пока твой поток не убьют
     event.sleep(math.huge)
 end
