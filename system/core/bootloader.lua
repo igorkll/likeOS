@@ -10,7 +10,7 @@ local shutdown = computer.shutdown
 local error = error
 local pcall = pcall
 
-_G._COREVERSION = "likeOS-v1.7"
+_G._COREVERSION = "likeOS-v1.8"
 _G._OSVERSION = _G._COREVERSION --это перезаписываеться в дистрибутивах
 
 local bootloader = {} --библиотека загрузчика
@@ -203,6 +203,7 @@ function bootloader.bootstrap()
         event.push("component_added", address, ctype)
         event.yield()
     end
+    event.sleep(0.1)
 
     --установка runlevel
     bootloader.runlevel = "kernel"

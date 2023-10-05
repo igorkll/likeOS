@@ -10,7 +10,7 @@ local primaries = {}
 -- component.getPrimary("modem").open(123), which may be nicer to read.
 setmetatable(component, {
     __index = function(_, key)
-        return component.getPrimary(key)
+        return primaries[key] --опционально
     end,
     __pairs = function(self)
         local parent = false
@@ -72,6 +72,9 @@ end
 function component.setPrimary(componentType, address)
     checkArg(1, componentType, "string")
     checkArg(2, address, "string", "nil")
+
+    local event = require("event")
+
     if address ~= nil then
         address = component.get(address, componentType)
         assert(address, "no such component")

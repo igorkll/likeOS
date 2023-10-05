@@ -4,6 +4,7 @@ local package = require("package")
 
 ------------------------------------
 
+--raw_computer_pullSignal насамом деле некакой не raw и уже несколько раз хукнут в boot скриптах
 local raw_computer_pullSignal = computer.pullSignal
 local thread_computer_pullSignal = function(time)
     if not time then time = math.huge end
