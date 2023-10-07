@@ -161,14 +161,19 @@ function system.setUnloadState(state)
 end
 system.setUnloadState(false)
 
-system.timerId = event.timer(3, function()
+local oldFree
+system.timerId = event.timer(2, function()
     --check RAM
-    if computer.freeMemory() < computer.totalMemory() / 3 then
-        system.setUnloadState(true)
-        cache.clearCache()
-    else
-        system.setUnloadState(false)
+    local free = computer.freeMemory()
+    if not oldFree or free > oldFree then --проверка сборшика мусора
+        if free < computer.totalMemory() / 3 then
+            system.setUnloadState(true)
+            cache.clearCache()
+        else
+            system.setUnloadState(false)
+        end
     end
+    oldFree = free
 end, math.huge)
 
 event.hyperListen(function (eventType, componentUuid, componentType)

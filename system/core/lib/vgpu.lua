@@ -53,23 +53,10 @@ function vgpu.create(gpu, screen)
     local rsmax = (rx - 1) + ((ry - 1) * rx)
     local origCurrentBack, origCurrentFore = currentBack, currentFore
 
-    
-
     for i = 0, rsmax do
         backgrounds[i] = 0
-        currentBackgrounds[i] = 0
-
         foregrounds[i] = 0xffffff
-        currentForegrounds[i] = 0xffffff
-
-        --backgroundsPal[i] = false
-        --currentBackgroundsPal[i] = false
-
-        --foregroundsPal[i] = false
-        --currentForegroundsPal[i] = false
-
         chars[i] = " "
-        currentChars[i] = " "
     end
 
     for key, value in pairs(gpu) do
