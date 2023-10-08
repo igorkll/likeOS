@@ -930,11 +930,18 @@ end
 ------------------------------------
 
 function graphic.findGpuAddress(screen)
-    if graphic.bindCache[screen] then return graphic.bindCache[screen] end
-
     local deviceinfo = lastinfo.deviceinfo
-    local screenLevel = tonumber(deviceinfo[screen].capacity) or 0
+    if not deviceinfo[screen] then
+        graphic.bindCache[screen] = nil
+        graphic.vgpus[screen] = nil
+        return
+    end
 
+    if graphic.bindCache[screen] then
+        return graphic.bindCache[screen]
+    end
+
+    local screenLevel = tonumber(deviceinfo[screen].capacity) or 0
     local bestGpuLevel, gpuLevel, bestGpu = 0
     local function check(deep)
         for address in component.list("gpu") do
@@ -1167,7 +1174,8 @@ end
 event.hyperTimer(graphic.forceUpdate)
 event.listen(nil, function(eventType, _, ctype)
     if (eventType == "component_added" or eventType == "component_removed") and (ctype == "screen" or ctype == "gpu") then
-        graphic.bindCache = {} --да, тупо создаю новую табличьку
+        graphic.bindCache = {}
+        graphic.vgpus = {}
     end
 end)
 
