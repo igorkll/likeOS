@@ -1,5 +1,6 @@
-local component = component
-local computer = computer
+local component = require("component")
+local computer = require("computer")
+local event = require("event")
 
 local adding = {}
 local primaries = {}
@@ -196,14 +197,5 @@ local function onComponentRemoved(_, address, componentType)
     end
 end
 
-local pullSignal = computer.pullSignal
-local unpack = table.unpack
-function computer.pullSignal(time)
-    local tbl = {pullSignal(time)}
-    if tbl[1] == "component_added" then
-        onComponentAdded(unpack(tbl))
-    elseif tbl[1] == "component_removed" then
-        onComponentRemoved(unpack(tbl))
-    end
-    return unpack(tbl)
-end
+event.listen("component_added", onComponentAdded)
+event.listen("component_removed", onComponentRemoved)

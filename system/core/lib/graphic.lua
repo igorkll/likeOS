@@ -1172,7 +1172,7 @@ function graphic.update(screen)
 end
 
 event.hyperTimer(graphic.forceUpdate)
-event.listen(nil, function(eventType, _, ctype)
+event.hyperListen(function(eventType, _, ctype)
     if (eventType == "component_added" or eventType == "component_removed") and (ctype == "screen" or ctype == "gpu") then
         graphic.bindCache = {}
         graphic.vgpus = {}
