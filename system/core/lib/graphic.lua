@@ -956,17 +956,26 @@ function graphic.findGpuAddress(screen)
             local connectScr = component.invoke(address, "getScreen")
             local connectedAny = not not connectScr
             local connected = connectScr == screen
+
             if not graphic.gpuPrivateList[address] and (deep or connected) then
                 gpuLevel = tonumber(deviceinfo[address].capacity) or 0
+
                 if connectedAny and not connected then
-                    gpuLevel = gpuLevel - 10
-                elseif connected and gpuLevel == screenLevel then --уже подключенная видеокарта, казырный туз, но только если она того же уровня что и монитор!
-                    gpuLevel = gpuLevel + 30
-                elseif gpuLevel == screenLevel then
-                    gpuLevel = gpuLevel + 20
-                elseif gpuLevel > screenLevel then
-                    gpuLevel = gpuLevel + 10
+                    gpuLevel = gpuLevel - 1000
+                else
+                    if connected and gpuLevel == screenLevel then
+                        gpuLevel = gpuLevel + 2000
+                    elseif connected then
+                        gpuLevel = gpuLevel + 1000
+                    end
+
+                    if gpuLevel == screenLevel then
+                        gpuLevel = gpuLevel + 20
+                    elseif gpuLevel > screenLevel then
+                        gpuLevel = gpuLevel + 10
+                    end
                 end
+
                 if gpuLevel > bestGpuLevel then
                     bestGpuLevel = gpuLevel
                     bestGpu = address
@@ -981,46 +990,47 @@ function graphic.findGpuAddress(screen)
     return bestGpu
 end
 
+function graphic.initGpu(screen, gpuaddress)
+    local gpu = component.proxy(gpuaddress)
+
+    if isVGpuInstalled and not graphic.vgpus[screen] then
+        local vgpu = require("vgpu")
+        if graphic.allowSoftwareBuffer then
+            graphic.vgpus[screen] = vgpu.create(gpu, screen)
+        else
+            graphic.vgpus[screen] = vgpu.createStub(gpu)
+        end
+    end
+
+    if gpu.getScreen() ~= screen then
+        gpu.bind(screen, false)
+    end
+
+    if gpu.setActiveBuffer then
+        if graphic.allowHardwareBuffer then
+            if not graphic.screensBuffers[screen] then
+                gpu.setActiveBuffer(0)
+                graphic.screensBuffers[screen] = gpu.allocateBuffer(gpu.getResolution())
+            end
+
+            if graphic.screensBuffers[screen] then
+                gpu.setActiveBuffer(graphic.screensBuffers[screen])
+            end
+        else
+            gpu.setActiveBuffer(0)
+            gpu.freeAllBuffers()
+        end
+    end
+
+    if graphic.vgpus[screen] then
+        return graphic.vgpus[screen]
+    end
+end
+
 function graphic.findGpu(screen)
     local bestGpu = graphic.findGpuAddress(screen)
-    
     if bestGpu then
-        local gpu = component.proxy(bestGpu)
-
-        if isVGpuInstalled and not graphic.vgpus[screen] then
-            local vgpu = require("vgpu")
-            if graphic.allowSoftwareBuffer then
-                graphic.vgpus[screen] = vgpu.create(gpu, screen)
-            else
-                graphic.vgpus[screen] = vgpu.createStub(gpu)
-            end
-        end
-
-        if gpu.getScreen() ~= screen then
-            gpu.bind(screen, false)
-        end
-
-        if gpu.setActiveBuffer then
-            if graphic.allowHardwareBuffer then
-                if not graphic.screensBuffers[screen] then
-                    gpu.setActiveBuffer(0)
-                    graphic.screensBuffers[screen] = gpu.allocateBuffer(gpu.getResolution())
-                end
-
-                if graphic.screensBuffers[screen] then
-                    gpu.setActiveBuffer(graphic.screensBuffers[screen])
-                end
-            else
-                gpu.setActiveBuffer(0)
-                gpu.freeAllBuffers()
-            end
-        end
-
-        if graphic.vgpus[screen] then
-            return graphic.vgpus[screen]
-        end
-
-        return gpu
+        return graphic.initGpu(screen, bestGpu)
     end
 end
 

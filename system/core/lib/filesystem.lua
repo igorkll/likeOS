@@ -234,6 +234,7 @@ function filesystem.open(path, mode)
                 until not data
                 return buffer
             end,
+            readMax = function() return proxy.read(result, math.huge) end,
             handle = result,
         }
 
