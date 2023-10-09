@@ -253,8 +253,8 @@ function filesystem.copy(fromPath, toPath, fcheck)
 
                 local list = filesystem.list(fromPath)
                 for i = 1, #list do
-                    local from = paths.canonical(fromPath .. "/" .. list[i])
-                    local to =  paths.canonical(toPath .. "/" .. list[i])
+                    local from = paths.concat(fromPath, list[i])
+                    local to =  paths.concat(toPath, list[i])
                     local success, err = copyRecursively(from, to)
                     if not success then
                         return nil, err
