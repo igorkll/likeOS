@@ -246,6 +246,8 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
     local offsetX = 0
     local offsetY = 0
 
+    local lockState = false
+
     local function getBackCol(i)
         if selectFrom then
             return (i >= selectFrom and i <= selectTo) and selectColor or background
@@ -271,7 +273,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
         if gpu then
             local cursorPos
             local str = buffer
-            if allowUse then
+            if allowUse and not lockState then
                 --str = str .. "\0"
                 cursorPos = unicode.len(str) + 1
                 local nCursorPos = cursorPos + offsetX
@@ -562,9 +564,15 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
         redraw()
     end
 
-    return {uploadEvent = function(eventData) --по идеи сюда нужно закидывать эвенты которые прошли через window:uploadEvent
+    return {setLock = function(lock)
+        lockState = lock
+    end, getLock = function()
+        return not not lockState
+    end, uploadEvent = function(eventData) --по идеи сюда нужно закидывать эвенты которые прошли через window:uploadEvent
         --вызывайте функцию и передавайте туда эвенты которые сами читаете, 
         --если функция чтото вернет, это результат, если он TRUE(не false) значет было нажато ctrl+w
+
+        if lockState then return end
 
         if not eventData.windowEventData then --если это не эвент окна то делаем его таковым(потому что я криворукий и забываю об этом постоянно)
             eventData = self:uploadEvent(eventData)
