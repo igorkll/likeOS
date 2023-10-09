@@ -163,7 +163,7 @@ function bootloader.bootstrap()
         _G.bit32 = bootloader.dofile("/system/core/lib/bit32.lua", bootloader.createEnv())
     end
 
-    --бут скрипты. тут инициализации всего и вся
+    --бут скрипты
     do 
         local path = "/system/core/boot/"
         for i, v in ipairs(bootloader.bootfs.list(path) or {}) do
@@ -171,7 +171,7 @@ function bootloader.bootstrap()
         end
     end
 
-    --package инициализирует библиотек
+    --инициализизация библиотек
     bootloader.dofile("/system/core/luaenv/a_base.lua", bootloader.createEnv())
     local package = bootloader.dofile("/system/core/lib/package.lua", bootloader.createEnv(), bootloader)
     _G.require = package.require
@@ -179,7 +179,6 @@ function bootloader.bootstrap()
     _G.component = nil
     _G.unicode = nil
     _G.natives = nil
-   
     package.raw_reg("paths",      "/system/core/lib/paths.lua")
     package.raw_reg("filesystem", "/system/core/lib/filesystem.lua")
     require("vcomponent")

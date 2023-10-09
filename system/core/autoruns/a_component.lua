@@ -197,5 +197,10 @@ local function onComponentRemoved(_, address, componentType)
     end
 end
 
-event.listen("component_added", onComponentAdded)
-event.listen("component_removed", onComponentRemoved)
+event.hyperListen(function (eventType, ...)
+    if eventType == "component_added" then
+        onComponentAdded(eventType, ...)
+    elseif eventType == "component_removed" then
+        onComponentRemoved(eventType, ...)
+    end
+end)
