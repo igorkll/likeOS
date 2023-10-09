@@ -1172,14 +1172,20 @@ end
 function graphic.forceUpdate()
     if graphic.allowSoftwareBuffer or graphic.allowHardwareBuffer then
         for address, ctype in component.list("screen") do
-            local gpu = graphic.findGpu(address)
-            if gpu then
-                if graphic.allowSoftwareBuffer and gpu.update then --if this is vgpu
-                    gpu.update()
-                elseif gpu.bitblt and graphic.allowHardwareBuffer and graphic.updated[address] then
-                    gpu.bitblt()
-                    graphic.updated[address] = nil
+            local gpuaddress = graphic.findGpuAddress(address)
+            if gpuaddress and graphic.updated[address] then
+                if graphic.allowSoftwareBuffer then
+                    local gpu = graphic.initGpu(address, gpuaddress)
+                    if gpu.update then --if this is vgpu
+                        gpu.update()
+                    end
+                elseif graphic.allowHardwareBuffer then
+                    local gpu = graphic.initGpu(address, gpuaddress)
+                    if gpu.bitblt then
+                        gpu.bitblt()
+                    end
                 end
+                graphic.updated[address] = nil
             end
         end
     end
