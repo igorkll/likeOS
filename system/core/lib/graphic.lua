@@ -16,6 +16,7 @@ local graphic = {}
 graphic.colorAutoFormat = true --рисует псевдографикой на первом тире оттенки серого
 graphic.allowHardwareBuffer = false
 graphic.allowSoftwareBuffer = false
+graphic.allowCopyToRealClipboard = true
 
 graphic.screensBuffers = {}
 graphic.updated = {}
@@ -50,7 +51,7 @@ local function set(self, x, y, background, foreground, text)
         --graphic._set(gpu, valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), background, self.isPal, foreground, self.isPal, text)
     end
 
-    graphic.update(self.screen)
+    graphic.updated[self.screen] = true
 end
 
 local function get(self, x, y)
@@ -74,7 +75,7 @@ local function fill(self, x, y, sizeX, sizeY, background, foreground, char)
         ]]
     end
 
-    graphic.update(self.screen)
+    graphic.updated[self.screen] = true
 end
 
 local function copy(self, x, y, sizeX, sizeY, offsetX, offsetY)
@@ -83,7 +84,7 @@ local function copy(self, x, y, sizeX, sizeY, offsetX, offsetY)
         gpu.copy(valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), valueCheck(sizeX), valueCheck(sizeY), valueCheck(offsetX), valueCheck(offsetY))
     end
 
-    graphic.update(self.screen)
+    graphic.updated[self.screen] = true
 end
 
 local function clear(self, color)
@@ -99,7 +100,7 @@ local function getCursor(self)
 end
 
 local function write(self, data, background, foreground, autoln)
-    graphic.update(self.screen)
+    graphic.updated[self.screen] = true
     local gpu = graphic.findGpu(self.screen)
 
     if gpu then
@@ -475,7 +476,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
             end
         end
 
-        graphic.update(self.screen)
+        graphic.updated[self.screen] = true
     end
 
     local function isEmpty(str)
@@ -695,11 +696,17 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                 elseif eventData[3] == 3 and eventData[4] == 46 then --ctrl+c
                     if selectFrom then
                         cache.copiedText = unicode.sub(buffer .. lastBuffer, selectFrom, selectTo)
+                        if graphic.allowCopyToRealClipboard and component.debug then
+                            component.debug.sendToClipboard(eventData[5], cache.copiedText)
+                        end
                         redraw()
                     end
                 elseif eventData[3] == 24 and eventData[4] == 45 then --ctrl+x
                     if selectFrom then
                         cache.copiedText = removeSelectedContent()
+                        if graphic.allowCopyToRealClipboard and component.debug then
+                            component.debug.sendToClipboard(eventData[5], cache.copiedText)
+                        end
                         redraw()
                     end
                 elseif eventData[3] == 22 and eventData[4] == 47 then --вставка с системного clipboard
@@ -1171,33 +1178,32 @@ end
 
 ------------------------------------
 
-function graphic.forceUpdate(force)
+function graphic.forceUpdate()
     if graphic.allowSoftwareBuffer or graphic.allowHardwareBuffer then
-        for address, ctype in component.list("screen") do
-            local gpuaddress = graphic.findGpuAddress(address)
-            if gpuaddress and (graphic.updated[address] or force) then
-                if graphic.allowSoftwareBuffer then
-                    local gpu = graphic.initGpu(address, gpuaddress)
-                    if gpu.update then --if this is vgpu
-                        gpu.update(force)
-                    end
-                elseif graphic.allowHardwareBuffer then
-                    local gpu = graphic.initGpu(address, gpuaddress)
-                    if gpu.bitblt then
-                        gpu.bitblt()
-                    end
-                end
-                graphic.updated[address] = nil
-            end
+        for screen, ctype in component.list("screen") do
+            graphic.update(screen)
         end
     end
 end
 
 function graphic.update(screen)
-    graphic.updated[screen] = true
+    if graphic.updated[screen] then
+        local gpuaddress = graphic.findGpuAddress(screen)
+        if graphic.allowSoftwareBuffer then
+            local gpu = graphic.initGpu(screen, gpuaddress)
+            if gpu.update then --if this is vgpu
+                gpu.update()
+            end
+        elseif graphic.allowHardwareBuffer then
+            local gpu = graphic.initGpu(screen, gpuaddress)
+            if gpu.bitblt then
+                gpu.bitblt()
+            end
+        end
+        graphic.updated[screen] = nil
+    end
 end
 
-event.hyperTimer(graphic.forceUpdate)
 event.hyperListen(function(eventType, _, ctype)
     if (eventType == "component_added" or eventType == "component_removed") and (ctype == "screen" or ctype == "gpu") then
         graphic.bindCache = {}
@@ -1270,7 +1276,7 @@ function graphic.screenshot(screen, x, y, sx, sy)
             gpu.set(oldX, oldY, buff)
         end
 
-        graphic.update(screen)
+        graphic.updated[screen] = true
     end
 end
 
