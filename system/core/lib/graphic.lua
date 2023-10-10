@@ -1204,6 +1204,10 @@ function graphic.update(screen)
     end
 end
 
+function graphic.updateFlag(screen)
+    graphic.updated[screen] = true
+end
+
 event.hyperListen(function(eventType, _, ctype)
     if (eventType == "component_added" or eventType == "component_removed") and (ctype == "screen" or ctype == "gpu") then
         graphic.bindCache = {}
