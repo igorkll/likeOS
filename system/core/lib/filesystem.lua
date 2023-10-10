@@ -86,12 +86,15 @@ end
 
 function filesystem.get(path)
     path = endSlash(paths.canonical(path))
+    
+    for i = #filesystem.mountList, 1, -1 do
+        if not pcall(filesystem.mountList[i][1].exists, "/null") then --disconnect check
+            table.remove(filesystem.mountList, i)
+        end
+    end
+
     for i = 1, #filesystem.mountList do
         if unicode.sub(path, 1, unicode.len(filesystem.mountList[i][2])) == filesystem.mountList[i][2] then
-            if not pcall(filesystem.mountList[i][1].exists, "/null") then --disconnect check
-                table.remove(filesystem.mountList, i)
-                return filesystem.get(path)
-            end
             return filesystem.mountList[i][1], noEndSlash(startSlash(unicode.sub(path, unicode.len(filesystem.mountList[i][2]) + 1, unicode.len(path))))
         end
     end
