@@ -1169,15 +1169,17 @@ function graphic.setViewport(screen, x, y)
     end
 end
 
-function graphic.forceUpdate()
+------------------------------------
+
+function graphic.forceUpdate(force)
     if graphic.allowSoftwareBuffer or graphic.allowHardwareBuffer then
         for address, ctype in component.list("screen") do
             local gpuaddress = graphic.findGpuAddress(address)
-            if gpuaddress and graphic.updated[address] then
+            if gpuaddress and (graphic.updated[address] or force) then
                 if graphic.allowSoftwareBuffer then
                     local gpu = graphic.initGpu(address, gpuaddress)
                     if gpu.update then --if this is vgpu
-                        gpu.update()
+                        gpu.update(force)
                     end
                 elseif graphic.allowHardwareBuffer then
                     local gpu = graphic.initGpu(address, gpuaddress)

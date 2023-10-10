@@ -197,9 +197,10 @@ function vgpu.create(gpu, screen)
         ox = floor(ox)
         oy = floor(oy)
 
+        --[[
         --обновляем картинку на экране
         if updated then
-            obj.update()
+            obj.update(true)
         else
             init()
         end
@@ -236,10 +237,31 @@ function vgpu.create(gpu, screen)
             --currentForegroundsPal[newindex] = newFP[newindex]
             currentChars[newindex] = newC[newindex]
         end
+        ]]
+
+        newB, newF, newC = {}, {}, {}
+        for ix = x, x + (sx - 1) do 
+            for iy = y, y + (sy - 1) do
+                index = (ix - 1) + ((iy - 1) * rx)
+                newindex = ((ix + ox) - 1) + (((iy + oy) - 1) * rx)
+
+                newB[newindex] = backgrounds[index]
+                newF[newindex] = foregrounds[index]
+                newC[newindex] = chars[index]
+            end
+        end
+
+        for newindex in pairs(newC) do
+            backgrounds[newindex] = newB[newindex]
+            foregrounds[newindex] = newF[newindex]
+            chars[newindex] = newC[newindex]
+        end
+
+        updated = true
     end
 
-    function obj.update()
-        if updated then
+    function obj.update(force)
+        if updated or force then
             init()
 
             local index, buff, buffI, back, fore
