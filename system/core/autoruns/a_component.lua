@@ -117,6 +117,13 @@ function component.setPrimary(componentType, address)
     end
 end
 
+function component.isConnected(proxy)
+    if type(proxy) == "table" then
+        proxy = proxy.address
+    end
+    return not not pcall(component.doc, proxy, "")
+end
+
 -------------------------------------------------------------------------------
 
 local function onComponentAdded(_, address, componentType)
