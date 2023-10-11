@@ -44,7 +44,7 @@ local function new(path, data)
         end
         recurse(tbl, lreg.data)
         lreg.save()
-        return term
+        return true
     end
     
     setmetatable(lreg, {__newindex = function(_, key, value)
