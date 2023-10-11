@@ -27,12 +27,21 @@ local function new(path, data)
             end
             tbl = ntbl
         end
+        local bl = {
+            ["reg_rm_list"] = true,
+            ["reg_rm_all"] = true
+        }
         local function recurse(ltbl, native)
             for _, reg_rm in ipairs(ltbl.reg_rm_list or {}) do
                 native[reg_rm] = nil
             end
+            if ltbl.reg_rm_all then
+                for key in pairs(native) do
+                    native[key] = nil
+                end
+            end
             for key, value in pairs(ltbl) do
-                if key ~= "reg_rm_list" then
+                if not bl[key] then
                     if type(value) == "table" then
                         if type(native[key]) ~= "table" then
                             native[key] = {}
