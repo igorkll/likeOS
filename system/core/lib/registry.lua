@@ -4,19 +4,42 @@ local serialization = require("serialization")
 --------------------------------
 
 local function new(path, data)
+    checkArg(1, path, "string")
+    checkArg(2, data, "table", "nil")
+
     local lreg = {path = path, data = data or {}}
     if fs.exists(lreg.path) then
-        local content = fs.readFile(lreg.path)
-        if content then
-            local result = {pcall(serialization.unserialize, content)}
-            if result[1] and type(result[2]) == "table" then
-                lreg.data = result[2]
-            end
+        local tbl = serialization.load(lreg.path)
+        if tbl then
+            lreg.data = tbl
         end
     end
 
     function lreg.save()
         fs.writeFile(lreg.path, serialization.serialize(lreg.data))
+    end
+
+    function lreg.apply(tbl)
+        if type(tbl) == "string" then
+            tbl = serialization.load(tbl)
+        end
+        local function recurse(ltbl, native)
+            for _, reg_rm in ipairs(ltbl.reg_rm_list or {}) do
+                native[reg_rm] = nil
+            end
+            for key, value in pairs(ltbl) do
+                if type(value) == "table" then
+                    if type(native[key]) ~= "table" then
+                        native[key] = {}
+                    end
+                    recurse(value, native[key])
+                else
+                    native[key] = value
+                end
+            end
+        end
+        recurse(tbl, lreg.data)
+        lreg.save()
     end
     
     setmetatable(lreg, {__newindex = function(_, key, value)

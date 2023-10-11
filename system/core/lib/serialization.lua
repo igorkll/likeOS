@@ -1,3 +1,4 @@
+local fs = require("filesystem")
 local serialization = {}
 
 -- delay loaded tables fail to deserialize cross [C] boundaries (such as when having to read files that cause yields)
@@ -151,15 +152,30 @@ end
 
 function serialization.unserialize(data)
     checkArg(1, data, "string")
+
     local result, reason = load("return " .. data, "=data", nil, {math = {huge = math.huge}})
     if not result then
         return nil, reason
     end
+    
     local ok, output = pcall(result)
     if not ok then
         return nil, output
     end
-    return output
+    
+    if type(output) == "table" then
+        return output
+    end
+    return nil, "type error, input data is not a table"
+end
+
+function serialization.load(path)
+    checkArg(1, path, "string")
+    
+    local content, err = fs.readFile(path)
+    if not content then return nil, err end
+
+    return serialization.unserialize(content)
 end
 
 serialization.unloadable = true
