@@ -16,12 +16,16 @@ local function new(path, data)
     end
 
     function lreg.save()
-        fs.writeFile(lreg.path, serialization.serialize(lreg.data))
+        return fs.writeFile(lreg.path, serialization.serialize(lreg.data))
     end
 
     function lreg.apply(tbl)
         if type(tbl) == "string" then
-            tbl = serialization.load(tbl)
+            local ntbl, err = serialization.load(tbl)
+            if not ntbl then
+                return nil, err
+            end
+            tbl = ntbl
         end
         local function recurse(ltbl, native)
             for _, reg_rm in ipairs(ltbl.reg_rm_list or {}) do
@@ -40,6 +44,7 @@ local function new(path, data)
         end
         recurse(tbl, lreg.data)
         lreg.save()
+        return term
     end
     
     setmetatable(lreg, {__newindex = function(_, key, value)
