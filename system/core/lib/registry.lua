@@ -32,19 +32,30 @@ local function new(path, data)
                 native[reg_rm] = nil
             end
             for key, value in pairs(ltbl) do
-                if type(value) == "table" then
-                    if type(native[key]) ~= "table" then
-                        native[key] = {}
+                if key ~= "reg_rm_list" then
+                    if type(value) == "table" then
+                        if type(native[key]) ~= "table" then
+                            native[key] = {}
+                        end
+                        recurse(value, native[key])
+                    else
+                        native[key] = value
                     end
-                    recurse(value, native[key])
-                else
-                    native[key] = value
                 end
             end
         end
         recurse(tbl, lreg.data)
         lreg.save()
         return true
+    end
+
+    function lreg.hotReload()
+        local tbl = serialization.load(lreg.path)
+        if tbl then
+            lreg.data = tbl
+        else
+            lreg.data = {}
+        end
     end
     
     setmetatable(lreg, {__newindex = function(_, key, value)
