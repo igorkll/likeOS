@@ -90,7 +90,6 @@ end
 ------------------------------------thread functions
 
 function raw_kill(t) --не стоит убивать паток через raw_kill
-    t.thread = nil
     t.dead = true
 end
 
@@ -107,7 +106,7 @@ function suspend(t)
 end
 
 function status(t)
-    if not t.thread or coroutine.status(t.thread) == "dead" then return "dead" end
+    if not t.thread or coroutine.status(t.thread) == "dead" or t.dead then return "dead" end
     if t.parent then
         local status = t.parent:status()
         if status == "dead" then
