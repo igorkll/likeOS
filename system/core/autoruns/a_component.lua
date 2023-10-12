@@ -48,7 +48,7 @@ function component.isAvailable(componentType)
         -- This is mostly to avoid out of memory errors preventing proxyN
         -- creation cause confusion by trying to create the proxy again,
         -- causing the oom error to be thrown again.
-        component.setPrimary(componentType, component.list(componentType, true)())
+        pcall(component.setPrimary, componentType, component.list(componentType, true)())
     end
     return primaries[componentType] ~= nil
 end
@@ -141,7 +141,7 @@ local function onComponentAdded(_, address, componentType)
                     -- then prev (a screen) was added without a keyboard
                     -- and then we attached this screen+kb pair, and our kb fired first - failing to achieve primary
                     -- also, our kb may fire right after this, which is fine
-                    component.setPrimary("keyboard", first_kb)
+                    pcall(component.setPrimary, "keyboard", first_kb)
                     prev = nil -- nil meaning we should take this new one over the previous
                 end
             end
@@ -175,7 +175,7 @@ local function onComponentAdded(_, address, componentType)
     end
 
     if not prev then
-        component.setPrimary(componentType, address)
+        pcall(component.setPrimary, componentType, address)
     end
 end
 
@@ -184,7 +184,7 @@ local function onComponentRemoved(_, address, componentType)
         adding[componentType] and adding[componentType].address == address
     then
         local next = component.list(componentType, true)()
-        component.setPrimary(componentType, next)
+        pcall(component.setPrimary, componentType, next)
 
         if componentType == "screen" and next then
             -- setPrimary already set the proxy (if successful)
@@ -197,7 +197,7 @@ local function onComponentRemoved(_, address, componentType)
                 -- if the next screen doesn't have a kb, this operation is without purpose, leave things as they are
                 -- if there was no previous kb, use the new one
                 if next_kb and (not old_kb or old_kb.address ~= next_kb) then
-                    component.setPrimary("keyboard", next_kb)
+                    pcall(component.setPrimary, "keyboard", next_kb)
                 end
             end
         end
