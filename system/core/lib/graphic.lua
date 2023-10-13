@@ -965,7 +965,7 @@ function graphic.findGpuAddress(screen)
             local connected = connectScr == screen
 
             if not graphic.gpuPrivateList[address] and (deep or connected) then
-                gpuLevel = tonumber(deviceinfo[address].capacity) or 0
+                gpuLevel = (tonumber(deviceinfo[address].capacity) or 0) / 1000
 
                 if connectedAny and not connected then
                     gpuLevel = gpuLevel - 1000
