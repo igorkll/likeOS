@@ -957,7 +957,8 @@ function graphic.findGpuAddress(screen)
     end
 
     local screenLevel = tonumber(deviceinfo[screen].capacity) or 0
-    local bestGpuLevel, gpuLevel, bestGpu = 0
+    local bestGpuLevel = -math.huge
+    local gpuLevel, bestGpu
     local function check(deep)
         for address in component.list("gpu") do
             local connectScr = component.invoke(address, "getScreen")
