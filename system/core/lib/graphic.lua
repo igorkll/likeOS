@@ -1001,17 +1001,17 @@ end
 function graphic.initGpu(screen, gpuaddress)
     local gpu = component.proxy(gpuaddress)
 
+    if gpu.getScreen() ~= screen then
+        gpu.bind(screen, false)
+    end
+
     if isVGpuInstalled and not graphic.vgpus[screen] then
         local vgpu = require("vgpu")
         if graphic.allowSoftwareBuffer then
             graphic.vgpus[screen] = vgpu.create(gpu, screen)
-        else
+        elseif gpu.maxDepth() == 1 then
             graphic.vgpus[screen] = vgpu.createStub(gpu)
         end
-    end
-
-    if gpu.getScreen() ~= screen then
-        gpu.bind(screen, false)
     end
 
     if gpu.setActiveBuffer then
@@ -1032,6 +1032,8 @@ function graphic.initGpu(screen, gpuaddress)
 
     if graphic.vgpus[screen] then
         return graphic.vgpus[screen]
+    else
+        return gpu
     end
 end
 
