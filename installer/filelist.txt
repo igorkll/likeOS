@@ -2,10 +2,10 @@
 /system/core/LICENSE
 /system/core/logo.lua
 /system/core/recovery.lua
+/system/core/autoruns/a_component.lua
 /system/core/boot/a_functions.lua
 /system/core/boot/b_event.lua
 /system/core/boot/c_screen.lua
-/system/core/boot/d_component.lua
 /system/core/lib/bit32.lua
 /system/core/lib/cache.lua
 /system/core/lib/calls.lua
@@ -15,7 +15,6 @@
 /system/core/lib/graphic.lua
 /system/core/lib/internet.lua
 /system/core/lib/lastinfo.lua
-/system/core/lib/lpk.lua
 /system/core/lib/natives.lua
 /system/core/lib/package.lua
 /system/core/lib/parser.lua
