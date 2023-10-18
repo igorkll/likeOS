@@ -113,6 +113,14 @@ function event.hyperTimer(func)
     end
 end
 
+function event.hyperHook(func)
+    checkArg(1, func, "function")
+    local pullSignal = raw_computer_pullSignal
+    raw_computer_pullSignal = function (time)
+        return func(pullSignal(time))
+    end
+end
+
 function event.timer(time, func, times)
     checkArg(1, time, "number")
     checkArg(2, func, "function")
