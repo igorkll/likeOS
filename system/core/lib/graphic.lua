@@ -241,6 +241,8 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
         end
     end
 
+    local title, titleColor
+
     local selectFrom
     local selectTo
 
@@ -335,6 +337,10 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                 local cursorChar = {graphic.cursorChar, getForeCol(cursorPos, cursorColor), getBackCol(cursorPos)}
                 if not pcall(table.insert, chars, cursorPos, cursorChar) then
                     table.insert(chars, cursorChar)
+                end
+            elseif #chars == 0 and title and titleColor then
+                for i = 1, unicode.len(title) do
+                    table.insert(chars, {unicode.sub(title, i, i), getForeCol(i, titleColor), getBackCol(i)})
                 end
             end
 
@@ -761,6 +767,8 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
         disableClipboard = not allow
     end, setMaxStringLen = function (max)
         maxDataSize = max
+    end, setTitle = function (t, tc)
+        title, titleColor = t, tc
     end}
 end
 
