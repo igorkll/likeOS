@@ -136,15 +136,15 @@ function paths.extension(path)
         local char = unicode.sub(name, i, i)
         if char == "." then
             if i ~= 1 then
-                exp = ""
+                exp = {}
             end
         elseif exp then
-            exp = exp .. char
+            table.insert(exp, char)
         end
     end
 
-    if exp and unicode.len(exp) > 0 then
-        return exp
+    if exp and #exp > 0 then
+        return table.concat(exp)
     end
 end
 
