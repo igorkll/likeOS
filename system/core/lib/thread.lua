@@ -91,6 +91,7 @@ end
 
 function raw_kill(t) --не стоит убивать паток через raw_kill
     t.dead = true
+    t.enable = false
 end
 
 function kill(t) --вы сможете переопределить это в своем потоке, наример чтобы закрыть таймеры
