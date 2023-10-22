@@ -54,7 +54,7 @@ function filesystem.mount(proxy, path)
         end
     end
 
-    table.insert(filesystem.mountList, {proxy, path})
+    table.insert(filesystem.mountList, {proxy, path, {}})
     table.sort(filesystem.mountList, function(a, b) --просто нужно, иначе все по бараде пойдет
         return unicode.len(a[2]) > unicode.len(b[2])
     end)
@@ -95,12 +95,12 @@ function filesystem.get(path)
 
     for i = 1, #filesystem.mountList do
         if unicode.sub(path, 1, unicode.len(filesystem.mountList[i][2])) == filesystem.mountList[i][2] then
-            return filesystem.mountList[i][1], noEndSlash(startSlash(unicode.sub(path, unicode.len(filesystem.mountList[i][2]) + 1, unicode.len(path))))
+            return filesystem.mountList[i][1], noEndSlash(startSlash(unicode.sub(path, unicode.len(filesystem.mountList[i][2]) + 1, unicode.len(path)))), filesystem.mountList[i][3]
         end
     end
 
     if filesystem.mountList[1] then
-        return filesystem.mountList[1][1], filesystem.mountList[1][2]
+        return filesystem.mountList[1][1], filesystem.mountList[1][2], filesystem.mountList[1][3]
     end
 end
 
@@ -159,8 +159,17 @@ function filesystem.isDirectory(path)
 end
 
 function filesystem.isReadOnly(path)
-    local proxy, proxyPath = filesystem.get(path)
-    return proxy.isReadOnly()
+    local proxy, proxyPath, mountData = filesystem.get(path)
+    if mountData.ro ~= nil then return mountData.ro end
+    mountData.ro = proxy.isReadOnly()
+    return mountData.ro
+end
+
+function filesystem.isLabelReadOnly(path)
+    local proxy, proxyPath, mountData = filesystem.get(path)
+    if mountData.lro ~= nil then return mountData.lro end
+    mountData.lro = not pcall(proxy.setLabel, proxy.getLabel() or nil)
+    return mountData.lro
 end
 
 function filesystem.makeDirectory(path)

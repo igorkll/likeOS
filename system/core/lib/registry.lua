@@ -54,7 +54,6 @@ local function new(path, data)
             end
         end
         recurse(tbl, lreg.data)
-        lreg.save()
         return true
     end
 
