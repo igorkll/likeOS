@@ -12,10 +12,8 @@ local system = {}
 -------------------------------------------------
 
 function system.getSelfScriptPath()
-    local info
-
     for runLevel = 0, math.huge do
-        info = debug.getinfo(runLevel)
+        local info = debug.getinfo(runLevel)
 
         if info then
             if info.what == "main" then
