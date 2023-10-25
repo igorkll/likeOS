@@ -226,6 +226,100 @@ end
 
 local registry = {}
 do
+    local function serialize(value, path)
+        local local_pairs = function(tbl)
+            local mt = getmetatable(tbl)
+            return (mt and mt.__pairs or pairs)(tbl)
+        end
+
+        local kw = {
+            ["and"] = true,
+            ["break"] = true,
+            ["do"] = true,
+            ["else"] = true,
+            ["elseif"] = true,
+            ["end"] = true,
+            ["false"] = true,
+            ["for"] = true,
+            ["function"] = true,
+            ["goto"] = true,
+            ["if"] = true,
+            ["in"] = true,
+            ["local"] = true,
+            ["nil"] = true,
+            ["not"] = true,
+            ["or"] = true,
+            ["repeat"] = true,
+            ["return"] = true,
+            ["then"] = true,
+            ["true"] = true,
+            ["until"] = true,
+            ["while"] = true
+        }
+        local id = "^[%a_][%w_]*$"
+        local ts = {}
+        local result_pack = {}
+        local function recurse(current_value, depth)
+            local t = type(current_value)
+            if t == "number" then
+                if current_value ~= current_value then
+                    table.insert(result_pack, "0/0")
+                elseif current_value == math.huge then
+                    table.insert(result_pack, "math.huge")
+                elseif current_value == -math.huge then
+                    table.insert(result_pack, "-math.huge")
+                else
+                    table.insert(result_pack, tostring(current_value))
+                end
+            elseif t == "string" then
+                table.insert(result_pack, (string.format("%q", current_value):gsub("\\\n", "\\n")))
+            elseif
+                t == "nil" or t == "boolean" or pretty and (t ~= "table" or (getmetatable(current_value) or {}).__tostring)
+             then
+                table.insert(result_pack, tostring(current_value))
+            elseif t == "table" then
+                if ts[current_value] then
+                    error("tables with cycles are not supported")
+                end
+                ts[current_value] = true
+                local f = table.pack(local_pairs(current_value))
+                local i = 1
+                local first = true
+                table.insert(result_pack, "{")
+                for k, v in table.unpack(f) do
+                    if not first then
+                        table.insert(result_pack, ",")
+                        if pretty then
+                            table.insert(result_pack, "\n" .. string.rep(" ", depth))
+                        end
+                    end
+                    first = nil
+                    local tk = type(k)
+                    if tk == "number" and k == i then
+                        i = i + 1
+                        recurse(v, depth + 1)
+                    else
+                        if tk == "string" and not kw[k] and string.match(k, id) then
+                            table.insert(result_pack, k)
+                        else
+                            table.insert(result_pack, "[")
+                            recurse(k, depth + 1)
+                            table.insert(result_pack, "]")
+                        end
+                        table.insert(result_pack, "=")
+                        recurse(v, depth + 1)
+                    end
+                end
+                ts[current_value] = nil -- allow writing same table more than once
+                table.insert(result_pack, "}")
+            else
+                error("unsupported type: " .. t)
+            end
+        end
+        recurse(value, 1)
+        pcall(bootloader.writeFile, bootloader.bootfs, path, table.concat(result_pack))
+    end
+
     local function unserialize(path)
         local content = bootloader.readFile(bootloader.bootfs, path)
         if content then
@@ -251,9 +345,16 @@ do
         local reg = unserialize(registryPath)
         local mainReg = mainRegistryPath and unserialize(mainRegistryPath)
         if reg then
-            for key, value in pairs(mainReg) do
-                if reg[key] == nil then
-                    reg[key] = value
+            if mainReg then
+                local newKeysFound
+                for key, value in pairs(mainReg) do
+                    if reg[key] == nil then
+                        reg[key] = value
+                        newKeysFound = true
+                    end
+                end
+                if newKeysFound then
+                    serialize(reg, registryPath)
                 end
             end
             registry = reg
