@@ -45,13 +45,16 @@ function parser.toLines(str, max)
 end
 
 function parser.toLinesLn(str, max)
-    local tool = {len = unicode.wlen, sub = unicode.sub}
-    local raw_lines = parser.split(tool, str, {"\n"})
+    local raw_lines = parser.split(unicode, str, "\n")
     local lines = {}
     for _, raw_line in ipairs(raw_lines) do
-        local tmpLines = parser.toParts(tool, raw_line, max or 50)
-        for _, line in ipairs(tmpLines) do
-            table.insert(lines, line)
+        if raw_line == "" then
+            table.insert(lines, "")
+        else
+            local tmpLines = parser.toParts({len = unicode.wlen, sub = unicode.sub}, raw_line, max or 50)
+            for _, line in ipairs(tmpLines) do
+                table.insert(lines, line)
+            end
         end
     end
     return lines
