@@ -41,8 +41,11 @@ function bootloader.createEnv() --создает _ENV для программы,
     return setmetatable({_G = _G}, {__index = _G})
 end
 
-function bootloader.find(name)
+function bootloader.find(name, ignoreData)
     local checkList = {"/data/", "/vendor/", "/system/", "/system/core/"} --в порядке уменьшения приоритета(data самый приоритетный)
+    if ignoreData then
+        table.remove(checkList, 1)
+    end
     for index, pathPath in ipairs(checkList) do
         local path = pathPath .. name
         if bootloader.bootfs.exists(path) and not bootloader.bootfs.isDirectory(path) then
@@ -334,7 +337,7 @@ do
     end
 
     local registryPath = "/data/registry.dat"
-    local mainRegistryPath = bootloader.find("registry.dat") --если он найдет файл в /data, значит он там есть и перезапись не требуеться
+    local mainRegistryPath = bootloader.find("registry.dat", true)
 
     if mainRegistryPath and not bootloader.bootfs.exists(registryPath) then
         pcall(bootloader.bootfs.makeDirectory, "/data")
