@@ -226,6 +226,19 @@ end
 
 local registry = {}
 do
+    local function unserialize(path)
+        local content = bootloader.readFile(bootloader.bootfs, path)
+        if content then
+            local code = load("return " .. content, "=unserialize", "t", {math={huge=math.huge}})
+            if code then
+                local result = {pcall(code)}
+                if result[1] and type(result[2]) == "table" then
+                    return result[2]
+                end
+            end
+        end
+    end
+
     local registryPath = "/data/registry.dat"
     local mainRegistryPath = bootloader.find("registry.dat") --если он найдет файл в /data, значит он там есть и перезапись не требуеться
 
@@ -235,22 +248,15 @@ do
     end
 
     if bootloader.bootfs.exists(registryPath) then
-        local file = bootloader.bootfs.open(registryPath, "rb")
-        if file then
-            local buffer = ""
-            repeat
-                local data = bootloader.bootfs.read(file, math.huge)
-                buffer = buffer .. (data or "")
-            until not data
-            bootloader.bootfs.close(file)
-
-            local code = load("return " .. buffer, "=unserialization", "t", {math={huge=math.huge}})
-            if code then
-                local result = {pcall(code)}
-                if result[1] and type(result[2]) == "table" then
-                    registry = result[2]
+        local reg = unserialize(registryPath)
+        local mainReg = mainRegistryPath and unserialize(mainRegistryPath)
+        if reg then
+            for key, value in pairs(mainReg) do
+                if reg[key] == nil then
+                    reg[key] = value
                 end
             end
+            registry = reg
         end
     end
 end

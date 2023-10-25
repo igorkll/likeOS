@@ -701,22 +701,22 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                     redraw()
                 elseif eventData[3] == 3 and eventData[4] == 46 then --ctrl+c
                     if selectFrom then
-                        cache.copiedText = unicode.sub(buffer .. lastBuffer, selectFrom, selectTo)
+                        cache.data.copiedText = unicode.sub(buffer .. lastBuffer, selectFrom, selectTo)
                         if graphic.allowCopyToRealClipboard and component.debug then
-                            component.debug.sendToClipboard(eventData[5], cache.copiedText)
+                            component.debug.sendToClipboard(eventData[5], cache.data.copiedText)
                         end
                         redraw()
                     end
                 elseif eventData[3] == 24 and eventData[4] == 45 then --ctrl+x
                     if selectFrom then
-                        cache.copiedText = removeSelectedContent()
+                        cache.data.copiedText = removeSelectedContent()
                         if graphic.allowCopyToRealClipboard and component.debug then
-                            component.debug.sendToClipboard(eventData[5], cache.copiedText)
+                            component.debug.sendToClipboard(eventData[5], cache.data.copiedText)
                         end
                         redraw()
                     end
                 elseif eventData[3] == 22 and eventData[4] == 47 then --вставка с системного clipboard
-                    local str = clipboard(cache.copiedText)
+                    local str = clipboard(cache.data.copiedText)
                     if str then outFromRead() return str end
                 elseif eventData[4] == 211 then  --del
                     historyIndex = nil
