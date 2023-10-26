@@ -228,7 +228,21 @@ end
 ------------------------------------ registry
 
 local registry = {}
+local getRegistry
 do
+    function getRegistry()
+        if require then
+            local result = {pcall(require, "registry")}
+            if result[1] and type(result[2]) == "table" and type(result[2].data) == "table" then
+                return result[2].data
+            else
+                return registry
+            end
+        else
+            return registry
+        end
+    end
+
     local function serialize(value, path)
         local local_pairs = function(tbl)
             local mt = getmetatable(tbl)
@@ -365,6 +379,8 @@ do
     end
 end
 
+
+
 ------------------------------------ boot splash
 
 do
@@ -380,7 +396,7 @@ do
     local logo = bootloader.loadfile(logoPath, nil, setmetatable(logoenv, {__index = _G}))
     
     function bootloader.bootSplash(text)
-        if registry.disableLogo or not logo or not gpu then return end
+        if getRegistry().disableLogo or not logo or not gpu then return end
         logoenv.text = text
         for screen in component.list("screen") do
             logoenv.screen = screen
@@ -389,7 +405,7 @@ do
     end
 
     function bootloader.waitEnter()
-        if registry.disableLogo or not logo or not gpu then return end
+        if getRegistry().disableLogo or not logo or not gpu then return end
         while true do
             local eventData = {computer.pullSignal()}
             if eventData[1] == "key_down" then
@@ -403,7 +419,7 @@ end
 
 ------------------------------------ recovery
 
-if not registry.disableRecovery then
+if not getRegistry().disableRecovery then
     bootloader.bootSplash("Press R to open recovery menu")
 
     local gpu = component.proxy(component.list("gpu")() or "")
@@ -483,7 +499,7 @@ end
 
 ------------------------------------ error output
 
-if log_ok and not registry.disableAutoReboot then --если удалось записать log то комп перезагрузиться, а если не удалось то передаст ошибку в bios
+if log_ok and not getRegistry().disableAutoReboot then --если удалось записать log то комп перезагрузиться, а если не удалось то передаст ошибку в bios
     shutdown(true)
 end
 error(err, 0)
