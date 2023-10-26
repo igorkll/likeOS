@@ -6,7 +6,11 @@ local unicode = unicode
 ------------------------------------
 
 local package = {}
+package.loadingList = {}
 package.paths = {"/data/lib",  "/vendor/lib", "/system/lib", "/system/core/lib"} --позиция по мере снижения приоритета(первый элемент это самый высокий приоритет)
+
+package.cache = {}
+package.fakeLibCache = {}
 package.loaded = {
     ["package"] = package,
     ["bootloader"] = bootloader
@@ -16,8 +20,7 @@ for key, value in pairs(_G) do
         package.loaded[key] = value
     end
 end
-package.cache = {}
-package.loadingList = {}
+
 package.allowEnclosedLoadingCycle = false
 package.hardAutoUnloading = false
 
@@ -54,45 +57,52 @@ function package.find(name)
     end
 end
 
-function package.require(name)
-    local libtbl = package.loaded[name] or package.cache[name]
-    if libtbl then return libtbl end
-    
-    local function loadLib()
-        if not package.loaded[name] and not package.cache[name] then
-            local finded = package.find(name)
-            if not finded then
-                error("lib " .. name .. " is not found", 3)
-            end
-
-            package.loadingList[name] = true
-            local lib = assert(loadfile(finded, nil, bootloader.createEnv()))()
-            package.loadingList[name] = nil
-
-            if type(lib) == "table" and lib.unloadable then
-                package.cache[name] = lib
-            else
-                package.loaded[name] = lib
-            end
+function package.raw_require(name)
+    if not package.loaded[name] and not package.cache[name] then
+        local finded = package.find(name)
+        if not finded then
+            error("lib " .. name .. " is not found", 3)
         end
-        if not package.loaded[name] and not package.cache[name] then
-            error("lib " .. name .. " is not found" , 3)
+
+        package.loadingList[name] = true
+        local lib = assert(loadfile(finded, nil, bootloader.createEnv()))()
+        package.loadingList[name] = nil
+
+        if type(lib) == "table" and lib.unloadable then
+            package.cache[name] = lib
+        else
+            package.loaded[name] = lib
         end
-        return package.loaded[name] or package.cache[name]
     end
 
-    if package.hardAutoUnloading or package.loadingList[name] then
+    if not package.loaded[name] and not package.cache[name] then
+        error("lib " .. name .. " is not found" , 3)
+    end
+
+    return package.loaded[name] or package.cache[name]
+end
+
+function package.require(name)
+    local lib = package.loaded[name] or package.cache[name]
+    if lib then
+        return lib
+    elseif package.hardAutoUnloading or package.loadingList[name] then
         if package.hardAutoUnloading or package.allowEnclosedLoadingCycle then
-            return setmetatable({}, {__index = function (_, key)
-                return (loadLib())[key]
-            end, __newindex = function (_, key, value)
-                (loadLib())[key] = value
-            end})
+            if package.fakeLibCache[name] then
+                return package.fakeLibCache[name]
+            else
+                package.fakeLibCache[name] = setmetatable({}, {__index = function (_, key)
+                    return (package.raw_require(name))[key]
+                end, __newindex = function (_, key, value)
+                    (package.raw_require(name))[key] = value
+                end})
+                return package.fakeLibCache[name]
+            end
         else
             error("enclosed loading cycle is disabled", 2)
         end
     else
-        return loadLib()
+        return package.raw_require(name)
     end
 end
 

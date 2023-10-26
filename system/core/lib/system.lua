@@ -7,6 +7,7 @@ local lastinfo = require("lastinfo")
 local component = require("component")
 local fs = require("filesystem")
 local paths = require("paths")
+local calls = require("calls")
 local system = {}
 
 -------------------------------------------------
@@ -140,25 +141,32 @@ end
 
 -------------------------------------------------
 
+local function cacheMode(tbl, state)
+    local mt = getmetatable(tbl)
+    if mt then
+        if state then
+            mt.__mode = 'v'
+        else
+            mt.__mode = nil
+        end
+    else
+        mt = {}
+        if state then
+            mt.__mode = 'v'
+        end
+        setmetatable(tbl, mt)
+    end
+end
+
 local currentUnloadState
 function system.setUnloadState(state)
     checkArg(1, state, "boolean")
     if currentUnloadState == state then return end
     currentUnloadState = state
 
-    if state then
-        setmetatable(package.cache, {__mode = 'v'})
-        local calls = package.get("calls")
-        if calls then
-            setmetatable(calls.cache, {__mode = 'v'})
-        end
-    else
-        setmetatable(package.cache, {})
-        local calls = package.get("calls")
-        if calls then
-            setmetatable(calls.cache, {})
-        end
-    end
+    cacheMode(package.fakeLibCache, state)
+    cacheMode(package.cache, state)
+    cacheMode(calls.cache, state)
 end
 system.setUnloadState(false)
 
