@@ -11,6 +11,9 @@ local system = {}
 
 -------------------------------------------------
 
+function system.stub()
+end
+
 function system.getSelfScriptPath()
     for runLevel = 0, math.huge do
         local info = debug.getinfo(runLevel)
