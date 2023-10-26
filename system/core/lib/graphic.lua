@@ -1014,11 +1014,10 @@ function graphic.initGpu(screen, gpuaddress)
     end
 
     if isVGpuInstalled and not graphic.vgpus[screen] then
-        local vgpu = require("vgpu")
         if graphic.allowSoftwareBuffer then
-            graphic.vgpus[screen] = vgpu.create(gpu, screen)
+            graphic.vgpus[screen] = require("vgpu").create(gpu, screen)
         elseif gpu.maxDepth() == 1 then
-            graphic.vgpus[screen] = vgpu.createStub(gpu)
+            graphic.vgpus[screen] = require("vgpu").createStub(gpu)
         end
     end
 

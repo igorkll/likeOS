@@ -19,6 +19,7 @@ end
 package.cache = {}
 package.loadingList = {}
 package.allowEnclosedLoadingCycle = false
+package.hardAutoUnloading = false
 
 function package.find(name)
     local fs = require("filesystem")
@@ -56,9 +57,8 @@ end
 function package.require(name)
     local libtbl = package.loaded[name] or package.cache[name]
     if libtbl then return libtbl end
-
+    
     local function loadLib()
-        if libtbl then return libtbl end
         if not package.loaded[name] and not package.cache[name] then
             local finded = package.find(name)
             if not finded then
@@ -78,18 +78,15 @@ function package.require(name)
         if not package.loaded[name] and not package.cache[name] then
             error("lib " .. name .. " is not found" , 3)
         end
-        libtbl = package.loaded[name] or package.cache[name]
-        return libtbl
+        return package.loaded[name] or package.cache[name]
     end
 
-    if package.loadingList[name] then
-        if package.allowEnclosedLoadingCycle then
+    if package.hardAutoUnloading or package.loadingList[name] then
+        if package.hardAutoUnloading or package.allowEnclosedLoadingCycle then
             return setmetatable({}, {__index = function (_, key)
-                loadLib()
-                return libtbl[key]
+                return (loadLib())[key]
             end, __newindex = function (_, key, value)
-                loadLib()
-                libtbl[key] = value
+                (loadLib())[key] = value
             end})
         else
             error("enclosed loading cycle is disabled", 2)
