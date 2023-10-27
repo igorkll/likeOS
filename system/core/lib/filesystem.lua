@@ -88,7 +88,7 @@ function filesystem.get(path)
     path = endSlash(paths.absolute(path))
     
     for i = #filesystem.mountList, 1, -1 do
-        if not pcall(filesystem.mountList[i][1].exists, "/null") then --disconnect check
+        if component.isConnected and not component.isConnected(filesystem.mountList[i][1]) then
             table.remove(filesystem.mountList, i)
         end
     end

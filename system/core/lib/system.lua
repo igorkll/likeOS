@@ -164,7 +164,7 @@ function system.setUnloadState(state)
     if currentUnloadState == state then return end
     currentUnloadState = state
 
-    cacheMode(package.fakeLibCache, state)
+    cacheMode(package.libStubsCache, state)
     cacheMode(package.cache, state)
     cacheMode(calls.cache, state)
 end

@@ -10,7 +10,7 @@ package.loadingList = {}
 package.paths = {"/data/lib",  "/vendor/lib", "/system/lib", "/system/core/lib"} --позиция по мере снижения приоритета(первый элемент это самый высокий приоритет)
 
 package.cache = {}
-package.fakeLibCache = {}
+package.libStubsCache = {}
 package.loaded = {
     ["package"] = package,
     ["bootloader"] = bootloader
@@ -68,7 +68,7 @@ function package.raw_require(name)
         local lib = assert(loadfile(finded, nil, bootloader.createEnv()))()
         package.loadingList[name] = nil
 
-        if type(lib) == "table" and lib.unloadable then
+        if type(lib) ~= "table" or lib.unloadable then
             package.cache[name] = lib
         else
             package.loaded[name] = lib
@@ -88,15 +88,15 @@ function package.require(name)
         return lib
     elseif package.hardAutoUnloading or package.loadingList[name] then
         if package.hardAutoUnloading or package.allowEnclosedLoadingCycle then
-            if package.fakeLibCache[name] then
-                return package.fakeLibCache[name]
+            if package.libStubsCache[name] then
+                return package.libStubsCache[name]
             else
-                package.fakeLibCache[name] = setmetatable({}, {__index = function (_, key)
+                package.libStubsCache[name] = setmetatable({}, {__index = function (_, key)
                     return (package.raw_require(name))[key]
                 end, __newindex = function (_, key, value)
                     (package.raw_require(name))[key] = value
                 end})
-                return package.fakeLibCache[name]
+                return package.libStubsCache[name]
             end
         else
             error("enclosed loading cycle is disabled", 2)
@@ -121,12 +121,29 @@ end
 function package.raw_reg(name, path)
     if bootloader.bootfs.exists(path) and not package.loaded[name] and not package.cache[name] then
         local lib = bootloader.dofile(path, nil, bootloader.createEnv())
-        if type(lib) == "table" and lib.unloadable then
+        if type(lib) ~= "table" or lib.unloadable then
             package.cache[name] = lib
         else
             package.loaded[name] = lib
         end
     end
+end
+
+function package.delay(lib, action)
+    local mt = {}
+    function mt.__index(tbl, key)
+        mt.__index = nil
+        if type(action) == "function" then
+            action()
+        else
+            dofile(action)
+        end
+        return tbl[key]
+    end
+    if lib.internal then
+       setmetatable(lib.internal, mt)
+    end
+    setmetatable(lib, mt)
 end
 
 ------------------------------------
