@@ -18,33 +18,6 @@ function paths.segments(path)
     return parts
 end
 
-
-function paths.raw_canonical(path)
-    local result = table.concat(paths.segments(path), "/")
-    if unicode.sub(path, 1, 1) == "/" then
-        return "/" .. result
-    end
-    return result
-end
-
-function paths.raw_concat(...)
-    local set = table.pack(...)
-    for index, value in ipairs(set) do
-        checkArg(index, value, "string")
-    end
-    return paths.raw_canonical(table.concat(set, "/"))
-end
-
-function paths.raw_path(path)
-    local parts = paths.segments(path)
-    local result = table.concat(parts, "/", 1, #parts - 1) .. "/"
-    if unicode.sub(path, 1, 1) == "/" and unicode.sub(result, 1, 1) ~= "/" then
-        return paths.raw_canonical("/" .. result)
-    else
-        return paths.raw_canonical(result)
-    end
-end
-
 ------------------------------------
 
 function paths.xconcat(...) --работает как concat но пути начинаюшиеся со / НЕ обрабатываються как отновительные а откидывают путь в начало
@@ -83,18 +56,25 @@ end
 
 ------------------------------------
 
-function paths.canonical(path)
+function paths.absolute(path)
     local result = table.concat(paths.segments(path), "/")
     if unicode.sub(path, 1, 1) == "/" then
         return "/" .. result
     else
         if paths.baseDirectory then
-            return paths.raw_concat(paths.baseDirectory, path)
+            return paths.concat(paths.baseDirectory, path)
         else
             return result
         end
-        --return baseConcat(basePath(require("system").getSelfScriptPath()), path)
     end
+end
+
+function paths.canonical(path)
+    local result = table.concat(paths.segments(path), "/")
+    if unicode.sub(path, 1, 1) == "/" then
+        return "/" .. result
+    end
+    return result
 end
 
 function paths.equals(...)
@@ -149,7 +129,7 @@ function paths.extension(path)
 end
 
 function paths.hideExtension(path)
-    path = paths.raw_canonical(path)
+    path = paths.canonical(path)
 
     local exp = paths.extension(path)
     if exp then

@@ -42,7 +42,7 @@ function filesystem.mount(proxy, path)
         proxy = lproxy
     end
 
-    path = paths.canonical(path)
+    path = paths.absolute(path)
     if filesystem.inited then
         filesystem.makeDirectory(paths.path(path))
     end
@@ -63,7 +63,7 @@ function filesystem.mount(proxy, path)
 end
 
 function filesystem.umount(path)
-    path = endSlash(paths.canonical(path))
+    path = endSlash(paths.absolute(path))
     for i, v in ipairs(filesystem.mountList) do
         if v[2] == path then
             table.remove(filesystem.mountList, i)
@@ -85,7 +85,7 @@ function filesystem.mounts()
 end
 
 function filesystem.get(path)
-    path = endSlash(paths.canonical(path))
+    path = endSlash(paths.absolute(path))
     
     for i = #filesystem.mountList, 1, -1 do
         if not pcall(filesystem.mountList[i][1].exists, "/null") then --disconnect check
@@ -103,17 +103,6 @@ function filesystem.get(path)
         return filesystem.mountList[1][1], filesystem.mountList[1][2], filesystem.mountList[1][3]
     end
 end
-
---[[
-function filesystem.get(path)
-    path = paths.canonical(path)
-    for i = 1, #filesystem.mountList do
-        if path:sub(1, unicode.len(filesystem.mountList[i][2])) == filesystem.mountList[i][2] then
-            return filesystem.mountList[i][1], unicode.sub(path, filesystem.mountList[i][2]:len() + 1, -1)
-        end
-    end
-end
-]]
 
 function filesystem.exists(path)
     local proxy, proxyPath = filesystem.get(path)
@@ -149,7 +138,7 @@ end
 
 function filesystem.isDirectory(path)
     for i, v in ipairs(filesystem.mountList) do
-        if v[2] == paths.canonical(path) then
+        if v[2] == paths.absolute(path) then
             return true
         end
     end
@@ -194,7 +183,7 @@ function filesystem.list(path)
     if tbl then
         tbl.n = nil
         for i = 1, #filesystem.mountList do
-            if paths.canonical(path) == paths.path(filesystem.mountList[i][2]) then
+            if paths.absolute(path) == paths.path(filesystem.mountList[i][2]) then
                 table.insert(tbl, paths.name(filesystem.mountList[i][2]))
             end
         end
@@ -206,8 +195,8 @@ function filesystem.list(path)
 end
 
 function filesystem.rename(fromPath, toPath)
-    fromPath = paths.canonical(fromPath)
-    toPath = paths.canonical(toPath)
+    fromPath = paths.absolute(fromPath)
+    toPath = paths.absolute(toPath)
     if paths.equals(fromPath, toPath) then return end
 
     local fromProxy, fromProxyPath = filesystem.get(fromPath)
@@ -256,8 +245,8 @@ function filesystem.open(path, mode)
 end
 
 function filesystem.copy(fromPath, toPath, fcheck)
-    fromPath = paths.canonical(fromPath)
-    toPath = paths.canonical(toPath)
+    fromPath = paths.absolute(fromPath)
+    toPath = paths.absolute(toPath)
     if paths.equals(fromPath, toPath) then return end
     local function copyRecursively(fromPath, toPath)
         if not fcheck or fcheck(fromPath, toPath) then
