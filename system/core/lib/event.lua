@@ -41,7 +41,7 @@ event.interruptFunc = nil
 function event.errLog(data)
     fs.makeDirectory("/data")
     local file = assert(fs.open("/data/errorlog.log", "ab"))
-    assert(file.write(data .. "\n"))
+    assert(file.write(tostring(data or "unknown error") .. "\n"))
     file.close()
 end
 
