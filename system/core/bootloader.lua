@@ -385,7 +385,7 @@ end
 
 do
     local gpu = component.proxy(component.list("gpu")() or "")
-    if gpu then
+    if gpu and not getRegistry().disableLogo then
         for screen in component.list("screen") do
             bootloader.initScreen(gpu, screen)
         end
@@ -396,7 +396,7 @@ do
     local logo = bootloader.loadfile(logoPath, nil, setmetatable(logoenv, {__index = _G}))
     
     function bootloader.bootSplash(text)
-        if getRegistry().disableLogo or not logo or not gpu then return end
+        if not logo or not gpu or getRegistry().disableLogo then return end
         logoenv.text = text
         for screen in component.list("screen") do
             logoenv.screen = screen
@@ -405,7 +405,7 @@ do
     end
 
     function bootloader.waitEnter()
-        if getRegistry().disableLogo or not logo or not gpu then return end
+        if not logo or not gpu or getRegistry().disableLogo then return end
         while true do
             local eventData = {computer.pullSignal()}
             if eventData[1] == "key_down" then
@@ -420,11 +420,10 @@ end
 ------------------------------------ recovery
 
 if not getRegistry().disableRecovery then
-    bootloader.bootSplash("Press R to open recovery menu")
-
     local gpu = component.proxy(component.list("gpu")() or "")
-
     if gpu and component.list("screen")() then
+        bootloader.bootSplash("Press R to open recovery menu")
+
         local recoveryScreen, playerNickname
         for i = 1, 10 do
             local eventData = {computer.pullSignal(0.1)}
@@ -448,6 +447,10 @@ if not getRegistry().disableRecovery then
 
             local recoveryPath = bootloader.find("recovery.lua")
             if recoveryPath then
+                if getRegistry().disableLogo then --если лого отключено, то экран не был инициализирован ранее, а значит его нада инициализировать сейчас
+                    bootloader.initScreen(gpu, recoveryScreen)
+                end
+                
                 local env = bootloader.createEnv()
                 env.bootloader = bootloader
                 assert(xpcall(assert(bootloader.loadfile(recoveryPath, nil, env)), debug.traceback, recoveryScreen, playerNickname))
