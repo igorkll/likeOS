@@ -82,7 +82,11 @@ function package.raw_require(name)
     return package.loaded[name] or package.cache[name]
 end
 
-function package.require(name)
+function package.require(name, force)
+    if force then
+        return package.raw_require(name)
+    end
+
     local lib = package.loaded[name] or package.cache[name]
     if lib then
         return lib
