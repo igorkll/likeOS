@@ -8,13 +8,13 @@ local package = require("package")
 local raw_computer_pullSignal = computer.pullSignal
 local thread_computer_pullSignal = function(time)
     if not time then time = math.huge end
-    local inTime = computer.uptime()
+    local startTime = computer.uptime()
     repeat
         local eventData = {coroutine.yield()}
         if #eventData > 0 then
             return table.unpack(eventData)
         end
-    until computer.uptime() - inTime > time
+    until computer.uptime() - startTime > time
 end
 
 local function tableInsert(tbl, value) --кастомный insert с возвращения значения
@@ -29,7 +29,7 @@ end
 local event = {push = computer.pushSignal}
 event.isListen = false --если текуший код timer/listen
 
-event.minTime = 0.01 --минимальное время прирывания, можно увеличить, это вызовет подения производительности но уменьшет энергопотребления
+event.minTime = 0.05 --минимальное время прирывания, можно увеличить, это вызовет подения производительности но уменьшет энергопотребления
 event.listens = {}
 
 event.allowInterrupt = true
@@ -48,10 +48,10 @@ end
 function event.sleep(waitTime)
     waitTime = waitTime or 0.1
 
-    local inTime = computer.uptime()
+    local startTime = computer.uptime()
     repeat
-        computer.pullSignal(waitTime - (computer.uptime() - inTime))
-    until computer.uptime() - inTime >= waitTime
+        computer.pullSignal(waitTime - (computer.uptime() - startTime))
+    until computer.uptime() - startTime >= waitTime
 end
 os.sleep = event.sleep
 
@@ -154,9 +154,9 @@ function event.pull(waitTime, ...) --добавляет фильтер
         waitTime = math.huge
     end
     
-    local inTime = computer.uptime()
+    local startTime = computer.uptime()
     while true do
-        local ltime = waitTime - (computer.uptime() - inTime)
+        local ltime = waitTime - (computer.uptime() - startTime)
         if ltime <= 0 then break end
         local eventData = {computer.pullSignal(ltime)}
 
@@ -251,10 +251,9 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
     end
     
     --главный pullSignal
-    local inTime = computer.uptime()
+    local startTime = computer.uptime()
     while true do
-        local realWaitTime = waitTime - (computer.uptime() - inTime)
-        if realWaitTime <= 0 then return end
+        local realWaitTime = waitTime - (computer.uptime() - startTime)
 
         if thread then
             realWaitTime = event.minTime
@@ -306,6 +305,10 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
                 end
             end
             return table.unpack(eventData)
+        end
+
+        if realWaitTime <= 0 then
+            break
         end
     end
 end

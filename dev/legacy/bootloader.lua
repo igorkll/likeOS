@@ -65,11 +65,11 @@ do
     
             local func, err = programs.load(full_path)
             if not func then
-                event.errLog("err \"" .. (err or "unknown error") .. "\", to load programm: " .. full_path)
+                event.errLog("err \"" .. (err or "unknown error") .. "\", to load program: " .. full_path)
             else
                 local ok, err = pcall(func, ...)
                 if not ok then
-                    event.errLog("err \"" .. (err or "unknown error") .. "\", in programm: " .. full_path)
+                    event.errLog("err \"" .. (err or "unknown error") .. "\", in program: " .. full_path)
                 end
             end        
         end

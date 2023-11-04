@@ -42,7 +42,7 @@ end
 
 function programs.load(name, mode, env)
     local path = programs.find(name)
-    if not path then return nil, "no such programm" end
+    if not path then return nil, "no such program" end
 
     local file, err = fs.open(path, "rb")
     if not file then return nil, err end
