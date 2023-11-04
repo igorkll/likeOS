@@ -254,6 +254,7 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
     local startTime = computer.uptime()
     while true do
         local realWaitTime = waitTime - (computer.uptime() - startTime)
+        local isEnd = realWaitTime <= 0
 
         if thread then
             realWaitTime = event.minTime
@@ -307,7 +308,7 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
             return table.unpack(eventData)
         end
 
-        if realWaitTime <= 0 then
+        if isEnd then
             break
         end
     end
