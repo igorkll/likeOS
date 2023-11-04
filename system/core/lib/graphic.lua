@@ -6,6 +6,7 @@ local package = require("package")
 local colors = require("colors")
 local cache = require("cache")
 local lastinfo = require("lastinfo")
+local clipboardlib = require("clipboard")
 
 local isSyntaxInstalled = package.isInstalled("syntax")
 local isVGpuInstalled = package.isInstalled("vgpu")
@@ -16,7 +17,6 @@ local graphic = {}
 graphic.colorAutoFormat = true --рисует псевдографикой на первом тире оттенки серого
 graphic.allowHardwareBuffer = false
 graphic.allowSoftwareBuffer = false
-graphic.allowCopyToRealClipboard = true
 
 graphic.screensBuffers = {}
 graphic.updated = {}
@@ -701,22 +701,16 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                     redraw()
                 elseif eventData[3] == 3 and eventData[4] == 46 then --ctrl+c
                     if selectFrom then
-                        cache.data.copiedText = unicode.sub(buffer .. lastBuffer, selectFrom, selectTo)
-                        if graphic.allowCopyToRealClipboard and component.debug then
-                            component.debug.sendToClipboard(eventData[5], cache.data.copiedText)
-                        end
+                        clipboardlib.set(eventData[5], unicode.sub(buffer .. lastBuffer, selectFrom, selectTo))
                         redraw()
                     end
                 elseif eventData[3] == 24 and eventData[4] == 45 then --ctrl+x
                     if selectFrom then
-                        cache.data.copiedText = removeSelectedContent()
-                        if graphic.allowCopyToRealClipboard and component.debug then
-                            component.debug.sendToClipboard(eventData[5], cache.data.copiedText)
-                        end
+                        clipboardlib.set(eventData[5], removeSelectedContent())
                         redraw()
                     end
                 elseif eventData[3] == 22 and eventData[4] == 47 then --вставка с системного clipboard
-                    local str = clipboard(cache.data.copiedText)
+                    local str = clipboard(clipboardlib.get(eventData[5]))
                     if str then outFromRead() return str end
                 elseif eventData[4] == 211 then  --del
                     historyIndex = nil
