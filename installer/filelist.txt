@@ -9,6 +9,7 @@
 /system/core/lib/bit32.lua
 /system/core/lib/cache.lua
 /system/core/lib/calls.lua
+/system/core/lib/clipboard.lua
 /system/core/lib/colors.lua
 /system/core/lib/event.lua
 /system/core/lib/filesystem.lua
