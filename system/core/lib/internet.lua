@@ -1,5 +1,6 @@
 local component = require("component")
 local fs = require("filesystem")
+local paths = require("paths")
 local internet = {}
 
 function internet.get(url)
@@ -10,14 +11,12 @@ function internet.get(url)
     end
 
     local handle = inet.request(url)
-    local data = {}
-    local dataI = 1
     if handle then
+        local data = {}
         while true do
             local result, reason = handle.read(math.huge) 
             if result then
-                data[dataI] = result
-                dataI = dataI + 1
+                table.insert(data, result)
             else
                 handle.close()
                 
@@ -42,15 +41,24 @@ function internet.download(url, path)
 
     local handle = inet.request(url)
     if handle then
+        fs.makeDirectory(paths.path(path))
         local file, err = fs.open(path, "wb")
         if not file then
             return nil, err
         end
         
+        local data = {}
+        local dataSize = 0
         while true do
             local result, reason = handle.read(math.huge) 
             if result then
-                file.write(result)
+                table.insert(data, result)
+                dataSize = dataSize + #result
+
+                if dataSize >= 1024 * 32 then
+                    file.write(table.concat(data))
+                    data = {}
+                end
             else
                 file.close()
                 handle.close()
