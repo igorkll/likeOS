@@ -12,7 +12,7 @@ function thread.decode(th)
     if out[1] then
         return table.unpack(out)
     else
-        return nil, (out[2] or "unknown error") .. (out[3] or "")
+        return nil, (out[2] or "unknown error") .. "\n" .. (out[3] or "")
     end
 end
 
