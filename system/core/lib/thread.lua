@@ -3,6 +3,19 @@ local thread = {}
 thread.threads = {}
 thread.mainthread = coroutine.running()
 
+function thread.stub(func, ...)
+    local event = require("event")
+
+    local th = thread.create(func, ...)
+    th:resume()
+    
+    while th:status() ~= "dead" do
+        event.yield()
+    end
+
+    return table.unpack(th.out or {true})
+end
+
 function thread.xpcall(co, ...)
     local output = {system.checkExitinfo(coroutine.resume(co, ...))}
     if not output[1] then
