@@ -3,6 +3,19 @@ local thread = {}
 thread.threads = {}
 thread.mainthread = coroutine.running()
 
+function thread.decode(th)
+    if th:status() ~= "dead" then
+        error("thread.decode only works with dead thread", 2)
+    end
+
+    local out = th.out or {true}
+    if out[1] then
+        return table.unpack(out)
+    else
+        return nil, (out[2] or "unknown error") .. (out[3] or "")
+    end
+end
+
 function thread.stub(func, ...)
     local event = require("event")
 
@@ -10,10 +23,14 @@ function thread.stub(func, ...)
     th:resume()
     
     while th:status() ~= "dead" do
-        event.yield()
+        local successfully, err = pcall(event.yield)
+        if not successfully then
+            th:kill()
+            return successfully, err
+        end
     end
 
-    return table.unpack(th.out or {true})
+    return thread.decode(th)
 end
 
 function thread.xpcall(co, ...)
