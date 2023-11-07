@@ -58,8 +58,12 @@ function internet.download(url, path)
                 if dataSize >= 1024 * 32 then
                     file.write(table.concat(data))
                     data = {}
+                    dataSize = 0
                 end
             else
+                if #data > 0 then
+                    file.write(table.concat(data))
+                end
                 file.close()
                 handle.close()
                 
