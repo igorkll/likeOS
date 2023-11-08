@@ -206,8 +206,8 @@ end
 
 event.hyperListen(function (eventType, ...)
     if eventType == "component_added" then
-        onComponentAdded(eventType, ...)
+        pcall(onComponentAdded, eventType, ...)
     elseif eventType == "component_removed" then
-        onComponentRemoved(eventType, ...)
+        pcall(onComponentRemoved, eventType, ...)
     end
 end)
