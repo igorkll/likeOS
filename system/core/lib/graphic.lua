@@ -1182,10 +1182,16 @@ end
 
 ------------------------------------
 
-function graphic.forceUpdate()
+function graphic.forceUpdate(screen)
     if graphic.allowSoftwareBuffer or graphic.allowHardwareBuffer then
-        for screen, ctype in component.list("screen") do
+        if screen then
+            graphic.updateFlag(screen)
             graphic.update(screen)
+        else
+            for lscreen, ctype in component.list("screen") do
+                graphic.updateFlag(lscreen)
+                graphic.update(lscreen)
+            end
         end
     end
 end
