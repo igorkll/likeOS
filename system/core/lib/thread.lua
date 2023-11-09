@@ -92,6 +92,7 @@ local function create(func, ...)
         resume = resume,
         suspend = suspend,
         status = status,
+        decode = thread.decode,
         parentData = {},
 
         func = func,
