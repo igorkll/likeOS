@@ -184,6 +184,7 @@ local function runThreads(eventData)
             if not parsetbl then parsetbl = tbl end
             for i = #parsetbl, 1, -1 do
                 local v = parsetbl[i]
+                v:status()
                 if v.dead or not v.thread or coroutine.status(v.thread) == "dead" then
                     table.remove(parsetbl, i)
                     v.thread = nil

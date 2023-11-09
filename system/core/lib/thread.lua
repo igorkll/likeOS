@@ -122,6 +122,7 @@ end
 function raw_kill(t) --не стоит убивать паток через raw_kill
     t.dead = true
     t.enable = false
+    t.thread = nil
 end
 
 function kill(t) --вы сможете переопределить это в своем потоке, наример чтобы закрыть таймеры
@@ -137,10 +138,14 @@ function suspend(t)
 end
 
 function status(t)
-    if not t.thread or coroutine.status(t.thread) == "dead" or t.dead then return "dead" end
+    if not t.thread or coroutine.status(t.thread) == "dead" or t.dead then
+        t:kill()
+        return "dead"
+    end
     if t.parent then
         local status = t.parent:status()
         if status == "dead" then
+            t:kill()
             return "dead"
         elseif status == "suspended" then
             return "suspended"
