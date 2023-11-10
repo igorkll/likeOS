@@ -430,17 +430,20 @@ menu(bootloader.coreversion .. " recovery",
 
             local ramSize = tostring(math.floor((computer.totalMemory() / 1024) + 0.5)) .. "KB"
             ramSize = ramSize .. " / " .. tostring(math.floor(((computer.totalMemory() - computer.freeMemory()) / 1024) + 0.5)) .. "KB"
+
             local hddSize = tostring(math.floor((bootloader.bootfs.spaceTotal() / 1024) + 0.5)) .. "KB"
             hddSize = hddSize .. " / " .. tostring(math.floor((bootloader.bootfs.spaceUsed() / 1024) + 0.5)) .. "KB"
 
+            local computerAddr = short(computer.address())
+            
             info(
                 {
-                    "Computer Address: " .. short(computer.address()),
+                    "Computer Address: " .. computerAddr,
                     "Disk     Address: " .. short(bootloader.bootfs.address),
-                    "Device      Type: " .. short(deviceType .. string.rep(" ", #bootloader.bootfs.address - #deviceType)),
-                    "System  Runlevel: " .. short(bootloader.runlevel .. string.rep(" ", #bootloader.bootfs.address - #bootloader.runlevel)),
-                    "Total/Used   RAM: " .. short(ramSize .. string.rep(" ", #bootloader.bootfs.address - #ramSize)),
-                    "Total/Used   HDD: " .. short(hddSize .. string.rep(" ", #bootloader.bootfs.address - #hddSize))
+                    "Device      Type: " .. short(deviceType .. string.rep(" ", #computerAddr - #deviceType)),
+                    "System  Runlevel: " .. short(bootloader.runlevel .. string.rep(" ", #computerAddr - #bootloader.runlevel)),
+                    "Total/Used   RAM: " .. ramSize .. string.rep(" ", #computerAddr - #ramSize),
+                    "Total/Used   HDD: " .. hddSize .. string.rep(" ", #computerAddr - #hddSize)
                 }
             )
         end,
