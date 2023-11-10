@@ -36,6 +36,7 @@
 /system/core/lib/vgpu.lua
 /system/core/lib/archiver/init.lua
 /system/core/lib/archiver/formats/afpx.lua
+/system/core/lib/archiver/formats/tar.lua
 /system/core/luaenv/a_base.lua
 /system/core/luaenv/b_os.lua
 /system/core/unittests/a_readbit.lua
