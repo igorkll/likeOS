@@ -165,17 +165,15 @@ local function raw_selectfile(proxy, folder)
     return rpath, rname
 end
 
-local function selectfile()
+local function selectFilesystem(callback)
     local files, funcs = {}, {}
-    local rpath, rproxy, rname
+    local added = {}
     local function add(addr, label)
+        if added[addr] then return end
+        added[addr] = true
         table.insert(files, addr:sub(1, 4) .. " " .. (component.invoke(addr, "getLabel") or "no-label") .. (label and (" " .. label) or ""))
         table.insert(funcs, function ()
-            rproxy = component.proxy(addr)
-            rpath, rname = raw_selectfile(rproxy)
-            if rpath then
-                return true
-            end
+            return callback(component.proxy(addr))
         end)
     end
     add(bootloader.bootaddress, "(system)")
@@ -184,6 +182,17 @@ local function selectfile()
         add(addr)
     end
     menu("Select A Drive", files, funcs)
+end
+
+local function selectfile()
+    local rpath, rproxy, rname
+    selectFilesystem(function (proxy)
+        rpath, rname = raw_selectfile(proxy)
+        if rpath then
+            rproxy = proxy
+            return true
+        end
+    end)
     return rpath, rproxy, rname
 end
 
@@ -284,6 +293,8 @@ local recoveryApi = {
     menu = menu,
     info,
     input = input,
+    raw_selectfile = raw_selectfile,
+    selectFilesystem = selectFilesystem,
     selectfile = selectfile,
     loadfile = loadfile
 }
