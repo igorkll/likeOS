@@ -2,7 +2,7 @@
 local bootfs = component.proxy(computer.getBootAddress())
 local tmpfs = component.proxy(computer.tmpAddress())
 
-local function getFile(fs, path)
+local function readFile(fs, path)
     local file, err = fs.open(path, "rb")
     if not file then return nil, err end
 
@@ -16,10 +16,29 @@ local function getFile(fs, path)
     return buffer
 end
 
+--------------------------------------------
+
 local bootfile = "/system/core/bootloader.lua"
-if tmpfs.exists("/bootTo") then
-    bootfile = assert(getFile(tmpfs, "/bootTo"))
-    tmpfs.remove("/bootTo")
+local bootproxy = bootfs
+
+--------------------------------------------
+
+local bootloaderSettingsPath = "/bootloader"
+local bootloaderSettingsPath_bootfile = "/bootloader/bootfile"
+local bootloaderSettingsPath_bootaddr = "/bootloader/bootaddr"
+
+--------------------------------------------
+
+if tmpfs.exists(bootloaderSettingsPath_bootfile) then
+    bootfile = assert(readFile(tmpfs, bootloaderSettingsPath_bootfile))
 end
 
-assert(load(assert(getFile(bootfs, bootfile)), "=" .. bootfile, nil, _ENV))()
+if tmpfs.exists(bootloaderSettingsPath_bootaddr) then
+    bootproxy = assert(component.proxy(assert(readFile(tmpfs, bootloaderSettingsPath_bootaddr))))
+end
+
+tmpfs.remove(bootloaderSettingsPath)
+
+--------------------------------------------
+
+assert(load(assert(readFile(bootproxy, bootfile)), "=" .. bootfile, nil, _ENV))()

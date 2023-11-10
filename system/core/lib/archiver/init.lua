@@ -1,24 +1,32 @@
 local fs = require("filesystem")
 local paths = require("paths")
 local system = require("system")
+
 local formatsPath = paths.concat(paths.path(system.getSelfScriptPath()), "formats")
-local archiver = {supported = {}}
+local archiver = {}
+archiver.forceDriver = nil
+archiver.supported = {}
 for i, name in ipairs(fs.list(formatsPath)) do
     archiver.supported[i] = paths.hideExtension(paths.name(name))
 end
 
-function archiver.findDriver(path)
-    local exp = paths.extension(path)
-
-    if exp then
-        local formatDriverPath = paths.concat(formatsPath, exp .. ".lua")
-        if fs.exists(formatDriverPath) then
-            return require(formatDriverPath)
+function archiver.findDriver(path, custom)
+    if archiver.forceDriver then
+        if fs.exists(archiver.forceDriver) then
+            return require(archiver.forceDriver)
+        end
+    else
+        local exp = custom or paths.extension(path)
+        if exp then
+            local formatDriverPath = paths.concat(formatsPath, exp .. ".lua")
+            if fs.exists(formatDriverPath) then
+                return require(formatDriverPath)
+            end
         end
     end
 end
 
-function archiver.pack(dir, outputpath)
+function archiver.pack(dir, outputpath, custom)
     local driver = archiver.findDriver(outputpath)
     if driver then
         return driver.pack(dir, outputpath)
@@ -27,7 +35,7 @@ function archiver.pack(dir, outputpath)
     end
 end
 
-function archiver.unpack(inputpath, dir)
+function archiver.unpack(inputpath, dir, custom)
     local driver = archiver.findDriver(inputpath)
     if driver then
         return driver.unpack(inputpath, dir)
