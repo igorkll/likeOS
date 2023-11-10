@@ -167,18 +167,24 @@ end
 
 local function selectfile()
     local files, funcs = {}, {}
-    local rpath, rname
-    for addr in component.list("filesystem", true) do
-        table.insert(files, addr:sub(1, 4) .. " " .. (component.invoke(addr, "getLabel") or "no-label"))
+    local rpath, rproxy, rname
+    local function add(addr, label)
+        table.insert(files, addr:sub(1, 4) .. " " .. (component.invoke(addr, "getLabel") or "no-label") .. (label and (" " .. label) or ""))
         table.insert(funcs, function ()
-            rpath, rname = raw_selectfile(component.proxy(addr))
+            rproxy = component.proxy(addr)
+            rpath, rname = raw_selectfile(rproxy)
             if rpath then
                 return true
             end
         end)
     end
+    add(bootloader.bootaddress, "(system)")
+    add(bootloader.tmpaddress, "(tmp)")
+    for addr in component.list("filesystem", true) do
+        add(addr)
+    end
     menu("Select A Drive", files, funcs)
-    return rpath, rname
+    return rpath, rproxy, rname
 end
 
 local function loadfile(fs, path, mode, env)
