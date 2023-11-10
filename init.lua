@@ -34,7 +34,11 @@ if tmpfs.exists(bootloaderSettingsPath_bootfile) then
 end
 
 if tmpfs.exists(bootloaderSettingsPath_bootaddr) then
-    bootproxy = assert(component.proxy(assert(readFile(tmpfs, bootloaderSettingsPath_bootaddr))))
+    local bootaddr = assert(readFile(tmpfs, bootloaderSettingsPath_bootaddr))
+    computer.getBootAddress = function()
+        return bootaddr
+    end
+    bootproxy = assert(component.proxy(bootaddr))
 end
 
 tmpfs.remove(bootloaderSettingsPath)
