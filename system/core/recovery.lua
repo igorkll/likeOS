@@ -306,6 +306,17 @@ local function createSandbox()
     return env
 end
 
+-- проверка доступа к recovery
+local path = bootloader.find("recoveryAccess.lua")
+if bootloader.bootfs.exists(path) then
+    local code, err = bootloader.loadfile(path, nil, createSandbox())
+    if code then
+        code()
+    else
+        info(err or "Unknown Syntax Error")
+    end
+end
+
 -------------------------------------------------------------- menu
 
 menu(bootloader.coreversion .. " recovery",
@@ -321,7 +332,7 @@ menu(bootloader.coreversion .. " recovery",
     }, 
     {
         function ()
-            local path = "/system/recoveryScript.lua" --скрипт востановления системы, у каждой оськи на базе likeOS должен быть
+            local path = bootloader.find("recoveryScript.lua") --скрипт востановления системы, у каждой оськи на базе likeOS должен быть
             if bootloader.bootfs.exists(path) then
                 local code, err = bootloader.loadfile(path, nil, createSandbox())
                 if code then
