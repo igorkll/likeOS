@@ -140,7 +140,7 @@ end
 local function selectfile(proxy, folder)
     folder = folder or "/"
 
-    local ret, nickname
+    local rpath, rproxy, rname
     local files = {}
     local funcs = {}
     local list = proxy.list(folder)
@@ -148,21 +148,21 @@ local function selectfile(proxy, folder)
     for _, filename in ipairs(list) do
         local path = folder .. filename
         table.insert(files, filename)
-        table.insert(funcs, function (_, lnick)
+        table.insert(funcs, function (_, nickname)
             if proxy.isDirectory(path) then
-                ret, nickname = selectfile(proxy, path)
-                if ret then
+                rpath, rproxy, rname = selectfile(proxy, path)
+                if rpath then
                     return true
                 end
             else
-                ret, nickname = path, lnick
+                rpath, rproxy, rname = path, proxy, nickname
                 return true
             end
         end)
     end
 
     menu("Select A File: " .. proxy.address:sub(1, 4) .. "-" .. folder, files, funcs)
-    return ret, nickname
+    return rpath, rproxy, rname
 end
 
 local function loadfile(fs, path, mode, env)
