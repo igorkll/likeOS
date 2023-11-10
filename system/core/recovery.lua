@@ -165,6 +165,12 @@ local function selectfile(proxy, folder)
     return ret, nickname
 end
 
+local function loadfile(fs, path, mode, env)
+    local data, err = bootloader.readFile(fs, path)
+    if not data then return nil, err end
+    return load(data, "=" .. path, mode or "bt", env or _G)
+end
+
 -------------------------------------------------------------- micro programs
 
 local function micro_userControl(str)
@@ -204,34 +210,6 @@ local function micro_robotMoving(str)
         info("This Program Only Works On The Robot")
         return
     end
-    --[[
-    menu(str,
-        {
-            "Forward",
-            "Up",
-            "Down",
-            "Turn Left",
-            "Turn Right"
-        },
-        {
-            function ()
-                robot.move(3)
-            end,
-            function ()
-                robot.move(1)
-            end,
-            function ()
-                robot.move(0)
-            end,
-            function ()
-                robot.turn(false)
-            end,
-            function ()
-                robot.turn(true)
-            end
-        }
-    )
-    ]]
 
     clearScreen()
     centerPrint(centerY - 1, "WASD - control")
@@ -273,6 +251,28 @@ local function micro_microprograms(str)
     )
 end
 
+-------------------------------------------------------------- sandbox
+
+local recoveryApi = {
+    getDeviceType = getDeviceType,
+    centerPrint = centerPrint,
+    invertColor = invertColor,
+    screenFill = screenFill,
+    clearScreen = clearScreen,
+    menu = menu,
+    info,
+    input = input,
+    selectfile = selectfile,
+    loadfile = loadfile
+}
+
+local function createSandbox()
+    local env = bootloader.createEnv()
+    env.bootloader = bootloader
+    env.recoveryApi = recoveryApi
+    return env
+end
+
 -------------------------------------------------------------- menu
 
 menu(bootloader.coreversion .. " recovery",
@@ -290,9 +290,7 @@ menu(bootloader.coreversion .. " recovery",
         function ()
             local path = "/system/recoveryScript.lua" --скрипт востановления системы, у каждой оськи на базе likeOS должен быть
             if bootloader.bootfs.exists(path) then
-                local env = bootloader.createEnv()
-                env.bootloader = bootloader
-                local code, err = bootloader.loadfile(path, nil, env)
+                local code, err = bootloader.loadfile(path, nil, createSandbox())
                 if code then
                     code()
                 else
@@ -340,9 +338,9 @@ menu(bootloader.coreversion .. " recovery",
             
         end,
         function ()
-            local path, nickname = selectfile(bootloader.bootfs)
+            local path, proxy, nickname = selectfile(bootloader.bootfs)
             if path then
-                local code, err = bootloader.loadfile(path, nil, _ENV)
+                local code, err = loadfile(proxy, path, nil, createSandbox())
                 if code then
                     local ok, err = pcall(code, screen, nickname)
                     if not ok then
