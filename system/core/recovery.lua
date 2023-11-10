@@ -308,7 +308,7 @@ end
 
 -- проверка доступа к recovery
 local path = bootloader.find("recoveryAccess.lua")
-if bootloader.bootfs.exists(path) then
+if path then
     local code, err = bootloader.loadfile(path, nil, createSandbox())
     if code then
         code()
@@ -333,7 +333,7 @@ menu(bootloader.coreversion .. " recovery",
     {
         function ()
             local path = bootloader.find("recoveryScript.lua") --скрипт востановления системы, у каждой оськи на базе likeOS должен быть
-            if bootloader.bootfs.exists(path) then
+            if path then
                 local code, err = bootloader.loadfile(path, nil, createSandbox())
                 if code then
                     code()
