@@ -137,10 +137,10 @@ local function input(str)
     
 end
 
-local function selectfile(proxy, folder)
+local function raw_selectfile(proxy, folder)
     folder = folder or "/"
 
-    local rpath, rproxy, rname
+    local rpath, rname
     local files = {}
     local funcs = {}
     local list = proxy.list(folder)
@@ -150,19 +150,35 @@ local function selectfile(proxy, folder)
         table.insert(files, filename)
         table.insert(funcs, function (_, nickname)
             if proxy.isDirectory(path) then
-                rpath, rproxy, rname = selectfile(proxy, path)
+                rpath, rname = raw_selectfile(proxy, path)
                 if rpath then
                     return true
                 end
             else
-                rpath, rproxy, rname = path, proxy, nickname
+                rpath, rname = path, nickname
                 return true
             end
         end)
     end
 
     menu("Select A File: " .. proxy.address:sub(1, 4) .. "-" .. folder, files, funcs)
-    return rpath, rproxy, rname
+    return rpath, rname
+end
+
+local function selectfile()
+    local files, funcs = {}, {}
+    local rpath, rname
+    for addr in component.list("filesystem", true) do
+        table.insert(files, addr:sub(1, 4) .. " " .. (component.invoke(addr, "getLabel") or "no-label"))
+        table.insert(funcs, function ()
+            rpath, rname = raw_selectfile(component.proxy(addr))
+            if rpath then
+                return true
+            end
+        end)
+    end
+    menu("Select A Drive", files, funcs)
+    return rpath, rname
 end
 
 local function loadfile(fs, path, mode, env)
@@ -338,7 +354,7 @@ menu(bootloader.coreversion .. " recovery",
             
         end,
         function ()
-            local path, proxy, nickname = selectfile(bootloader.bootfs)
+            local path, proxy, nickname = selectfile()
             if path then
                 local code, err = loadfile(proxy, path, nil, createSandbox())
                 if code then
