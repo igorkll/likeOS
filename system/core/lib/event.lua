@@ -192,7 +192,7 @@ local function runThreads(eventData)
                 elseif not v.dead and v.enable then --если поток спит или умер то его потомки так-же не будут работать
                     v.out = {thread.xpcall(v.thread, table.unpack(v.args or eventData))}
                     if not v.out[1] then
-                        event.errLog("thread error: " .. tostring(v.out[2] or "unknown") .. " " .. tostring(v.out[3] or "unknown"))
+                        event.errLog("thread error: " .. tostring(v.out[2] or "unknown") .. "\n" .. tostring(v.out[3] or "unknown"))
                     end
 
                     v.args = nil

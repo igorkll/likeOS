@@ -114,10 +114,10 @@ function filesystem.size(path)
     local size = 0
     local sizeWithBaseCost = 0
     local function recurse(lpath)
+        sizeWithBaseCost = sizeWithBaseCost + filesystem.baseFileDirectorySize
         for _, filename in ipairs(filesystem.list(lpath)) do
             local fullpath = paths.concat(lpath, filename)
             if proxy.isDirectory(fullpath) then
-                sizeWithBaseCost = sizeWithBaseCost + filesystem.baseFileDirectorySize
                 recurse(fullpath)
             else
                 local lsize = proxy.size(fullpath)
