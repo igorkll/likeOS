@@ -29,7 +29,7 @@ end
 local event = {push = computer.pushSignal}
 event.isListen = false --если текуший код timer/listen
 
-event.minTime = 0.05 --минимальное время прирывания, можно увеличить, это вызовет подения производительности но уменьшет энергопотребления
+event.minTime = 0 --минимальное время прирывания, можно увеличить, это вызовет подения производительности но уменьшет энергопотребления
 event.listens = {}
 
 event.allowInterrupt = true
