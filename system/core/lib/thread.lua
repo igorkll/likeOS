@@ -48,9 +48,7 @@ function thread.current()
         if not parsetbl then parsetbl = tbl end
         for i = #parsetbl, 1, -1 do
             local v = parsetbl[i]
-            if not v.thread then
-                table.remove(parsetbl, i)
-            else
+            if v.thread then
                 if v.thread == currentT then
                     return v
                 else
@@ -123,7 +121,6 @@ end
 function raw_kill(t) --не стоит убивать паток через raw_kill
     t.dead = true
     t.enable = false
-    t.thread = nil
 end
 
 function kill(t) --вы сможете переопределить это в своем потоке, наример чтобы закрыть таймеры
@@ -139,7 +136,7 @@ function suspend(t)
 end
 
 function status(t)
-    if not t.thread or coroutine.status(t.thread) == "dead" or t.dead then
+    if t.dead or not t.thread or coroutine.status(t.thread) == "dead" then
         t:kill()
         return "dead"
     end
