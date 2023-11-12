@@ -16,6 +16,12 @@ local function readFile(fs, path)
     return buffer
 end
 
+local function loadfile(fs, path, mode, env)
+    local data, err = readFile(fs, path)
+    if not data then return nil, err end
+    return load(data, "=" .. path, mode or "bt", env or _G)
+end
+
 --------------------------------------------
 
 local bootfile = "/system/core/bootloader.lua"
@@ -45,4 +51,11 @@ tmpfs.remove(bootloaderSettingsPath)
 
 --------------------------------------------
 
-assert(load(assert(readFile(bootproxy, bootfile)), "=" .. bootfile, nil, _ENV))()
+if bootproxy.exists(bootfile) and not bootproxy.isDirectory(bootfile) then
+    assert(load(assert(readFile(bootproxy, bootfile)), "=" .. bootfile, nil, _ENV))()
+else
+    local lowLevelInitializer = "/likeOS_startup.lua" --может использоваться для запуска обновления системы
+    if bootproxy.exists(lowLevelInitializer) and not bootproxy.isDirectory(lowLevelInitializer) then
+        assert(loadfile(bootproxy, lowLevelInitializer))()
+    end
+end
