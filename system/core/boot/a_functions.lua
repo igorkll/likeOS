@@ -23,6 +23,23 @@ function math.roundTo(number, numbers)
 end
 
 --table
+function table.clone(tbl)
+    local newtbl = {}
+    for k, v in pairs(tbl) do
+        newtbl[k] = v
+    end
+    return newtbl
+end
+
+function table.exists(tbl, val)
+    for k, v in pairs(tbl) do
+        if v == val then
+            return true
+        end
+    end
+    return false
+end
+
 function table.deepclone(tbl, newtbl)
     local cache = {}
     local function recurse(tbl, newtbl)
