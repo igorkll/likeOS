@@ -291,7 +291,7 @@ local recoveryApi = {
     screenFill = screenFill,
     clearScreen = clearScreen,
     menu = menu,
-    info,
+    info = info,
     input = input,
     raw_selectfile = raw_selectfile,
     selectFilesystem = selectFilesystem,
