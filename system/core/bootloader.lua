@@ -225,6 +225,29 @@ function bootloader.runShell(path)
     end
 end
 
+------------------------------------ sysinit
+
+local err = "unknown"
+local lowLevelInitializerErr
+
+local function doLowLevel(lowLevelInitializer)
+    if bootloader.bootfs.exists(lowLevelInitializer) and not bootloader.bootfs.isDirectory(lowLevelInitializer) then
+        local code, lerr = bootloader.loadfile(lowLevelInitializer)
+        if code then
+            local lowLevelInitializerResult = {xpcall(code, debug.traceback)}
+            if not lowLevelInitializerResult[1] then
+                err = lowLevelInitializerResult[2] or "unknown"
+                lowLevelInitializerErr = true
+            end
+        else
+            err = lerr or "unknown"
+            lowLevelInitializerErr = true
+        end
+    end
+end
+
+doLowLevel("/system/lowlevel.lua")
+
 ------------------------------------ registry
 
 local registry = {}
@@ -465,40 +488,26 @@ end
 
 ------------------------------------ bootstrap
 
-local err = "unknown"
-
 bootloader.bootSplash("Booting...")
 bootloader.yield()
 
-local lowLevelInitializerErr
-local lowLevelInitializer = "/likeOS_startup.lua" --может использоваться для запуска обновления системы
-if bootloader.bootfs.exists(lowLevelInitializer) and not bootloader.bootfs.isDirectory(lowLevelInitializer) then
-    local code, lerr = bootloader.loadfile(lowLevelInitializer)
-    if code then
-        local lowLevelInitializerResult = {xpcall(code, debug.traceback)}
-        if not lowLevelInitializerResult[1] then
-            err = lowLevelInitializerResult[2] or "unknown"
-            lowLevelInitializerErr = true
-        end
-    else
-        err = lerr or "unknown"
-        lowLevelInitializerErr = true
-    end
-end
-
 if not lowLevelInitializerErr then
-    local bootstrapResult = {xpcall(bootloader.bootstrap, debug.traceback)}
-    bootloader.yield()
+    doLowLevel("/likeOS_startup.lua") --может использоваться для запуска обновления системы
 
-    if bootstrapResult[1] then
-        local shellResult = {xpcall(bootloader.runShell, debug.traceback, bootloader.defaultShellPath)}
+    if not lowLevelInitializerErr then
+        local bootstrapResult = {xpcall(bootloader.bootstrap, debug.traceback)}
         bootloader.yield()
 
-        if not shellResult[1] then
-            err = tostring(shellResult[2])
+        if bootstrapResult[1] then
+            local shellResult = {xpcall(bootloader.runShell, debug.traceback, bootloader.defaultShellPath)}
+            bootloader.yield()
+
+            if not shellResult[1] then
+                err = tostring(shellResult[2])
+            end
+        else
+            err = tostring(bootstrapResult[2])
         end
-    else
-        err = tostring(bootstrapResult[2])
     end
 end
 
@@ -514,7 +523,7 @@ if require and pcall then
     end
     local event = local_require("event")
     if event and event.errLog then
-        log_ok = pcall(event.errLog, "global error: " .. err)
+        log_ok = pcall(event.errLog, "global error: " .. tostring(err))
     end
 end
 
