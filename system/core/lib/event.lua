@@ -33,7 +33,7 @@ event.minTime = 0 --минимальное время прирывания, мо
 event.listens = {}
 
 event.allowInterrupt = true
-event.interruptFlag = nil --вы можете записать сюда true чтобы вызвать прирывания, или обьект патока чтобы кильнуть только его
+event.interruptFlag = nil --вы можете записать сюда true чтобы вызвать прирывания, или обьект патока чтобы кильнуть только его. так же вы можете записать сюда interruptData патока чтобы киньнуть его
 event.interruptFunc = nil
 
 ------------------------------------------------------------------------
@@ -232,12 +232,14 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
         local interrupt = event.interruptFlag == true
         if not interrupt and thread then
             local current = thread.current()
-            if current and event.interruptFlag == current then
+            if current and (event.interruptFlag == current or event.interruptFlag == current.parentData.interruptData) then
                 interrupt = true
             end
         end
+
         if interrupt then
             event.interruptFlag = nil
+
             if event.interruptFunc then
                 event.interruptFunc()
             else
