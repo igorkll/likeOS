@@ -232,7 +232,12 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
         local interrupt = event.interruptFlag == true
         if not interrupt and thread then
             local current = thread.current()
-            if current and (event.interruptFlag == current or event.interruptFlag == current.parentData.interruptData) then
+            if current and
+            not current.noInterrupts and
+            not current.parentData.noInterrupts and
+            (event.interruptFlag == current or
+            event.interruptFlag == current.interruptData or
+            event.interruptFlag == current.parentData.interruptData) then
                 interrupt = true
             end
         end
