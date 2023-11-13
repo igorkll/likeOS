@@ -15,6 +15,10 @@ local system = {}
 function system.stub()
 end
 
+function system.getResourcePath(name)
+    return paths.concat(paths.path(system.getSelfScriptPath()), name)
+end
+
 function system.getSelfScriptPath()
     for runLevel = 0, math.huge do
         local info = debug.getinfo(runLevel)
