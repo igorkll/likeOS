@@ -31,6 +31,7 @@
 /system/core/lib/term.lua
 /system/core/lib/thread.lua
 /system/core/lib/time.lua
+/system/core/lib/utils.lua
 /system/core/lib/uuid.lua
 /system/core/lib/vcomponent.lua
 /system/core/lib/vgpu.lua
