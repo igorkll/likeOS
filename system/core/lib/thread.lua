@@ -65,7 +65,7 @@ end
 
 function thread.attachThread(t, obj)
     if obj then
-        t.parentData = obj.parentData
+        t.parentData = table.deepclone(obj.parentData)
         t.parent = obj
         if obj.childs then
             table.insert(obj.childs, t)
