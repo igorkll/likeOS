@@ -148,11 +148,13 @@ local function uploadEvent(self, eventData)
             local rePosX = (eventData[3] - self.x) + 1
             local rePosY = (eventData[4] - self.y) + 1
             self.selected = false
-            if rePosX >= 1 and rePosY >= 1
-            and rePosX <= self.sizeX and rePosY <= self.sizeY then
+
+            local inside = rePosX >= 1 and rePosY >= 1 and rePosX <= self.sizeX and rePosY <= self.sizeY
+            if inside or self.outsideEvents then
                 self.selected = true
                 newEventData = {eventData[1], eventData[2], rePosX, rePosY, eventData[5], eventData[6]}
             end
+
             if eventData[1] == "drop" then
                 self.selected = oldSelected
             end
@@ -176,6 +178,10 @@ end
 
 local function toRealPos(self, x, y)
     return self.x + (x - 1), self.y + (y - 1)
+end
+
+local function toFakePos(self, x, y)
+    return x - (self.x - 1), y - (self.y - 1)
 end
 
 local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hidden, buffer, clickCheck, syntax)
@@ -785,6 +791,7 @@ function graphic.createWindow(screen, x, y, sizeX, sizeY, selected, isPal)
         readNoDraw = readNoDraw,
         read = read,
         toRealPos = toRealPos,
+        toFakePos = toFakePos,
         set = set,
         get = get,
         fill = fill,
