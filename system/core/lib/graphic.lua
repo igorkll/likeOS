@@ -1000,6 +1000,13 @@ function graphic.findGpuAddress(screen)
     return bestGpu
 end
 
+function graphic.findGpuProxy(screen)
+    local addr = graphic.findGpuAddress(screen)
+    if addr then
+        return component.proxy(addr)
+    end
+end
+
 function graphic.initGpu(screen, gpuaddress)
     local gpu = component.proxy(gpuaddress)
 
@@ -1039,9 +1046,20 @@ function graphic.initGpu(screen, gpuaddress)
 end
 
 function graphic.findGpu(screen)
-    local bestGpu = graphic.findGpuAddress(screen)
-    if bestGpu then
-        return graphic.initGpu(screen, bestGpu)
+    local gpu = graphic.findGpuAddress(screen)
+    if gpu then
+        return graphic.initGpu(screen, gpu)
+    end
+end
+
+function graphic.findNativeGpu(screen)
+    local gpu = graphic.findGpuProxy(screen)
+    if gpu then
+        if gpu.getScreen() ~= screen then
+            gpu.bind(screen, false)
+        end
+        pcall(gpu.setActiveBuffer, 0)
+        return gpu
     end
 end
 
