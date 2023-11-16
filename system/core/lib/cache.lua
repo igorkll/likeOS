@@ -10,7 +10,18 @@ local cache = {}
 
 cache.hddCacheMt = {}
 function cache.hddCacheMt:__index(key)
-    
+    for name, value in pairs(cache.cache.caches[self._folder]) do
+        if paths.hideExtension(name) == key then
+            return value
+        end
+    end
+
+    for _, name in ipairs(fs.list(self._folder)) do
+        local lkey = paths.hideExtension(name)
+        if lkey == key then
+            local valuename = key .. "." .. paths.extension(name)
+        end
+    end
 end
 
 function cache.hddCacheMt:__newindex(key, value)
@@ -37,8 +48,9 @@ end
 
 function cache.hddCacheMt:__pairs()
     local tbl = {}
-    for _, name in pairs(fs.list(self._folder)) do
-        table.insert(tbl, paths.hideExtension(name))
+    for _, name in ipairs(fs.list(self._folder)) do
+        local key = paths.hideExtension(name)
+        tbl[key] = self(key)
     end
     return pairs(tbl)
 end

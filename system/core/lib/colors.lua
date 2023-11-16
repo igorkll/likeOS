@@ -88,7 +88,11 @@ end
 
 function colors.colorMul(color, mul)
     local r, g, b = colors.unBlend(color)
-    return colors.blend(r * mul, g * mul, b * mul)
+    return colors.blend(
+        math.clampRound(r * mul, 0, 255),
+        math.clampRound(g * mul, 0, 255),
+        math.clampRound(b * mul, 0, 255)
+    )
 end
 
 colors.unloadable = true

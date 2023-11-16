@@ -22,6 +22,16 @@ function math.roundTo(number, numbers)
     return tonumber(string.format("%." .. tostring(math.floor(numbers)) .. "f", number))
 end
 
+
+function math.mapRound(value, low, high, low_2, high_2)
+    return math.round(math.map(value, low, high, low_2, high_2))
+end
+
+function math.clampRound(value, min, max)
+    return math.round(math.clamp(value, min, max))
+end
+
+
 --table
 function table.clone(tbl)
     local newtbl = {}
@@ -64,6 +74,7 @@ function table.deepclone(tbl, newtbl)
 
     return recurse(tbl, newtbl)
 end
+
 
 --bit32
 function bit32.readbit(byte, index)
