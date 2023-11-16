@@ -10,21 +10,31 @@ local cache = {}
 
 cache.hddCacheMt = {}
 function cache.hddCacheMt:__index(key)
-    for name, value in pairs(cache.cache.caches[self._folder]) do
-        if paths.hideExtension(name) == key then
-            return value
+    if cache.cache.caches then
+        for name, value in pairs(cache.cache.caches[self._folder]) do
+            if paths.hideExtension(name) == key then
+                return value
+            end
         end
     end
+
+    if not cache.cache.caches then cache.cache.caches = {} end
+    if not cache.cache.caches[self._folder] then cache.cache.caches[self._folder] = {} end
 
     for _, name in ipairs(fs.list(self._folder)) do
         local lkey = paths.hideExtension(name)
         if lkey == key then
-            local path = paths.concat(self._folder, key .. "." .. paths.extension(name))
+            local valuename = key .. "." .. paths.extension(name)
+            local path = paths.concat(self._folder, valuename)
             if fs.exists(path) then
                 if fs.isDirectory(path) then
-                    return cache.createHddCache(path)
+                    local tbl = cache.createHddCache(path)
+                    cache.cache.caches[self._folder][valuename] = tbl
+                    return tbl
                 else
-                    return fs.readFile(path)
+                    local str = fs.readFile(path)
+                    cache.cache.caches[self._folder][valuename] = str
+                    return str
                 end
             end
         end
@@ -37,6 +47,9 @@ function cache.hddCacheMt:__newindex(key, value)
     value = tostring(value)
     local valuename = key .. "." .. valuetype
     local path = paths.concat(self._folder, valuename)
+
+    if not cache.cache.caches then cache.cache.caches = {} end
+    if not cache.cache.caches[self._folder] then cache.cache.caches[self._folder] = {} end
 
     if valuetype == "number" or valuetype == "string" or valuetype == "boolean" then
         cache.cache.caches[self._folder][valuename] = value
@@ -67,9 +80,6 @@ end
 function cache.createHddCache(folder)
     folder = paths.canonical(folder)
     fs.makeDirectory(folder)
-
-    if not cache.cache.caches then cache.cache.caches = {} end
-    cache.cache.caches[folder] = {}
 
     return setmetatable({_folder = folder}, cache.hddCacheMt)
 end
