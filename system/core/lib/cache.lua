@@ -10,7 +10,7 @@ local cache = {}
 
 cache.hddCacheMt = {}
 function cache.hddCacheMt:__index(key)
-    if cache.cache.caches then
+    if cache.cache.caches and cache.cache.caches[self._folder] then
         for name, value in pairs(cache.cache.caches[self._folder]) do
             if paths.hideExtension(name) == key then
                 return value
