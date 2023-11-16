@@ -105,6 +105,8 @@ function cache.clearCache()
 
                 if valuetype == "number" or valuetype == "string" or valuetype == "boolean" then
                     fs.writeFile(path, tostring(value))
+                elseif valuetype == "table" then
+                    fs.makeDirectory(path)
                 end
             end
         end
