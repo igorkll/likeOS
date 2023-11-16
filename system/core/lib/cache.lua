@@ -92,7 +92,7 @@ function cache.clearCache()
 end
 
 cache.cache = {} --can be cleaned at any time
-cache.data = cache.createHddCache(runtimeCache) --in the future it will be saved to the hard disk
+cache.data = cache.createHddCache(runtimeCache) --it can be cached on the hard disk if there is a lack of RAM
 cache.const = cache.createHddCache("/data/cache/const") --instantly saved to the hard disk (not deleted)
 
 return cache
