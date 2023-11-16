@@ -34,6 +34,7 @@ function cache.hddCacheMt:__index(key)
                     return tbl
                 else
                     local str = fs.readFile(path)
+                    fs.remove(path)
                     local obj
                     if objtype == "number" then
                         obj = tonumber(str)
@@ -97,22 +98,16 @@ end
 
 function cache.clearCache()
     if cache.cache.caches then
-        local function process(tbl)
-            for lpath, values in pairs(tbl) do
-                for valuename, value in pairs(values) do
-                    local path = paths.concat(lpath, valuename)
-                    local valuetype = type(value)
+        for lpath, tbl in pairs(cache.cache.caches) do
+            for valuename, value in pairs(tbl) do
+                local path = paths.concat(lpath, valuename)
+                local valuetype = type(value)
 
-                    if valuetype == "number" or valuetype == "string" or valuetype == "boolean" then
-                        fs.writeFile(path, tostring(value))
-                    elseif valuetype == "table" then
-                        fs.makeDirectory(path)
-                        process(value)
-                    end
+                if valuetype == "number" or valuetype == "string" or valuetype == "boolean" then
+                    fs.writeFile(path, tostring(value))
                 end
             end
         end
-        process(cache.cache.caches)
     end
 
     for key, value in pairs(cache.cache) do
@@ -123,6 +118,5 @@ end
 
 cache.cache = {} --can be cleaned at any time
 cache.data = cache.createHddCache(runtimeCache) --it can be cached on the hard disk if there is a lack of RAM
-cache.const = cache.createHddCache("/data/cache/const") --instantly saved to the hard disk (not deleted)
 
 return cache
