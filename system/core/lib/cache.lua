@@ -10,10 +10,20 @@ local cache = {}
 
 cache.hddCacheMt = {}
 function cache.hddCacheMt:__index(key)
+    local function formatType(obj, objtype)
+        if objtype == "number" then
+            return tonumber(obj)
+        elseif objtype == "boolean" then
+            return toboolean(obj)
+        else
+            return obj
+        end
+    end
+
     if cache.cache.caches and cache.cache.caches[self._folder] then
         for name, value in pairs(cache.cache.caches[self._folder]) do
             if paths.hideExtension(name) == key then
-                return value
+                return formatType(value, paths.extension(name))
             end
         end
     end
@@ -35,14 +45,7 @@ function cache.hddCacheMt:__index(key)
                 else
                     local str = fs.readFile(path)
                     fs.remove(path)
-                    local obj
-                    if objtype == "number" then
-                        obj = tonumber(str)
-                    elseif objtype == "boolean" then
-                        obj = toboolean(str)
-                    else
-                        obj = str
-                    end
+                    local obj = formatType(str, objtype)
                     cache.cache.caches[self._folder][valuename] = obj
                     return obj
                 end
