@@ -80,6 +80,11 @@ function cache.hddCacheMt:__pairs()
         local key = paths.hideExtension(name)
         tbl[key] = self[key]
     end
+    if cache.cache.caches and cache.cache.caches[self._folder] then
+        for name, value in pairs(cache.cache.caches[self._folder]) do
+            tbl[paths.hideExtension(name)] = value
+        end
+    end
     return pairs(tbl)
 end
 
