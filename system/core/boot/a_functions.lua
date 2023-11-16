@@ -94,3 +94,15 @@ function bit32.writebit(byte, index, newstate)
 
     return math.floor(byte)
 end
+
+
+--other
+
+function toboolean(object)
+    object = tostring(object)
+    if object == "true" or object == "1" then
+        return true
+    else
+        return false
+    end
+end

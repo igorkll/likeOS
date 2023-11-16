@@ -24,7 +24,8 @@ function cache.hddCacheMt:__index(key)
     for _, name in ipairs(fs.list(self._folder)) do
         local lkey = paths.hideExtension(name)
         if lkey == key then
-            local valuename = key .. "." .. paths.extension(name)
+            local objtype = paths.extension(name)
+            local valuename = key .. "." .. objtype
             local path = paths.concat(self._folder, valuename)
             if fs.exists(path) then
                 if fs.isDirectory(path) then
@@ -33,8 +34,16 @@ function cache.hddCacheMt:__index(key)
                     return tbl
                 else
                     local str = fs.readFile(path)
-                    cache.cache.caches[self._folder][valuename] = str
-                    return str
+                    local obj
+                    if objtype == "number" then
+                        obj = tonumber(str)
+                    elseif objtype == "boolean" then
+                        obj = toboolean(str)
+                    else
+                        obj = str
+                    end
+                    cache.cache.caches[self._folder][valuename] = obj
+                    return obj
                 end
             end
         end
@@ -44,7 +53,6 @@ end
 function cache.hddCacheMt:__newindex(key, value)
     local valuetype = type(value)
     key = tostring(key)
-    value = tostring(value)
     local valuename = key .. "." .. valuetype
     local path = paths.concat(self._folder, valuename)
 
@@ -52,13 +60,12 @@ function cache.hddCacheMt:__newindex(key, value)
     if not cache.cache.caches[self._folder] then cache.cache.caches[self._folder] = {} end
 
     if valuetype == "number" or valuetype == "string" or valuetype == "boolean" then
-        cache.cache.caches[self._folder][valuename] = value
-        fs.writeFile(path, value)
+        cache.cache.caches[self._folder][valuename] = tostring(value)
     elseif valuetype == "nil" then
         cache.cache.caches[self._folder][valuename] = nil
         fs.remove(path)
     elseif valuetype == "table" then
-        local tbl = cache.createHddCache(path)
+        local tbl = cache.createHddCache(path, value)
         cache.cache.caches[self._folder][valuename] = tbl
         return tbl
     else
@@ -77,14 +84,37 @@ end
 
 --------------------------------------------------
 
-function cache.createHddCache(folder)
-    folder = paths.canonical(folder)
-    fs.makeDirectory(folder)
-
-    return setmetatable({_folder = folder}, cache.hddCacheMt)
+function cache.createHddCache(folder, base)
+    local tbl
+    if base then
+        tbl = base
+        tbl._folder = paths.canonical(folder)
+    else
+        tbl = {_folder = paths.canonical(folder)}
+    end
+    return setmetatable(base, cache.hddCacheMt)
 end
 
 function cache.clearCache()
+    if cache.cache.caches then
+        local function process(tbl)
+            for lpath, values in pairs(tbl) do
+                for valuename, value in pairs(values) do
+                    local path = paths.concat(lpath, valuename)
+                    local valuetype = type(value)
+
+                    if valuetype == "number" or valuetype == "string" or valuetype == "boolean" then
+                        fs.writeFile(path, tostring(value))
+                    elseif valuetype == "table" then
+                        fs.makeDirectory(path)
+                        process(value)
+                    end
+                end
+            end
+        end
+        process(cache.cache.caches)
+    end
+
     for key, value in pairs(cache.cache) do
         cache.cache[key] = nil
     end
