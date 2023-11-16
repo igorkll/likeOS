@@ -19,7 +19,14 @@ function cache.hddCacheMt:__index(key)
     for _, name in ipairs(fs.list(self._folder)) do
         local lkey = paths.hideExtension(name)
         if lkey == key then
-            local valuename = key .. "." .. paths.extension(name)
+            local path = paths.concat(self._folder, key .. "." .. paths.extension(name))
+            if fs.exists(path) then
+                if fs.isDirectory(path) then
+                    return cache.createHddCache(path)
+                else
+                    return fs.readFile(path)
+                end
+            end
         end
     end
 end
