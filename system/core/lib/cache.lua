@@ -8,18 +8,18 @@ fs.remove(runtimeCache)
 
 local cache = {}
 
+local function formatType(obj, objtype)
+    if objtype == "number" then
+        return tonumber(obj)
+    elseif objtype == "boolean" then
+        return toboolean(obj)
+    else
+        return obj
+    end
+end
+
 cache.hddCacheMt = {}
 function cache.hddCacheMt:__index(key)
-    local function formatType(obj, objtype)
-        if objtype == "number" then
-            return tonumber(obj)
-        elseif objtype == "boolean" then
-            return toboolean(obj)
-        else
-            return obj
-        end
-    end
-
     if cache.cache.caches and cache.cache.caches[self._folder] then
         for name, value in pairs(cache.cache.caches[self._folder]) do
             if paths.hideExtension(name) == key then
@@ -45,6 +45,7 @@ function cache.hddCacheMt:__index(key)
                 else
                     local str = fs.readFile(path)
                     fs.remove(path)
+
                     local obj = formatType(str, objtype)
                     cache.cache.caches[self._folder][valuename] = obj
                     return obj
@@ -81,11 +82,11 @@ function cache.hddCacheMt:__pairs()
     local tbl = {}
     for _, name in ipairs(fs.list(self._folder)) do
         local key = paths.hideExtension(name)
-        tbl[key] = self[key]
+        tbl[key] = formatType(self[key], paths.extension(name))
     end
     if cache.cache.caches and cache.cache.caches[self._folder] then
         for name, value in pairs(cache.cache.caches[self._folder]) do
-            tbl[paths.hideExtension(name)] = value
+            tbl[paths.hideExtension(name)] = formatType(value, paths.extension(name))
         end
     end
     return pairs(tbl)
