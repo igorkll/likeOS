@@ -77,7 +77,7 @@ function cache.hddCacheMt:__pairs()
     local tbl = {}
     for _, name in ipairs(fs.list(self._folder)) do
         local key = paths.hideExtension(name)
-        tbl[key] = self(key)
+        tbl[key] = self[key]
     end
     return pairs(tbl)
 end
@@ -92,7 +92,7 @@ function cache.createHddCache(folder, base)
     else
         tbl = {_folder = paths.canonical(folder)}
     end
-    return setmetatable(base, cache.hddCacheMt)
+    return setmetatable(tbl, cache.hddCacheMt)
 end
 
 function cache.clearCache()

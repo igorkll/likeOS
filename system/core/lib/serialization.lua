@@ -1,12 +1,6 @@
 local fs = require("filesystem")
 local serialization = {}
 
--- delay loaded tables fail to deserialize cross [C] boundaries (such as when having to read files that cause yields)
-local local_pairs = function(tbl)
-    local mt = getmetatable(tbl)
-    return (mt and mt.__pairs or pairs)(tbl)
-end
-
 -- Important: pretty formatting will allow presenting non-serializable values
 -- but may generate output that cannot be unserialized back.
 function serialization.serialize(value, pretty)
@@ -68,7 +62,7 @@ function serialization.serialize(value, pretty)
             local f
             if pretty then
                 local ks, sks, oks = {}, {}, {}
-                for k in local_pairs(current_value) do
+                for k in pairs(current_value) do
                     if type(k) == "number" then
                         table.insert(ks, k)
                     elseif type(k) == "string" then
@@ -99,7 +93,7 @@ function serialization.serialize(value, pretty)
                     end
                 )
             else
-                f = table.pack(local_pairs(current_value))
+                f = table.pack(pairs(current_value))
             end
             local i = 1
             local first = true

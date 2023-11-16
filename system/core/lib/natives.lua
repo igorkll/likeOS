@@ -31,4 +31,6 @@ natives.component = deepclone(component)
 natives.computer = deepclone(computer)
 natives.pcall = pcall
 natives.xpcall = xpcall
+natives.pairs = pairs
+natives.ipairs = ipairs
 return natives
