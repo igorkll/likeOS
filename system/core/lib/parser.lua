@@ -41,7 +41,7 @@ function parser.toParts(tool, str, max) --дробит строку на кус�
 end
 
 function parser.toLines(str, max)
-    return parser.toParts({len = unicode.wlen, sub = unicode.sub}, str, max)
+    return parser.toParts(unicode, str, max)
 end
 
 function parser.toLinesLn(str, max)
@@ -51,7 +51,7 @@ function parser.toLinesLn(str, max)
         if raw_line == "" then
             table.insert(lines, "")
         else
-            local tmpLines = parser.toParts({len = unicode.wlen, sub = unicode.sub}, raw_line, max or 50)
+            local tmpLines = parser.toParts(unicode, raw_line, max or 50)
             for _, line in ipairs(tmpLines) do
                 table.insert(lines, line)
             end
