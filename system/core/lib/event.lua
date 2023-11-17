@@ -39,10 +39,7 @@ event.interruptFunc = nil
 ------------------------------------------------------------------------
 
 function event.errLog(data)
-    fs.makeDirectory("/data")
-    local file = assert(fs.open("/data/errorlog.log", "ab"))
-    assert(file.write(tostring(data or "unknown error") .. "\n"))
-    file.close()
+    require("logs").log(data)
 end
 
 function event.sleep(waitTime)

@@ -60,5 +60,24 @@ function parser.toLinesLn(str, max)
     return lines
 end
 
+function parser.parseTraceback(traceback, maxlen, maxlines, spaces)
+    maxlen = maxlen or 50
+    maxlines = maxlines or 15
+    spaces = spaces or 2
+
+    local tab = string.char(9)
+    local space = string.rep(" ", spaces)
+
+    local lines = {}
+    for i, str in ipairs(parser.toLinesLn(traceback, maxlen)) do
+        table.insert(lines, str:gsub(tab, spaces))
+        if #lines >= maxlines then
+            break
+        end
+    end
+    
+    return lines
+end
+
 parser.unloadable = true
 return parser
