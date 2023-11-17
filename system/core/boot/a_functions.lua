@@ -44,10 +44,21 @@ end
 function table.exists(tbl, val)
     for k, v in pairs(tbl) do
         if v == val then
-            return true
+            return true, k
         end
     end
     return false
+end
+
+function table.clear(tbl, val)
+    local state = false
+    for k, v in pairs(tbl) do
+        if val == nil or v == val then
+            tbl[k] = nil
+            state = true
+        end
+    end
+    return state
 end
 
 function table.deepclone(tbl, newtbl)
