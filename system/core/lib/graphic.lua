@@ -1102,7 +1102,6 @@ function graphic.setResolution(screen, x, y)
                 for i = 0, 15 do
                     table.insert(palette, graphic.getPaletteColor(screen, i) or 0)
                 end
-                gpu.setActiveBuffer(activeBuffer) --graphic.getPaletteColor ставит нулевой буфер, и нада вернуть на место
             end
             
             local newBuffer = gpu.allocateBuffer(x, y)
