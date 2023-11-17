@@ -79,5 +79,9 @@ function parser.parseTraceback(traceback, maxlen, maxlines, spaces)
     return lines
 end
 
+function parser.formatTraceback(...)
+    return table.concat(parser.parseTraceback(...))
+end
+
 parser.unloadable = true
 return parser
