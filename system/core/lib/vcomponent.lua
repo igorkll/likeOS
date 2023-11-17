@@ -212,7 +212,7 @@ function vcomponent.resolve(address, componentType)
 end
 
 function vcomponent.uuid()
-    return uuid()
+    return require("uuid").next()
 end
 
 return vcomponent

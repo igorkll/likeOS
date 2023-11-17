@@ -20,7 +20,7 @@ function uuid.isValid(str)
         local need = uuid.null:sub(i, i)
         local char = str:sub(i, i)
 
-        if xor(need == "-", char == "-") or (need ~= "-" and not tonumber(char)) then
+        if xor(need == "-", char == "-") or (need ~= "-" and not tonumber(char, 16)) then
             return false
         end
     end
