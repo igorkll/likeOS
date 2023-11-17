@@ -97,6 +97,15 @@ end
 
 
 --other
+function xor(...)
+    local state = false
+    for _, flag in ipairs({...}) do
+        if flag then
+            state = not state
+        end
+    end
+    return state
+end
 
 function toboolean(object)
     object = tostring(object)
