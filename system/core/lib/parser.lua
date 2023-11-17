@@ -70,7 +70,7 @@ function parser.parseTraceback(traceback, maxlen, maxlines, spaces)
 
     local lines = {}
     for i, str in ipairs(parser.toLinesLn(traceback, maxlen)) do
-        table.insert(lines, (str:gsub(tab, spaces)))
+        table.insert(lines, (str:gsub(tab, space)))
         if #lines >= maxlines then
             break
         end
@@ -80,7 +80,7 @@ function parser.parseTraceback(traceback, maxlen, maxlines, spaces)
 end
 
 function parser.formatTraceback(...)
-    return table.concat(parser.parseTraceback(...))
+    return table.concat(parser.parseTraceback(...), "\n")
 end
 
 parser.unloadable = true
