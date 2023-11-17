@@ -23,11 +23,7 @@ function thread.stub(func, ...)
     th:resume()
     
     while th:status() ~= "dead" do
-        local successfully, err = pcall(event.yield)
-        if not successfully then
-            th:kill()
-            return successfully, err
-        end
+        event.yield()
     end
 
     return thread.decode(th)

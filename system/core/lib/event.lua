@@ -32,10 +32,6 @@ event.isListen = false --если текуший код timer/listen
 event.minTime = 0 --минимальное время прирывания, можно увеличить, это вызовет подения производительности но уменьшет энергопотребления
 event.listens = {}
 
-event.allowInterrupt = true
-event.interruptFlag = nil --вы можете записать сюда true чтобы вызвать прирывания, или обьект патока чтобы кильнуть только его. так же вы можете записать сюда interruptData патока чтобы киньнуть его
-event.interruptFunc = nil
-
 ------------------------------------------------------------------------
 
 function event.errLog(data)
@@ -137,7 +133,7 @@ function event.cancel(num)
     return ok
 end
 
-function event.pull(waitTime, ...) --добавляет фильтер
+function event.pull(waitTime, ...) --реализует фильтер
     local filters = {...}
 
     if #filters == 0 then
@@ -222,33 +218,6 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
     end
 
     local thread = package.get("thread")
-
-    --само ядро не поднимает event.interruptFlag, это могут делать дистрибутивы для прирывания процессов
-    --вы можете записать туда true и убить первый попавшийся на пути поток, а можете записать туда обьект патока, чтобы убить что-то конкретное
-    if event.allowInterrupt and event.interruptFlag then
-        local interrupt = event.interruptFlag == true
-        if not interrupt and thread then
-            local current = thread.current()
-            if current and
-            not current.noInterrupts and
-            not current.parentData.noInterrupts and
-            (event.interruptFlag == current or
-            event.interruptFlag == current.interruptData or
-            event.interruptFlag == current.parentData.interruptData) then
-                interrupt = true
-            end
-        end
-
-        if interrupt then
-            event.interruptFlag = nil
-
-            if event.interruptFunc then
-                event.interruptFunc()
-            else
-                error("interrupted", 0)
-            end
-        end
-    end
 
     --pullSignal для патоков
     if thread and thread.current() then
