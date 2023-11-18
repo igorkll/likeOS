@@ -2,6 +2,7 @@ local component = require("component")
 local fs = require("filesystem")
 local paths = require("paths")
 local event = require("event")
+local computer = require("computer")
 local internet = {settings = {}}
 internet.settings.timeout = 3
 internet.settings.downloadPart = 1024 * 32
@@ -9,6 +10,7 @@ internet.settings.downloadPart = 1024 * 32
 local unknown = "unknown error"
 
 function internet.wait(handle)
+    local startTime = computer.uptime()
     while true do
         local successfully, err = handle.finishConnect()
         if successfully then
@@ -16,6 +18,11 @@ function internet.wait(handle)
         elseif successfully == nil then
             return nil, tostring(err or unknown)
         end
+
+        if computer.uptime() - startTime > internet.settings.timeout then
+            return nil, "timeout error"
+        end
+
         event.yield()
     end
 end
