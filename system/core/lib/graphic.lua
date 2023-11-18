@@ -159,11 +159,9 @@ local function uploadEvent(self, eventData)
                 self.selected = oldSelected
             end
         elseif eventData[1] == "key_down" or eventData[1] == "key_up" or eventData[1] == "clipboard" then
-            for i, v in ipairs(lastinfo.keyboards[self.screen]) do
-                if eventData[2] == v then
-                    newEventData = eventData
-                    break
-                end
+            --eventData[2] == self.screen для подключения виртуальных клавиатур
+            if table.exists(lastinfo.keyboards[self.screen], eventData[2]) or eventData[2] == self.screen then 
+                newEventData = eventData
             end
         end
     end
