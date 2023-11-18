@@ -59,6 +59,29 @@ function thread.current()
     return find(thread.threads)
 end
 
+function thread.all()
+    local list = {}
+    
+    local function find(tbl)
+        local parsetbl = tbl.childs
+        if not parsetbl then parsetbl = tbl end
+        for i = #parsetbl, 1, -1 do
+            local v = parsetbl[i]
+            if v.thread then
+                table.insert(list, v)
+
+                local obj = find(v)
+                if obj then
+                    return obj
+                end
+            end
+        end
+    end
+    find(thread.threads)
+
+    return list
+end
+
 function thread.attachThread(t, obj)
     if obj then
         t.parentData = table.deepclone(obj.parentData)

@@ -159,8 +159,11 @@ local function uploadEvent(self, eventData)
                 self.selected = oldSelected
             end
         elseif eventData[1] == "key_down" or eventData[1] == "key_up" or eventData[1] == "clipboard" then
-            --eventData[2] == self.screen для подключения виртуальных клавиатур
-            if table.exists(lastinfo.keyboards[self.screen], eventData[2]) or eventData[2] == self.screen then 
+            if table.exists(lastinfo.keyboards[self.screen], eventData[2]) then 
+                newEventData = eventData
+            end
+        elseif eventData[1] == "softwareInsert" then --для подключения виртуальных клавиатур
+            if eventData[2] == self.screen then
                 newEventData = eventData
             end
         end
@@ -559,8 +562,8 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
         redraw()
     end
 
-    local function clipboard(inputStr)
-        if not disableClipboard and inputStr then
+    local function clipboard(inputStr, force)
+        if (not disableClipboard or force) and inputStr then
             local out = add(inputStr)
             if out then
                 removeSelect()
@@ -738,6 +741,9 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                 end
             elseif eventData[1] == "clipboard" then --вставка с реального clipboard
                 local str = clipboard(eventData[3])
+                if str then outFromRead() return str end
+            elseif eventData[1] == "softwareInsert" then --для подключения виртуальных клавиатур
+                local str = clipboard(eventData[3], true)
                 if str then outFromRead() return str end
             end
         end
