@@ -134,10 +134,11 @@ function event.cancel(num)
 end
 
 function event.pull(waitTime, ...) --реализует фильтер
-    local filters = {...}
+    local filters = table.pack(...)
 
     if type(waitTime) == "string" then
         table.insert(filters, 1, waitTime)
+        filters.n = filters.n + 1
         waitTime = math.huge
     elseif not waitTime then
         waitTime = math.huge
@@ -154,8 +155,9 @@ function event.pull(waitTime, ...) --реализует фильтер
         local eventData = {computer.pullSignal(ltime)}
 
         local ok = true
-        for i, v in ipairs(filters) do
-            if v ~= eventData[i] then
+        for i = 1, filters.n do
+            local value = filters[i]
+            if value and value ~= eventData[i] then
                 ok = false
                 break
             end
