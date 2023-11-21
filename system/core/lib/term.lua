@@ -19,11 +19,35 @@ function term.create(screen, x, y, sizeX, sizeY, selected, isPal)
     obj.sizeY = sizeY
     obj.selected = selected
     obj.isPal = isPal
+    obj.defaultPrintTab = 4
 
     setmetatable(obj, {__index = term})
     return obj
 end
 
+
+function term:print(...)
+    local args = table.pack(...)
+    local len = args.n
+    local printResult = ""
+    
+    for i = 1, len do
+        local str = tostring(args[i])
+        printResult = printResult .. str
+        if i ~= len then
+            local strlen = #str
+            local dtablen = self.defaultPrintTab
+            local tablen = 0
+            while tablen <= 0 do
+                tablen = dtablen - strlen
+                dtablen = dtablen + self.defaultPrintTab
+            end
+            printResult = printResult .. string.rep(" ", tablen * 2)
+        end
+    end
+
+    self:writeLn(printResult)
+end
 
 function term:setColors(bg, fg)
     self.bg = bg
@@ -82,8 +106,7 @@ function term:write(str)
 end
 
 function term:writeLn(str)
-    str = tostring(str)
-    self:write(str .. "\n")
+    self:write(tostring(str) .. "\n")
 end
 
 function term:read(hidden, buffer, syntax, disHistory)
