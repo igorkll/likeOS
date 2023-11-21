@@ -19,7 +19,7 @@ function term.create(screen, x, y, sizeX, sizeY, selected, isPal)
     obj.sizeY = sizeY
     obj.selected = selected
     obj.isPal = isPal
-    obj.defaultPrintTab = 4
+    obj.defaultPrintTab = 8
 
     setmetatable(obj, {__index = term})
     return obj
@@ -42,7 +42,7 @@ function term:print(...)
                 tablen = dtablen - strlen
                 dtablen = dtablen + self.defaultPrintTab
             end
-            printResult = printResult .. string.rep(" ", tablen * 2)
+            printResult = printResult .. string.rep(" ", tablen)
         end
     end
 
