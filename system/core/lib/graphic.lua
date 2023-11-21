@@ -32,6 +32,7 @@ graphic.selectColorFore = nil
 graphic.gpuPrivateList = {} --для приватизации видеокарт, дабы избежать "кражи" другими процессами, добовляйте так graphic.gpuPrivateList[gpuAddress] = true
 graphic.vgpus = {}
 graphic.bindCache = {}
+graphic.topBindCache = {}
 
 local function valueCheck(value)
     if value ~= value or value == math.huge or value == -math.huge then
@@ -957,16 +958,22 @@ end
 
 ------------------------------------
 
-function graphic.findGpuAddress(screen)
+function graphic.findGpuAddress(screen, topOnly)
     local deviceinfo = lastinfo.deviceinfo
     if not deviceinfo[screen] then
         graphic.bindCache[screen] = nil
+        graphic.topBindCache[screen] = nil
         graphic.vgpus[screen] = nil
         return
     end
 
-    if graphic.bindCache[screen] then
-        return graphic.bindCache[screen]
+    local bindCache = graphic.bindCache
+    if topOnly then
+        bindCache = graphic.topBindCache
+    end
+
+    if bindCache[screen] then
+        return bindCache[screen]
     end
 
     local screenLevel = tonumber(deviceinfo[screen].capacity) or 0
@@ -981,19 +988,21 @@ function graphic.findGpuAddress(screen)
             if not graphic.gpuPrivateList[address] and (deep or connected) then
                 gpuLevel = (tonumber(deviceinfo[address].capacity) or 0) / 1000
 
-                if connectedAny and not connected then
-                    gpuLevel = gpuLevel - 1000
-                else
-                    if connected and gpuLevel == screenLevel then
-                        gpuLevel = gpuLevel + 2000
-                    elseif connected then
-                        gpuLevel = gpuLevel + 1000
-                    end
+                if not topOnly then
+                    if connectedAny and not connected then
+                        gpuLevel = gpuLevel - 1000
+                    else
+                        if connected and gpuLevel == screenLevel then
+                            gpuLevel = gpuLevel + 2000
+                        elseif connected then
+                            gpuLevel = gpuLevel + 1000
+                        end
 
-                    if gpuLevel == screenLevel then
-                        gpuLevel = gpuLevel + 20
-                    elseif gpuLevel > screenLevel then
-                        gpuLevel = gpuLevel + 10
+                        if gpuLevel == screenLevel then
+                            gpuLevel = gpuLevel + 20
+                        elseif gpuLevel > screenLevel then
+                            gpuLevel = gpuLevel + 10
+                        end
                     end
                 end
 
@@ -1004,15 +1013,18 @@ function graphic.findGpuAddress(screen)
             end
         end
     end
-    check()
+    
+    if not topOnly then
+        check()
+    end
     check(true)
 
-    graphic.bindCache[screen] = bestGpu
+    bindCache[screen] = bestGpu
     return bestGpu
 end
 
-function graphic.findGpuProxy(screen)
-    local addr = graphic.findGpuAddress(screen)
+function graphic.findGpuProxy(screen, topOnly)
+    local addr = graphic.findGpuAddress(screen, topOnly)
     if addr then
         return component.proxy(addr)
     end
@@ -1056,8 +1068,8 @@ function graphic.initGpu(screen, gpuaddress)
     end
 end
 
-function graphic.findGpu(screen)
-    local gpu = graphic.findGpuAddress(screen)
+function graphic.findGpu(screen, topOnly)
+    local gpu = graphic.findGpuAddress(screen, topOnly)
     if gpu then
         return graphic.initGpu(screen, gpu)
     end
@@ -1085,7 +1097,7 @@ function graphic.getResolution(screen)
 end
 
 function graphic.maxResolution(screen)
-    local gpu = graphic.findGpu(screen)
+    local gpu = graphic.findGpu(screen, true)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
@@ -1095,7 +1107,7 @@ function graphic.maxResolution(screen)
 end
 
 function graphic.setResolution(screen, x, y)
-    local gpu = graphic.findGpu(screen)
+    local gpu = graphic.findGpu(screen, true)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             local activeBuffer = gpu.getActiveBuffer()
@@ -1170,7 +1182,7 @@ function graphic.getDepth(screen)
 end
 
 function graphic.setDepth(screen, v)
-    local gpu = graphic.findGpu(screen)
+    local gpu = graphic.findGpu(screen, true)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
@@ -1180,7 +1192,7 @@ function graphic.setDepth(screen, v)
 end
 
 function graphic.maxDepth(screen)
-    local gpu = graphic.findGpu(screen)
+    local gpu = graphic.findGpu(screen, true)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
@@ -1200,7 +1212,7 @@ function graphic.getViewport(screen)
 end
 
 function graphic.setViewport(screen, x, y)
-    local gpu = graphic.findGpu(screen)
+    local gpu = graphic.findGpu(screen, true)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
@@ -1250,6 +1262,7 @@ end
 event.hyperListen(function(eventType, _, ctype)
     if (eventType == "component_added" or eventType == "component_removed") and (ctype == "screen" or ctype == "gpu") then
         graphic.bindCache = {}
+        graphic.topBindCache = {}
         graphic.vgpus = {}
     end
 end)
