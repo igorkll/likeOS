@@ -136,15 +136,15 @@ end
 function event.pull(waitTime, ...) --реализует фильтер
     local filters = {...}
 
-    if #filters == 0 then
-        return computer.pullSignal(waitTime)
-    end
-
     if type(waitTime) == "string" then
         table.insert(filters, 1, waitTime)
         waitTime = math.huge
     elseif not waitTime then
         waitTime = math.huge
+    end
+
+    if #filters == 0 then
+        return computer.pullSignal(waitTime)
     end
     
     local startTime = computer.uptime()
