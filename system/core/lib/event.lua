@@ -6,16 +6,6 @@ local package = require("package")
 
 --raw_computer_pullSignal насамом деле некакой не raw и уже несколько раз хукнут в boot скриптах
 local raw_computer_pullSignal = computer.pullSignal
-local thread_computer_pullSignal = function(time)
-    if not time then time = math.huge end
-    local startTime = computer.uptime()
-    repeat
-        local eventData = {coroutine.yield()}
-        if #eventData > 0 then
-            return table.unpack(eventData)
-        end
-    until computer.uptime() - startTime > time
-end
 
 local function tableInsert(tbl, value) --кастомный insert с возвращения значения
     for i = 1, #tbl + 1 do
@@ -76,10 +66,10 @@ function event.wait() --ждать то тех пор пока твой пото
     event.sleep(math.huge)
 end
 
-function event.listen(eventType, func)
+function event.listen(eventType, func, th)
     checkArg(1, eventType, "string", "nil")
     checkArg(2, func, "function")
-    return tableInsert(event.listens, {eventType = eventType, func = func, type = "l"}) --нет класический table.insert не подайдет, так как он не дает понять, нуда вставил значения
+    return tableInsert(event.listens, {th = th, eventType = eventType, func = func, type = "l"}) --нет класический table.insert не подайдет, так как он не дает понять, нуда вставил значения
 end
 
 --имеет самый самый высокий приоритет из возможных
@@ -114,11 +104,11 @@ function event.hyperHook(func)
     end
 end
 
-function event.timer(time, func, times)
+function event.timer(time, func, times, th)
     checkArg(1, time, "number")
     checkArg(2, func, "function")
     checkArg(3, times, "number", "nil")
-    return tableInsert(event.listens, {time = time, func = func, times = times or 1,
+    return tableInsert(event.listens, {th = th, time = time, func = func, times = times or 1,
     type = "t", lastTime = computer.uptime()})
 end
 
@@ -220,13 +210,11 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
     end
 
     local thread = package.get("thread")
-
-    --pullSignal для патоков
-    if thread and thread.current() then
-        return thread_computer_pullSignal(waitTime)
+    local current
+    if thread then
+        current = thread.current()
     end
-    
-    --главный pullSignal
+
     local startTime = computer.uptime()
     while true do
         local realWaitTime = waitTime - (computer.uptime() - startTime)
@@ -237,7 +225,7 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
         else
             --поиск времени до первого таймера, что обязательно на него успеть
             for k, v in pairs(event.listens) do --нет ipairs неподайдет, так могут быть дырки
-                if v.type == "t" and not v.killed then
+                if v.type == "t" and not v.killed and v.th == current then
                     local timerTime = v.time - (computer.uptime() - v.lastTime)
                     if timerTime < realWaitTime then
                         realWaitTime = timerTime
@@ -250,34 +238,47 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
             end
         end
 
-        local eventData = {raw_computer_pullSignal(realWaitTime)} --обязательно повисеть в pullSignal
-        if not event.isListen then
-            runThreads(eventData)
+        local eventData
+        if not current then
+            eventData = {raw_computer_pullSignal(realWaitTime)} --обязательно повисеть в pullSignal
+            if not event.isListen then
+                runThreads(eventData)
+            end
+        else
+            eventData = {coroutine.yield()}
         end
 
         for k, v in pairs(event.listens) do --таймеры. нет ipairs неподайдет, там могуть быть дырки
-            if v.type == "t" and not v.killed then
-                local uptime = computer.uptime() 
-                if uptime - v.lastTime >= v.time then
-                    v.lastTime = uptime --ДО выполнения функции ресатаем таймер, чтобы тайминги не поплывали при долгих функциях
-                    if v.times <= 0 then
-                        event.listens[k] = nil
-                    else
-                        runCallback(true, v.func, k)
-                        v.times = v.times - 1
+            if v.type == "t" and not v.killed and v.th == current then
+                if not v.th or v.th:status() == "running" then
+                    local uptime = computer.uptime() 
+                    if uptime - v.lastTime >= v.time then
+                        v.lastTime = uptime --ДО выполнения функции ресатаем таймер, чтобы тайминги не поплывали при долгих функциях
                         if v.times <= 0 then
                             event.listens[k] = nil
+                        else
+                            runCallback(true, v.func, k)
+                            v.times = v.times - 1
+                            if v.times <= 0 then
+                                event.listens[k] = nil
+                            end
                         end
                     end
+                elseif v.th:status() == "dead" then
+                    event.listens[k] = nil
                 end
             end
         end
 
         if #eventData > 0 then
             for k, v in pairs(event.listens) do --слушатели. нет ipairs неподайдет, так могут быть дырки
-                if v.type == "l" and not v.killed then
-                    if not v.eventType or v.eventType == eventData[1] then
-                        runCallback(false, v.func, k, table.unpack(eventData))
+                if v.type == "l" and not v.killed and v.th == current then
+                    if not v.th or v.th:status() == "running" then
+                        if not v.eventType or v.eventType == eventData[1] then
+                            runCallback(false, v.func, k, table.unpack(eventData))
+                        end
+                    elseif v.th:status() == "dead" then
+                        event.listens[k] = nil
                     end
                 end
             end

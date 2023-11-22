@@ -135,6 +135,14 @@ function thread.createTo(func, connectTo, ...)
     return obj
 end
 
+function thread.listen(eventType, func)
+    return require("event").listen(eventType, func, thread.current())
+end
+
+function thread.timer(time, func, times)
+    return require("event").timer(time, func, times, thread.current())
+end
+
 ------------------------------------thread functions
 
 function raw_kill(t) --не стоит убивать паток через raw_kill
