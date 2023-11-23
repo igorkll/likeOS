@@ -2,10 +2,9 @@ local computer = require("computer")
 local fs = require("filesystem")
 local package = require("package")
 
-------------------------------------
-
---raw_computer_pullSignal насамом деле некакой не raw и уже несколько раз хукнут в boot скриптах
-local raw_computer_pullSignal = computer.pullSignal
+local event = {}
+event.minTime = 0 --минимальное время прирывания, можно увеличить, это вызовет подения производительности но уменьшет энергопотребления
+event.listens = {}
 
 local function tableInsert(tbl, value) --кастомный insert с возвращения значения
     for i = 1, #tbl + 1 do
@@ -16,11 +15,47 @@ local function tableInsert(tbl, value) --кастомный insert с возвр
     end
 end
 
-local event = {push = computer.pushSignal}
-event.isListen = false --если текуший код timer/listen
+local function runThreads(eventData)
+    local thread = package.get("thread")
+    if thread then
+        local function find(tbl)
+            local parsetbl = tbl.childs
+            if not parsetbl then parsetbl = tbl end
+            for i = #parsetbl, 1, -1 do
+                local v = parsetbl[i]
+                v:status()
+                if v.dead or not v.thread or coroutine.status(v.thread) == "dead" then
+                    table.remove(parsetbl, i)
+                    v.thread = nil
+                    v.dead = true
+                elseif v.enable then --если поток спит или умер то его потомки так-же не будут работать
+                    v.out = {thread.xpcall(v.thread, table.unpack(v.args or eventData))}
+                    if not v.out[1] then
+                        event.errLog("thread error: " .. tostring(v.out[2] or "unknown") .. "\n" .. tostring(v.out[3] or "unknown"))
+                    end
 
-event.minTime = 0 --минимальное время прирывания, можно увеличить, это вызовет подения производительности но уменьшет энергопотребления
-event.listens = {}
+                    v.args = nil
+                    find(v)
+                end
+            end
+        end
+        find(thread.threads)
+    end
+end
+
+local function runCallback(isTimer, func, index, ...)
+    local oldState = event.isListen
+    event.isListen = true
+    local ok, err = xpcall(func, debug.traceback, ...)
+    event.isListen = oldState
+    if ok then
+        if err == false then --таймер/слушатель хочет отключиться
+            event.listens[index] = nil
+        end
+    else
+        event.errLog((isTimer and "timer" or "listen") .. " error: " .. tostring(err or "unknown"))
+    end
+end
 
 ------------------------------------------------------------------------
 
@@ -36,7 +71,6 @@ function event.sleep(waitTime)
         computer.pullSignal(waitTime - (computer.uptime() - startTime))
     until computer.uptime() - startTime >= waitTime
 end
-os.sleep = event.sleep
 
 function event.yield()
     computer.pullSignal(event.minTime)
@@ -70,38 +104,6 @@ function event.listen(eventType, func, th)
     checkArg(1, eventType, "string", "nil")
     checkArg(2, func, "function")
     return tableInsert(event.listens, {th = th, eventType = eventType, func = func, type = "l"}) --нет класический table.insert не подайдет, так как он не дает понять, нуда вставил значения
-end
-
---имеет самый самый высокий приоритет из возможных
---не может быть как либо удален до перезагрузки
---вызываеться при каждом завершении pullSignal даже если события не пришло
---ошибки в функции переданой в hyperListen будут переданы в вызвавщий pullSignal
-function event.hyperListen(func)
-    checkArg(1, func, "function")
-    local pullSignal = raw_computer_pullSignal
-    local unpack = table.unpack
-    raw_computer_pullSignal = function (time)
-        local eventData = {pullSignal(time)}
-        func(unpack(eventData))
-        return unpack(eventData)
-    end
-end
-
-function event.hyperTimer(func)
-    checkArg(1, func, "function")
-    local pullSignal = raw_computer_pullSignal
-    raw_computer_pullSignal = function (time)
-        func()
-        return pullSignal(time)
-    end
-end
-
-function event.hyperHook(func)
-    checkArg(1, func, "function")
-    local pullSignal = raw_computer_pullSignal
-    raw_computer_pullSignal = function (time)
-        return func(pullSignal(time))
-    end
 end
 
 function event.timer(time, func, times, th)
@@ -161,45 +163,37 @@ end
 
 ------------------------------------------------------------------------
 
-local function runThreads(eventData)
-    local thread = package.get("thread")
-    if thread then
-        local function find(tbl)
-            local parsetbl = tbl.childs
-            if not parsetbl then parsetbl = tbl end
-            for i = #parsetbl, 1, -1 do
-                local v = parsetbl[i]
-                v:status()
-                if v.dead or not v.thread or coroutine.status(v.thread) == "dead" then
-                    table.remove(parsetbl, i)
-                    v.thread = nil
-                    v.dead = true
-                elseif v.enable then --если поток спит или умер то его потомки так-же не будут работать
-                    v.out = {thread.xpcall(v.thread, table.unpack(v.args or eventData))}
-                    if not v.out[1] then
-                        event.errLog("thread error: " .. tostring(v.out[2] or "unknown") .. "\n" .. tostring(v.out[3] or "unknown"))
-                    end
+local computer_pullSignal = computer.pullSignal
 
-                    v.args = nil
-                    find(v)
-                end
-            end
-        end
-        find(thread.threads)
+--имеет самый самый высокий приоритет из возможных
+--не может быть как либо удален до перезагрузки
+--вызываеться при каждом завершении pullSignal даже если события не пришло
+--ошибки в функции переданой в hyperListen будут переданы в вызвавщий pullSignal
+function event.hyperListen(func)
+    checkArg(1, func, "function")
+    local pullSignal = computer_pullSignal
+    local unpack = table.unpack
+    computer_pullSignal = function (time)
+        local eventData = {pullSignal(time)}
+        func(unpack(eventData))
+        return unpack(eventData)
     end
 end
 
-local function runCallback(isTimer, func, index, ...)
-    local oldState = event.isListen
-    event.isListen = true
-    local ok, err = xpcall(func, debug.traceback, ...)
-    event.isListen = oldState
-    if ok then
-        if err == false then --таймер/слушатель хочет отключиться
-            event.listens[index] = nil
-        end
-    else
-        event.errLog((isTimer and "timer" or "listen") .. " error: " .. tostring(err or "unknown"))
+function event.hyperTimer(func)
+    checkArg(1, func, "function")
+    local pullSignal = computer_pullSignal
+    computer_pullSignal = function (time)
+        func()
+        return pullSignal(time)
+    end
+end
+
+function event.hyperHook(func)
+    checkArg(1, func, "function")
+    local pullSignal = computer_pullSignal
+    computer_pullSignal = function (time)
+        return func(pullSignal(time))
     end
 end
 
@@ -239,13 +233,13 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
         end
 
         local eventData
-        if not current then
-            eventData = {raw_computer_pullSignal(realWaitTime)} --обязательно повисеть в pullSignal
+        if current then
+            eventData = {coroutine.yield()}
+        else
+            eventData = {computer_pullSignal(realWaitTime)} --обязательно повисеть в pullSignal
             if not event.isListen then
                 runThreads(eventData)
             end
-        else
-            eventData = {coroutine.yield()}
         end
 
         for k, v in pairs(event.listens) do --таймеры. нет ipairs неподайдет, там могуть быть дырки
@@ -291,4 +285,6 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
     end
 end
 
+os.sleep = event.sleep
+event.push = computer.pushSignal
 return event
