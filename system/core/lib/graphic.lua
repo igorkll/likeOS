@@ -43,12 +43,12 @@ end
 
 ------------------------------------class window
 
-local function set(self, x, y, background, foreground, text)
+local function set(self, x, y, background, foreground, text, vertical)
     local gpu = graphic.findGpu(self.screen)
     if gpu then
         gpu.setBackground(background, self.isPal)
         gpu.setForeground(foreground, self.isPal)
-        gpu.set(valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), text)
+        gpu.set(valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), text, vertical)
         --graphic._set(gpu, valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), background, self.isPal, foreground, self.isPal, text)
     end
 
