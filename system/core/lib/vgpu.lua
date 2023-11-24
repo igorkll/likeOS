@@ -127,19 +127,31 @@ function vgpu.create(gpu, screen)
         return chars[index], foregrounds[index], backgrounds[index]
     end
 
-    function obj.set(x, y, text)
+    function obj.set(x, y, text, vertical)
         local currentBack, _, currentFore, _, text = graphic._formatColor(gpu, currentBack, currentBackPal, currentFore, currentForePal, text, true)
         x = floor(x)
         y = floor(y)
 
-        for i = 1, unicode.len(text) do
-            if x + (i - 1) > rx then break end
-            index = ((x + (i - 1)) - 1) + ((y - 1) * rx)
-            backgrounds[index] = currentBack
-            foregrounds[index] = currentFore
-            --backgroundsPal[index] = currentBackPal
-            --foregroundsPal[index] = currentForePal
-            chars[index] = unicode.sub(text, i, i)
+        if vertical then
+            for i = 1, unicode.len(text) do
+                if y + (i - 1) > ry then break end
+                index = ((x - 1) * rx) + ((y + (i - 1)) - 1)
+                backgrounds[index] = currentBack
+                foregrounds[index] = currentFore
+                --backgroundsPal[index] = currentBackPal
+                --foregroundsPal[index] = currentForePal
+                chars[index] = unicode.sub(text, i, i)
+            end
+        else
+            for i = 1, unicode.len(text) do
+                if x + (i - 1) > rx then break end
+                index = ((x + (i - 1)) - 1) + ((y - 1) * rx)
+                backgrounds[index] = currentBack
+                foregrounds[index] = currentFore
+                --backgroundsPal[index] = currentBackPal
+                --foregroundsPal[index] = currentForePal
+                chars[index] = unicode.sub(text, i, i)
+            end
         end
 
         updated = true
@@ -352,7 +364,7 @@ function vgpu.createStub(gpu)
         return old, oldPal
     end
 
-    function obj.set(x, y, text)
+    function obj.set(x, y, text, vertical)
         local newBack, newBackPal, newFore, newForePal, text = graphic._formatColor(gpu, back, backPal, fore, forePal, text)
         if fgUpdated then
             gpu.setForeground(newFore, newForePal)            
@@ -362,7 +374,7 @@ function vgpu.createStub(gpu)
             gpu.setBackground(newBack, newBackPal)
             bgUpdated = false
         end
-        gpu.set(x, y, text)
+        gpu.set(x, y, text, vertical)
     end
 
     function obj.fill(x, y, sx, sy, char)
