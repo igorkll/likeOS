@@ -1187,6 +1187,7 @@ function graphic.setDepth(screen, v)
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
+        graphic.vgpus[screen] = nil
         return gpu.setDepth(v)
     end
 end
