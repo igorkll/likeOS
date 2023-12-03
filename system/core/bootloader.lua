@@ -153,6 +153,8 @@ function bootloader.initScreen(gpu, screen, rx, ry)
     gpu.setBackground(0)
     gpu.setForeground(0xFFFFFF)
     gpu.fill(1, 1, rx, ry, " ")
+
+    return rx, ry
 end
 
 function bootloader.bootstrap()
