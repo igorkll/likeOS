@@ -1086,13 +1086,23 @@ function graphic.findNativeGpu(screen)
     end
 end
 
+------------------------------------
+
+local function backBuffer(screen, ...)
+    local gpu = graphic.findGpu(screen)
+    if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
+        gpu.setActiveBuffer(graphic.screensBuffers[screen])
+    end
+    return ...
+end
+
 function graphic.getResolution(screen)
     local gpu = graphic.findGpu(screen)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.getResolution()
+        return backBuffer(screen, gpu.getResolution())
     end
 end
 
@@ -1102,7 +1112,7 @@ function graphic.maxResolution(screen)
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.maxResolution()
+        return backBuffer(screen, gpu.maxResolution())
     end
 end
 
@@ -1129,17 +1139,17 @@ function graphic.setResolution(screen, x, y)
                 gpu.freeBuffer(activeBuffer)
 
                 if palette then
-                    gpu.setActiveBuffer(newBuffer)
+                    gpu.setActiveBuffer(0)
                     for i, color in ipairs(palette) do
                         gpu.setPaletteColor(i - 1, color)
                     end
                     
-                    gpu.setActiveBuffer(0)
+                    gpu.setActiveBuffer(newBuffer)
                     for i, color in ipairs(palette) do
                         gpu.setPaletteColor(i - 1, color)
                     end
                 else
-                    gpu.setActiveBuffer(0)
+                    gpu.setActiveBuffer(newBuffer)
                 end
             else
                 graphic.screensBuffers[screen] = nil
@@ -1153,11 +1163,21 @@ function graphic.setPaletteColor(screen, i, v)
     local gpu = graphic.findGpu(screen)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
-            gpu.setActiveBuffer(graphic.screensBuffers[screen])
-            gpu.setPaletteColor(i, v)
             gpu.setActiveBuffer(0)
+            gpu.setPaletteColor(i, v)
+            gpu.setActiveBuffer(graphic.screensBuffers[screen])
         end
         return gpu.setPaletteColor(i, v)
+    end
+end
+
+function graphic.getPaletteColor(screen, i)
+    local gpu = graphic.findGpu(screen)
+    if gpu then
+        if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
+            gpu.setActiveBuffer(0)
+        end
+        return backBuffer(screen, gpu.getPaletteColor(i))
     end
 end
 
@@ -1180,9 +1200,9 @@ function graphic.setPalette(screen, palette, fromZero)
         end
 
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
-            gpu.setActiveBuffer(graphic.screensBuffers[screen])
-            set()
             gpu.setActiveBuffer(0)
+            set()
+            gpu.setActiveBuffer(graphic.screensBuffers[screen])
         end
         set()
     end
@@ -1203,17 +1223,7 @@ function graphic.getPalette(screen, fromZero)
                 palette[i + 1] = gpu.getPaletteColor(i)
             end
         end
-        return palette
-    end
-end
-
-function graphic.getPaletteColor(screen, i)
-    local gpu = graphic.findGpu(screen)
-    if gpu then
-        if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
-            gpu.setActiveBuffer(0)
-        end
-        return gpu.getPaletteColor(i)
+        return backBuffer(screen, palette)
     end
 end
 
@@ -1223,17 +1233,19 @@ function graphic.getDepth(screen)
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.getDepth()
+        return backBuffer(screen, gpu.getDepth())
     end
 end
 
 function graphic.setDepth(screen, v)
     local gpu = graphic.findGpu(screen, true)
     if gpu then
+        graphic.vgpus[screen] = nil
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
+            gpu.setDepth(v)
+            gpu.setActiveBuffer(graphic.screensBuffers[screen])
         end
-        graphic.vgpus[screen] = nil
         return gpu.setDepth(v)
     end
 end
@@ -1254,7 +1266,7 @@ function graphic.getViewport(screen)
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.getViewport()
+        return backBuffer(screen, gpu.getViewport())
     end
 end
 
@@ -1264,7 +1276,7 @@ function graphic.setViewport(screen, x, y)
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.setViewport(x, y)
+        return backBuffer(screen, gpu.setViewport(x, y))
     end
 end
 
