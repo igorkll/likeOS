@@ -1161,7 +1161,7 @@ function graphic.setPaletteColor(screen, i, v)
     end
 end
 
-function graphic.setPalette(screen, tbl, fromZero)
+function graphic.setPalette(screen, palette, fromZero)
     local gpu = graphic.findGpu(screen)
     if gpu then
         local from = fromZero and 0 or 1
@@ -1173,8 +1173,8 @@ function graphic.setPalette(screen, tbl, fromZero)
                     index = i - 1
                 end
                 
-                if gpu.getPaletteColor(index) ~= tbl[i] then
-                    gpu.setPaletteColor(index, tbl[i])
+                if gpu.getPaletteColor(index) ~= palette[i] then
+                    gpu.setPaletteColor(index, palette[i])
                 end
             end
         end
@@ -1185,6 +1185,25 @@ function graphic.setPalette(screen, tbl, fromZero)
             gpu.setActiveBuffer(0)
         end
         set()
+    end
+end
+
+function graphic.getPalette(screen, fromZero)
+    local gpu = graphic.findGpu(screen)
+    if gpu then
+        if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
+            gpu.setActiveBuffer(0)
+        end
+
+        local palette = {}
+        for i = 0, 15 do
+            if fromZero then
+                palette[i] = gpu.getPaletteColor(i)
+            else
+                palette[i + 1] = gpu.getPaletteColor(i)
+            end
+        end
+        return palette
     end
 end
 
