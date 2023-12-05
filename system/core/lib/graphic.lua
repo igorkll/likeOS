@@ -1128,7 +1128,6 @@ function graphic.setResolution(screen, x, y)
                 for i = 0, 15 do
                     table.insert(palette, graphic.getPaletteColor(screen, i) or 0)
                 end
-                gpu.setActiveBuffer(activeBuffer)
             end
             
             local newBuffer = gpu.allocateBuffer(x, y)
@@ -1152,10 +1151,18 @@ function graphic.setResolution(screen, x, y)
                     gpu.setActiveBuffer(newBuffer)
                 end
             else
+                gpu.setActiveBuffer(0)
                 graphic.screensBuffers[screen] = nil
             end
         end
-        return gpu.setResolution(x, y)
+
+        if graphic.screensBuffers[screen] then
+            gpu.setResolution(x, y)
+            gpu.setActiveBuffer(0)
+            return backBuffer(screen, gpu.setResolution(x, y))
+        else
+            return gpu.setResolution(x, y)
+        end
     end
 end
 
