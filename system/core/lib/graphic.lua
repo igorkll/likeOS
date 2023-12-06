@@ -1263,7 +1263,7 @@ function graphic.maxDepth(screen)
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.maxDepth()
+        return backBuffer(screen, gpu.maxDepth())
     end
 end
 
