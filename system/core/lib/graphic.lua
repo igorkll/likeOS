@@ -1091,7 +1091,7 @@ end
 local function backBuffer(screen, ...)
     local gpu = graphic.findGpu(screen)
     if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
-        gpu.setActiveBuffer(graphic.screensBuffers[screen])
+        gpu.setActiveBuffer(graphic.screensBuffers[screen] or 0)
     end
     return ...
 end
@@ -1166,13 +1166,18 @@ function graphic.setResolution(screen, x, y)
     end
 end
 
+function graphic.isValidResolution(screen, x, y)
+    local rx, ry = graphic.maxResolution(screen)
+    return not (x > rx or y > rx or (x * y) > (rx * ry))
+end
+
 function graphic.setPaletteColor(screen, i, v)
     local gpu = graphic.findGpu(screen)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
             gpu.setPaletteColor(i, v)
-            gpu.setActiveBuffer(graphic.screensBuffers[screen])
+            gpu.setActiveBuffer(graphic.screensBuffers[screen] or 0)
         end
         return gpu.setPaletteColor(i, v)
     end
@@ -1209,7 +1214,7 @@ function graphic.setPalette(screen, palette, fromZero)
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
             set()
-            gpu.setActiveBuffer(graphic.screensBuffers[screen])
+            gpu.setActiveBuffer(graphic.screensBuffers[screen] or 0)
         end
         set()
     end
@@ -1251,7 +1256,7 @@ function graphic.setDepth(screen, v)
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
             gpu.setDepth(v)
-            gpu.setActiveBuffer(graphic.screensBuffers[screen])
+            gpu.setActiveBuffer(graphic.screensBuffers[screen] or 0)
         end
         return gpu.setDepth(v)
     end
