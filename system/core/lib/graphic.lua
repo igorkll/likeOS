@@ -1306,18 +1306,20 @@ end
 function graphic.update(screen)
     if graphic.updated[screen] then
         local gpuaddress = graphic.findGpuAddress(screen)
-        if graphic.allowSoftwareBuffer then
-            local gpu = graphic.initGpu(screen, gpuaddress)
-            if gpu.update then --if this is vgpu
-                gpu.update()
+        if gpuaddress then
+            if graphic.allowSoftwareBuffer then
+                local gpu = graphic.initGpu(screen, gpuaddress)
+                if gpu.update then --if this is vgpu
+                    gpu.update()
+                end
+            elseif graphic.allowHardwareBuffer then
+                local gpu = graphic.initGpu(screen, gpuaddress)
+                if gpu.bitblt then
+                    gpu.bitblt()
+                end
             end
-        elseif graphic.allowHardwareBuffer then
-            local gpu = graphic.initGpu(screen, gpuaddress)
-            if gpu.bitblt then
-                gpu.bitblt()
-            end
+            graphic.updated[screen] = nil
         end
-        graphic.updated[screen] = nil
     end
 end
 
