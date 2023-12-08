@@ -8,6 +8,7 @@ local component = require("component")
 local fs = require("filesystem")
 local paths = require("paths")
 local calls = require("calls")
+local unicode = require("unicode")
 local system = {}
 
 -------------------------------------------------
@@ -16,6 +17,10 @@ function system.stub()
 end
 
 function system.getResourcePath(name)
+    if unicode.sub(name, 1, 1) == "/" then
+        return name
+    end
+    
     return paths.concat(paths.path(system.getSelfScriptPath()), name)
 end
 

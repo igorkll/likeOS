@@ -28,6 +28,9 @@ graphic.hideChar = "*"
 graphic.cursorColor = nil
 graphic.selectColor = nil
 graphic.selectColorFore = nil
+graphic.defaultInputForeground = nil
+graphic.defaultInputBackground = nil
+graphic.fakePalette = nil
 
 graphic.gpuPrivateList = {} --для приватизации видеокарт, дабы избежать "кражи" другими процессами, добовляйте так graphic.gpuPrivateList[gpuAddress] = true
 graphic.vgpus = {}
@@ -211,6 +214,14 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
     local gpu = graphic.findGpu(self.screen)
     local depth = gpu.getDepth()
 
+    local function getPalColor(pal)
+        if graphic.fakePalette then
+            return graphic.fakePalette[pal]
+        else
+            return gpu.getPaletteColor(pal)
+        end
+    end
+
     local function findColor(rgb, pal, bw)
         if self.isPal and depth > 1 then
             return pal
@@ -218,15 +229,15 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
             if depth == 8 then
                 return rgb
             elseif depth == 4 then
-                return gpu.getPaletteColor(pal)
+                return getPalColor(pal)
             else
                 return bw
             end
         end
     end
 
-    background = background or findColor(0x000000, colors.black, 0x000000)
-    foreground = foreground or findColor(0xffffff, colors.white, 0xffffff)
+    background = background or graphic.defaultInputBackground or findColor(0x000000, colors.black, 0x000000)
+    foreground = foreground or graphic.defaultInputForeground or findColor(0xffffff, colors.white, 0xffffff)
     local cursorColor     = graphic.cursorColor     or findColor(0x00ff00, colors.lightgreen, foreground)
     local selectColor     = graphic.selectColor     or findColor(0x0000ff, colors.blue,       foreground)
     local selectColorFore = graphic.selectColorFore
@@ -241,7 +252,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
             if depth == 8 then
                 selectColor = 0x0000ff
             elseif depth == 4 then
-                selectColor = gpu.getPaletteColor(colors.blue)
+                selectColor = getPalColor(colors.blue)
             else
                 selectColor = 0xffffff
                 selectColorFore = 0x000000
@@ -269,7 +280,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
 
     local function getForeCol(i, def, pal)
         if pal then
-            def = gpu.getPaletteColor(def)
+            def = getPalColor(def)
         end
         if selectFrom and selectColorFore then
             return (i >= selectFrom and i <= selectTo) and selectColorFore or def
@@ -825,6 +836,75 @@ function graphic.createWindow(screen, x, y, sizeX, sizeY, selected, isPal)
 
     table.insert(graphic.windows, obj)
     return obj
+end
+
+------------------------------------ window methods
+
+graphic.defaultWindows = {}
+
+local function window(screen)
+    local rx, ry = graphic.getResolution(screen)
+    graphic.defaultWindows[screen] = graphic.defaultWindows[screen] or graphic.createWindow(screen, 1, 1, rx, ry)
+    local window = graphic.defaultWindows[screen]
+    window.sizeX = rx
+    window.sizeY = ry
+    return graphic.defaultWindows[screen]
+end
+
+function graphic.readNoDraw(screen, ...)
+    return window(screen):readNoDraw(...)
+end
+
+function graphic.read(screen, ...)
+    return window(screen):read(...)
+end
+
+function graphic.toRealPos(screen, ...)
+    return window(screen):toRealPos(...)
+end
+
+function graphic.toFakePos(screen, ...)
+    return window(screen):toFakePos(...)
+end
+
+function graphic.set(screen, ...)
+    return window(screen):set(...)
+end
+
+function graphic.get(screen, ...)
+    return window(screen):get(...)
+end
+
+function graphic.fill(screen, ...)
+    return window(screen):fill(...)
+end
+
+function graphic.copy(screen, ...)
+    return window(screen):copy(...)
+end
+
+function graphic.clear(screen, ...)
+    return window(screen):clear(...)
+end
+
+function graphic.readNoDraw(screen, ...)
+    return window(screen):readNoDraw(...)
+end
+
+function graphic.uploadEvent(screen, ...)
+    return window(screen):uploadEvent(...)
+end
+
+function graphic.write(screen, ...)
+    return window(screen):write(...)
+end
+
+function graphic.getCursor(screen, ...)
+    return window(screen):getCursor(...)
+end
+
+function graphic.setCursor(screen, ...)
+    return window(screen):setCursor(...)
 end
 
 ------------------------------------
