@@ -97,9 +97,13 @@ function syntax.parse(code)
     return obj
 end
 
-function syntax.draw(x, y, obj, gpu)
+function syntax.draw(x, y, obj, gpu, palette)
     for index, value in ipairs(obj) do
-        gpu.setForeground(value[4], true)
+        if palette then
+            gpu.setForeground(palette[value[4]] or 0)
+        else
+            gpu.setForeground(value[4], true)
+        end
         gpu.set((x - 1) + value[1], (y - 1) + value[2], value[3])
     end
 end
