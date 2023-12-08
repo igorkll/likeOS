@@ -216,7 +216,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
 
     local function getPalColor(pal)
         if graphic.fakePalette then
-            return graphic.fakePalette[pal]
+            return graphic.fakePalette[pal] or 0
         else
             return gpu.getPaletteColor(pal)
         end

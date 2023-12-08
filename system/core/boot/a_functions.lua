@@ -86,6 +86,22 @@ function table.deepclone(tbl, newtbl)
     return recurse(tbl, newtbl)
 end
 
+function table.low(tbl)
+    local newtbl = {}
+    for i, v in ipairs(tbl) do
+        newtbl[i - 1] = v
+    end
+    return newtbl
+end
+
+function table.high(tbl)
+    local newtbl = {}
+    for i, v in ipairs(tbl) do
+        newtbl[i + 1] = v
+    end
+    return newtbl
+end
+
 
 --bit32
 function bit32.readbit(byte, index)
