@@ -150,6 +150,12 @@ function package.delay(lib, action)
     setmetatable(lib, mt)
 end
 
+function package.forceUnload(name)
+    package.loaded[name] = nil
+    package.cache[name] = nil
+    _G[name] = nil
+end
+
 ------------------------------------
 
 return package

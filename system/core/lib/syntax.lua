@@ -1,5 +1,6 @@
 local unicode = require("unicode")
 local colors = require("colors")
+local parser = require("parser")
 local syntax = {}
 syntax.keywords = {
     ["function"] = colors.magenta,
@@ -53,7 +54,7 @@ function syntax.parse(code)
     local obj = {}
     local gcomment = false
     local counter = 1
-    for posY, str in ipairs(split2(unicode, code, {"\n"})) do
+    for posY, str in ipairs(parser.split(unicode, code, {"\n"})) do
         local posX = 1
         local lcomment = false
         local lostr = false

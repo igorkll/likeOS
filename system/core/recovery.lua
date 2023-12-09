@@ -4,9 +4,10 @@ local computer = computer
 local unicode = unicode
 
 local screen = ...
-local deviceinfo = computer.getDeviceInfo()
 local gpu = component.proxy(component.list("gpu")() or "")
 if not gpu then return end
+
+local deviceinfo = computer.getDeviceInfo()
 bootloader.initScreen(gpu, screen, 80, 25) --на экране с более низким разрешениям будет выбрано максимальное. на экране с более высоким установленное
 local rx, ry = gpu.getResolution()
 local centerY = math.floor(ry / 2)

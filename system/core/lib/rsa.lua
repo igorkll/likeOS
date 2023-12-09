@@ -74,7 +74,7 @@ function rsa_encr(msg, e, N)
     return ret
 end
 
-function split(s, delimiter)
+local function localsplit(s, delimiter)
     result = {};
     for match in (s..delimiter):gmatch("(.-)"..delimiter) do
         table.insert(result, match);
@@ -84,7 +84,7 @@ end
 
 function rsa_decr(msg, d, N)
     local ret = ""
-    for i,v in ipairs(split(msg:sub(1,-2),"#")) do
+    for i,v in ipairs(localsplit(msg:sub(1,-2),"#")) do
         local vn = tonumber(v)
         local dc = pow_mod(vn,d,N)
         local ac = string.char(dc)
@@ -141,7 +141,8 @@ print(rsa.decrypt(lolz, decryptionKey))
 ]]
 
 function parseKey(key)
-    local key, N = table.unpack(split2(string, key, {"#"}))
+    local parser = require("parser")
+    local key, N = table.unpack(parser.split(string, key, {"#"}))
     return tonumber(key), tonumber(N)
 end
 
