@@ -325,7 +325,11 @@ function filesystem.equals(path1, path2)
     local file1 = assert(filesystem.open(path1, "rb"))
     local file2 = assert(filesystem.open(path2, "rb"))
     while true do
-        if file1.readMax() ~= file2.readMax() then
+        local chunk1 = file1.readMax()
+        local chunk2 = file2.readMax()
+        if not chunk1 and not chunk2 then
+            break
+        elseif chunk1 ~= chunk2 then
             return false
         end
     end
