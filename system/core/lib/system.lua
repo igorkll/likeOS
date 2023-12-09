@@ -141,7 +141,7 @@ function system.isLikeOSDisk(address)
 
     local file = component.invoke(address, "open", "/init.lua", "rb")
     if file then
-        local data = invoke(address, "read", file, #signature)
+        local data = component.invoke(address, "read", file, #signature)
         component.invoke(address, "close", file)
         return signature == data
     end

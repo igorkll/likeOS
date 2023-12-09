@@ -22,7 +22,6 @@
 /system/core/lib/paths.lua
 /system/core/lib/programs.lua
 /system/core/lib/registry.lua
-/system/core/lib/rsa.lua
 /system/core/lib/serialization.lua
 /system/core/lib/service.lua
 /system/core/lib/sha256.lua
