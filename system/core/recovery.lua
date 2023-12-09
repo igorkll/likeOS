@@ -158,7 +158,7 @@ local function info(strs, withoutWaitEnter)
         table.insert(strs, "Press Enter To Continue")
     end
     for i, str in ipairs(strs) do
-        centerPrint((centerY + (i - 1)) - math.floor((#strs / 2) + 0.5), str)
+        centerPrint((centerY + (i - 1)) - math.floor((#strs / 2) + 0.5), tostring(str))
     end
     
     while not withoutWaitEnter do
@@ -176,7 +176,11 @@ local function input(str, hidden)
 
     local function draw()
         clearScreen()
-        centerPrint(centerY, (str and (str .. "> ") or "") .. buffer .. "|")
+        if hidden then
+            centerPrint(centerY, (str and (str .. "> ") or "") .. string.rep("*", unicode.len(buffer)) .. "|")
+        else
+            centerPrint(centerY, (str and (str .. "> ") or "") .. buffer .. "|")
+        end
     end
     draw()
 
@@ -394,6 +398,7 @@ menu(bootloader.coreversion .. " recovery",
     {
         "Run System Recovery Script",
         "Wipe Data / Factory Reset",
+        "Run Script From String",
         "Run Script From Url",
         "Run Script From Disk",
         "Micro Programs",
@@ -448,6 +453,20 @@ menu(bootloader.coreversion .. " recovery",
                 },
                 true
             )
+        end,
+        function ()
+            local script, nickname = input("script")
+            if script then
+                local code, err = load(script, nil, nil, createSandbox())
+                if code then
+                    local ok, err = pcall(code, screen, nickname)
+                    if not ok then
+                        info({"Script Error", err})
+                    end
+                else
+                    info({"Script Error(syntax)", err})
+                end
+            end
         end,
         function ()
             local url, nickname = input("url")
