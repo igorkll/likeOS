@@ -7,9 +7,25 @@ local lastinfo = require("lastinfo")
 local component = require("component")
 local fs = require("filesystem")
 local paths = require("paths")
-local calls = require("calls")
 local unicode = require("unicode")
-local system = {}
+local system = {unloadable = true}
+
+local function cacheMode(tbl, state)
+    local mt = getmetatable(tbl)
+    if mt then
+        if state then
+            mt.__mode = 'v'
+        else
+            mt.__mode = nil
+        end
+    else
+        mt = {}
+        if state then
+            mt.__mode = 'v'
+        end
+        setmetatable(tbl, mt)
+    end
+end
 
 -------------------------------------------------
 
@@ -148,25 +164,6 @@ function system.getCharge()
     return math.clamp(math.round(math.map(computer.energy(), 0, computer.maxEnergy(), 0, 100)), 0, 100)
 end
 
--------------------------------------------------
-
-local function cacheMode(tbl, state)
-    local mt = getmetatable(tbl)
-    if mt then
-        if state then
-            mt.__mode = 'v'
-        else
-            mt.__mode = nil
-        end
-    else
-        mt = {}
-        if state then
-            mt.__mode = 'v'
-        end
-        setmetatable(tbl, mt)
-    end
-end
-
 local currentUnloadState
 function system.setUnloadState(state)
     checkArg(1, state, "boolean")
@@ -175,34 +172,7 @@ function system.setUnloadState(state)
 
     cacheMode(package.libStubsCache, state)
     cacheMode(package.cache, state)
-    cacheMode(calls.cache, state)
 end
 system.setUnloadState(false)
-
-local oldFree
-system.timerId = event.timer(2, function()
-    --check RAM
-    local free = computer.freeMemory()
-    if not oldFree or free > oldFree then --проверка сборшика мусора
-        if free < computer.totalMemory() / 3 then
-            system.setUnloadState(true)
-            cache.clearCache()
-        else
-            system.setUnloadState(false)
-        end
-    end
-    oldFree = free
-end, math.huge)
-
-event.hyperListen(function (eventType, componentUuid, componentType)
-    if fs.autoMount and componentType == "filesystem" then
-        local path = paths.concat("/mnt", componentUuid)
-        if eventType == "component_added" then
-            fs.mount(component.proxy(componentUuid), path)
-        elseif eventType == "component_removed" then
-            fs.umount(path)
-        end
-    end
-end)
 
 return system

@@ -4,12 +4,10 @@
 /system/core/recovery.lua
 /system/core/autoruns/a_component.lua
 /system/core/boot/a_functions.lua
-/system/core/boot/b_event.lua
-/system/core/boot/c_screen.lua
-/system/core/boot/d_lua_improvements.lua
+/system/core/boot/b_screen.lua
+/system/core/boot/c_lua_improvements.lua
 /system/core/lib/bit32.lua
 /system/core/lib/cache.lua
-/system/core/lib/calls.lua
 /system/core/lib/clipboard.lua
 /system/core/lib/colors.lua
 /system/core/lib/event.lua
@@ -26,6 +24,7 @@
 /system/core/lib/registry.lua
 /system/core/lib/rsa.lua
 /system/core/lib/serialization.lua
+/system/core/lib/service.lua
 /system/core/lib/sha256.lua
 /system/core/lib/sides.lua
 /system/core/lib/syntax.lua
