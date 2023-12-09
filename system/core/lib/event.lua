@@ -3,33 +3,9 @@ local fs = require("filesystem")
 local package = require("package")
 
 local event = {}
+event.forceGC = true
 event.minTime = 0 --минимальное время прирывания, можно увеличить, это вызовет подения производительности но уменьшет энергопотребления
 event.listens = {}
-
------------------------------------------------------------------------- custom queue
-
-do
-    local pullSignal = computer.pullSignal
-    local remove = table.remove
-    local insert = table.insert
-    local unpack = table.unpack
-
-    local queue = {}
-
-    function computer.pullSignal(...)
-        if #queue == 0 then
-            return pullSignal(...)
-        else
-            local data = queue[1]
-            remove(queue, 1)
-            return unpack(data)
-        end
-    end
-
-    function computer.pushSignal(...)
-        insert(queue, {...})
-    end
-end
 
 ------------------------------------------------------------------------
 
@@ -188,9 +164,28 @@ function event.pull(waitTime, ...) --реализует фильтер
     end
 end
 
-------------------------------------------------------------------------
+------------------------------------------------------------------------ custom queue
 
-local computer_pullSignal = computer.pullSignal
+local remove = table.remove
+local insert = table.insert
+local unpack = table.unpack
+
+local raw_computer_pullSignal = computer.pullSignal
+local customQueue = {}
+
+local function computer_pullSignal(...)
+    if #customQueue == 0 then
+        return raw_computer_pullSignal(...)
+    else
+        return unpack(remove(customQueue, 1))
+    end
+end
+
+function computer.pushSignal(...)
+    insert(customQueue, {...})
+end
+
+------------------------------------------------------------------------
 
 --имеет самый самый высокий приоритет из возможных
 --не может быть как либо удален до перезагрузки
@@ -266,6 +261,19 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
             eventData = {coroutine.yield()}
         else
             eventData = {computer_pullSignal(realWaitTime)} --обязательно повисеть в pullSignal
+            if event.forceGC and computer.freeMemory() < 64 * 1024 then
+                if collectgarbage then
+                    collectgarbage("collect")
+                else
+                    for i = 1, 9 do --чистка памяти
+                        local localEventData = {raw_computer_pullSignal(0)}
+                        if #localEventData > 0 then
+                            insert(customQueue, localEventData)
+                        end
+                    end
+                end
+            end
+
             if not event.isListen then
                 runThreads(eventData)
             end

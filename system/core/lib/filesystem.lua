@@ -176,7 +176,7 @@ function filesystem.remove(path)
     return proxy.remove(proxyPath)
 end
 
-function filesystem.list(path)
+function filesystem.list(path, fullpaths)
     local proxy, proxyPath = filesystem.get(path)
     local tbl = proxy.list(proxyPath)
 
@@ -185,6 +185,11 @@ function filesystem.list(path)
         for i = 1, #filesystem.mountList do
             if paths.absolute(path) == paths.path(filesystem.mountList[i][2]) then
                 table.insert(tbl, paths.name(filesystem.mountList[i][2]))
+            end
+        end
+        if fullpaths then
+            for i, v in ipairs(tbl) do
+                tbl[i] = paths.concat(path, v)
             end
         end
         table.sort(tbl)
@@ -316,6 +321,18 @@ function filesystem.readFile(path)
     return table.unpack(result)
 end
 
+function filesystem.equals(path1, path2)
+    local file1 = assert(filesystem.open(path1, "rb"))
+    local file2 = assert(filesystem.open(path2, "rb"))
+    while true do
+        if file1.readMax() ~= file2.readMax() then
+            return false
+        end
+    end
+    file1.close()
+    file2.close()
+    return true
+end
 
 filesystem.bootaddress = bootloader.bootaddress
 filesystem.tmpaddress = bootloader.tmpaddress
