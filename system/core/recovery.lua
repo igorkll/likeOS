@@ -11,9 +11,46 @@ local deviceinfo = computer.getDeviceInfo()
 bootloader.initScreen(gpu, screen, 80, 25) --на экране с более низким разрешениям будет выбрано максимальное. на экране с более высоким установленное
 local rx, ry = gpu.getResolution()
 local centerY = math.floor(ry / 2)
-local keyboard = component.invoke(screen, "getKeyboards")[1]
+local keyboards = component.invoke(screen, "getKeyboards")
 
 -------------------------------------------------------------- local api
+
+local function isKeyboard(address)
+    for i, v in ipairs(keyboards) do
+        if v == address then
+            return true
+        end
+    end
+    return false
+end
+
+local function wget(url)
+    local inet = component.proxy(component.list("internet")() or "")
+    if not inet then
+        return nil, "no internet-card"
+    end
+
+    local handle, err = inet.request(url)
+    if handle then
+        local data = {}
+        while true do
+            local result, reason = handle.read(math.huge) 
+            if result then
+                table.insert(data, result)
+            else
+                handle.close()
+                
+                if reason then
+                    return nil, reason
+                else
+                    return table.concat(data)
+                end
+            end
+        end
+    else
+        return nil, tostring(err or "unknown error")
+    end
+end
 
 local function getDeviceType()
     local function isType(ctype)
@@ -72,7 +109,7 @@ local function menu(label, strs, funcs, withoutBackButton, refresh)
 
     while true do
         local eventData = {computer.pullSignal()}
-        if eventData[1] == "key_down" and eventData[2] == keyboard then
+        if eventData[1] == "key_down" and isKeyboard(eventData[2]) then
             if eventData[4] == 28 then
                 if funcs[selected] then
                     if funcs[selected](strs[selected], eventData[5]) then
@@ -126,7 +163,7 @@ local function info(strs, withoutWaitEnter)
     
     while not withoutWaitEnter do
         local eventData = {computer.pullSignal()}
-        if eventData[1] == "key_down" and eventData[2] == keyboard then
+        if eventData[1] == "key_down" and isKeyboard(eventData[2]) then
             if eventData[4] == 28 then
                 break
             end
@@ -134,8 +171,36 @@ local function info(strs, withoutWaitEnter)
     end
 end
 
-local function input(str)
-    
+local function input(str, hidden)
+    local buffer = ""
+
+    local function draw()
+        clearScreen()
+        centerPrint(centerY, (str and (str .. "> ") or "") .. buffer .. "|")
+    end
+    draw()
+
+    while true do
+        local eventData = {computer.pullSignal()}
+        if isKeyboard(eventData[2]) then
+            if eventData[1] == "key_down" then
+                if eventData[4] == 28 then
+                    return buffer, eventData[5]
+                elseif eventData[4] == 14 then
+                    buffer = unicode.sub(buffer, 1, unicode.len(buffer) - 1)
+                    draw()
+                elseif eventData[3] == 23 and eventData[4] == 17 then
+                    return
+                elseif not unicode.isWide(eventData[3]) and eventData[3] > 0 then
+                    buffer = buffer .. unicode.char(eventData[3])
+                    draw()
+                end
+            elseif eventData[1] == "clipboard" and not hidden then
+                buffer = buffer .. eventData[3]
+                draw()
+            end
+        end
+    end
 end
 
 local function raw_selectfile(proxy, folder)
@@ -217,7 +282,10 @@ local function micro_userControl(str)
             end
         end
         local funcs = {function ()
-            add(input("Enter Nickname> "))
+            local name = input("Enter Nickname")
+            if name then
+                add(name)
+            end
         end, function (_, nickname)
             add(nickname)
         end}
@@ -250,7 +318,7 @@ local function micro_robotMoving(str)
 
     while true do
         local eventData = {computer.pullSignal()}
-        if eventData[1] == "key_down" and eventData[2] == keyboard then
+        if eventData[1] == "key_down" and isKeyboard(eventData[2]) then
             if eventData[4] == 28 then
                 break
             elseif eventData[4] == 17 then
@@ -297,7 +365,9 @@ local recoveryApi = {
     raw_selectfile = raw_selectfile,
     selectFilesystem = selectFilesystem,
     selectfile = selectfile,
-    loadfile = loadfile
+    loadfile = loadfile,
+    isKeyboard = isKeyboard,
+    wget = wget
 }
 
 local function createSandbox()
@@ -380,7 +450,23 @@ menu(bootloader.coreversion .. " recovery",
             )
         end,
         function ()
-            
+            local url, nickname = input("url")
+            if url then
+                local chunk, err = wget(url)
+                if chunk then
+                    local code, err = load(chunk, "=" .. url, nil, createSandbox())
+                    if code then
+                        local ok, err = pcall(code, screen, nickname)
+                        if not ok then
+                            info({"Script Error", err})
+                        end
+                    else
+                        info({"Script Error(syntax)", err})
+                    end
+                else
+                    info({"Internet Error", err})
+                end
+            end
         end,
         function ()
             local path, proxy, nickname = selectfile()
