@@ -150,10 +150,23 @@ function package.delay(lib, action)
     setmetatable(lib, mt)
 end
 
-function package.forceUnload(name)
-    package.loaded[name] = nil
-    package.cache[name] = nil
-    _G[name] = nil
+function package.unload(name, force)
+    if force then
+        if package.loaded[name] then
+            table.clear(package.loaded[name])
+            package.loaded[name] = nil
+        end
+
+        if _G[name] then
+            table.clear(_G[name])
+            _G[name] = nil
+        end
+    end
+    
+    if package.cache[name] then
+        table.clear(package.cache[name])
+        package.cache[name] = nil
+    end
 end
 
 ------------------------------------

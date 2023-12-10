@@ -17,5 +17,13 @@ function logs.assert(ok, err)
     end
 end
 
+function logs.check(...)
+    local ok, err = ...
+    if not ok then
+        logs.log(err)
+    end
+    return ...
+end
+
 logs.unloadable = true
 return logs
