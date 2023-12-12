@@ -23,9 +23,6 @@ end
 local afpx = {}
 
 function afpx.pack(dir, outputpath)
-    dir = paths.canonical(dir)
-    outputpath = paths.canonical(outputpath)
-
     local files = {}
     local function process()
         local outputfile = assert(fs.open(outputpath, "wb"))
@@ -77,9 +74,6 @@ function afpx.pack(dir, outputpath)
 end
 
 function afpx.unpack(inputpath, dir)
-    inputpath = paths.canonical(inputpath)
-    dir = paths.canonical(dir)
-
     local files = {}
     local function process()
         local inputfile = assert(fs.open(inputpath, "rb"))

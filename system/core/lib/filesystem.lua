@@ -321,6 +321,14 @@ function filesystem.readFile(path)
     return table.unpack(result)
 end
 
+function filesystem.readSignature(path, size)
+    local file, err = filesystem.open(path, "rb")
+    if not file then return nil, err or "unknown error" end
+    local result = {file.read(size or 8)}
+    file.close()
+    return table.unpack(result)
+end
+
 function filesystem.equals(path1, path2)
     local file1 = assert(filesystem.open(path1, "rb"))
     local file2 = assert(filesystem.open(path2, "rb"))
