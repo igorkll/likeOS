@@ -46,13 +46,12 @@ end
 
 ------------------------------------class window
 
-local function set(self, x, y, background, foreground, text, vertical)
+local function set(self, x, y, background, foreground, text, vertical, pal)
     local gpu = graphic.findGpu(self.screen)
     if gpu then
-        gpu.setBackground(background, self.isPal)
-        gpu.setForeground(foreground, self.isPal)
+        gpu.setBackground(background, xor(self.isPal, pal))
+        gpu.setForeground(foreground, xor(self.isPal, pal))
         gpu.set(valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), text, vertical)
-        --graphic._set(gpu, valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), background, self.isPal, foreground, self.isPal, text)
     end
 
     graphic.updated[self.screen] = true
@@ -65,18 +64,12 @@ local function get(self, x, y)
     end
 end
 
-local function fill(self, x, y, sizeX, sizeY, background, foreground, char)
+local function fill(self, x, y, sizeX, sizeY, background, foreground, char, pal)
     local gpu = graphic.findGpu(self.screen)
     if gpu then
-        gpu.setBackground(background, self.isPal)
-        gpu.setForeground(foreground, self.isPal)
+        gpu.setBackground(background, xor(self.isPal, pal))
+        gpu.setForeground(foreground, xor(self.isPal, pal))
         gpu.fill(valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), valueCheck(sizeX), valueCheck(sizeY), char)
-        --[[
-        graphic._fill(gpu,
-        valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)),
-        valueCheck(sizeX), valueCheck(sizeY),
-        background, self.isPal, foreground, self.isPal, char)
-        ]]
     end
 
     graphic.updated[self.screen] = true
@@ -91,8 +84,8 @@ local function copy(self, x, y, sizeX, sizeY, offsetX, offsetY)
     graphic.updated[self.screen] = true
 end
 
-local function clear(self, color)
-    self:fill(1, 1, self.sizeX, self.sizeY, color, 0, " ")
+local function clear(self, color, pal)
+    self:fill(1, 1, self.sizeX, self.sizeY, color, 0, " ", pal)
 end
 
 local function setCursor(self, x, y)
@@ -103,7 +96,7 @@ local function getCursor(self)
     return self.cursorX, self.cursorY
 end
 
-local function write(self, data, background, foreground, autoln)
+local function write(self, data, background, foreground, autoln, pal)
     graphic.updated[self.screen] = true
     local gpu = graphic.findGpu(self.screen)
 
@@ -116,8 +109,9 @@ local function write(self, data, background, foreground, autoln)
             setX, setY = self.cursorX, self.cursorY
         end
 
-        gpu.setBackground(background or (self.isPal and colors.black or 0), self.isPal)
-        gpu.setForeground(foreground or (self.isPal and colors.white or 0xFFFFFF), self.isPal)
+        local cpal = xor(self.isPal, pal)
+        gpu.setBackground(background or (cpal and colors.black or 0), cpal)
+        gpu.setForeground(foreground or (cpal and colors.white or 0xFFFFFF), cpal)
 
         for i = 1, unicode.len(data) do
             local char = unicode.sub(data, i, i)
