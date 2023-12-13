@@ -130,8 +130,35 @@ function internet.download(url, path)
     end
 end
 
+local function removeTrues(results)
+    for i, tbl in ipairs(results) do
+        if tbl[1] == true then
+            table.remove(tbl, 1)
+        end
+    end
+    return results
+end
+
 function internet.downloads(downloads)
-    
+    local thread = require("thread")
+    local threads = {}
+    for _, download in ipairs(downloads) do
+        local th = thread.create(internet.download, table.unpack(download))
+        table.insert(threads, th)
+        th:resume()
+    end
+    return removeTrues(thread.waitForAll(threads))
+end
+
+function internet.gets(gets)
+    local thread = require("thread")
+    local threads = {}
+    for _, get in ipairs(gets) do
+        local th = thread.create(internet.get, table.unpack(get))
+        table.insert(threads, th)
+        th:resume()
+    end
+    return removeTrues(thread.waitForAll(threads))
 end
 
 internet.getInternetFile = internet.get

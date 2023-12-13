@@ -1,4 +1,6 @@
 local system = require("system")
+local computer = require("computer")
+local event = require("event")
 local thread = {}
 thread.threads = {}
 thread.mainthread = coroutine.running()
@@ -17,8 +19,6 @@ function thread.decode(th)
 end
 
 function thread.stub(func, ...)
-    local event = require("event")
-
     local th = thread.create(func, ...)
     th:resume()
     
@@ -136,16 +136,35 @@ function thread.createTo(func, connectTo, ...)
 end
 
 function thread.listen(eventType, func)
-    return require("event").listen(eventType, func, thread.current())
+    return event.listen(eventType, func, thread.current())
 end
 
 function thread.timer(time, func, times)
-    return require("event").timer(time, func, times, thread.current())
+    return event.timer(time, func, times, thread.current())
 end
 
 local function wait(timeout, forAny, threads)
+    local startTime = computer.uptime()
     while true do
-        
+        local deadCount = 0
+        for _, th in ipairs(threads) do
+            if th:status() == "dead" then
+                if forAny then
+                    break
+                end
+                deadCount = deadCount + 1
+            end
+        end
+
+        if deadCount >= #threads or computer.uptime() - startTime > timeout then
+            break
+        end
+
+        event.yield()
+    end
+
+    for _, th in ipairs(threads) do
+        th:kill()
     end
 end
 
@@ -157,10 +176,19 @@ local function parseWait(forAny, ...)
         table.remove(threads, #threads)
     end
     wait(timeout, forAny, threads)
+    local results = {}
+    for _, th in ipairs(threads) do
+        table.insert(results, {th:decode()})
+    end
+    return results
 end
 
 function thread.waitForAll(...)
-    local threads = {}
+    return parseWait(false, ...)
+end
+
+function thread.waitForAny(...)
+    return parseWait(true, ...)
 end
 
 ------------------------------------thread functions
