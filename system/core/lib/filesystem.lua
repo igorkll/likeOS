@@ -111,29 +111,36 @@ end
 
 function filesystem.size(path)
     local proxy, proxyPath = filesystem.get(path)
-    local size = 0
-    local sizeWithBaseCost = 0
+    local size, sizeWithBaseCost = 0, 0
+    local filesCount, dirsCount = 0, 0
+
     local function recurse(lpath)
         sizeWithBaseCost = sizeWithBaseCost + filesystem.baseFileDirectorySize
         for _, filename in ipairs(filesystem.list(lpath)) do
             local fullpath = paths.concat(lpath, filename)
             if proxy.isDirectory(fullpath) then
                 recurse(fullpath)
+                dirsCount = dirsCount + 1
             else
                 local lsize = proxy.size(fullpath)
                 size = size + lsize
                 sizeWithBaseCost = sizeWithBaseCost + lsize + filesystem.baseFileDirectorySize
+                filesCount = filesCount + 1
             end
         end
     end
+
     if proxy.isDirectory(proxyPath) then
         recurse(proxyPath)
+        dirsCount = dirsCount + 1
     else
         local lsize = proxy.size(proxyPath)
         size = size + lsize
         sizeWithBaseCost = sizeWithBaseCost + lsize + filesystem.baseFileDirectorySize
+        filesCount = filesCount + 1
     end
-    return size, sizeWithBaseCost
+
+    return size, sizeWithBaseCost, filesCount, dirsCount
 end
 
 function filesystem.isDirectory(path)
@@ -214,6 +221,7 @@ function filesystem.rename(fromPath, toPath)
         if not success then
             return nil, err
         end
+        
         local success, err = filesystem.remove(fromPath)
         if not success then
             return nil, err
