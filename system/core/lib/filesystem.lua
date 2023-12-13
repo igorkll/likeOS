@@ -224,6 +224,7 @@ function filesystem.rename(fromPath, toPath)
 end
 
 function filesystem.open(path, mode, bufferSize)
+    mode = mode or "rb"
     local proxy, proxyPath = filesystem.get(path)
     local result, reason = proxy.open(proxyPath, mode)
     if result then
@@ -231,20 +232,29 @@ function filesystem.open(path, mode, bufferSize)
             bufferSize = 16 * 1024
         end
 
+        local tool = mode:sub(#mode, #mode) == "b" and string or unicode
         local readBuffer
         local writeBuffer
 
         local handle = {
+            handle = result,
+
             read = function(readsize)
+                if not readsize then
+                    readsize = 1
+                end
+
                 if bufferSize then
                     if not readBuffer then
-                        readBuffer = proxy.read(result, bufferSize)
+                        readBuffer = proxy.read(result, bufferSize) or ""
                     end
 
-                    local str = readBuffer:sub(1, readsize)
-                    readBuffer = readBuffer:sub(readsize + 1, #readBuffer)
-                    if #readBuffer == 0 then readBuffer = nil end
-                    return str
+                    local str = tool.sub(readBuffer, 1, readsize)
+                    readBuffer = tool.sub(readBuffer, readsize + 1, tool.len(readBuffer))
+                    if tool.len(readBuffer) == 0 then readBuffer = nil end
+                    if tool.len(str) > 0 then
+                        return str
+                    end
                 else
                     return proxy.read(result, readsize)
                 end
@@ -252,7 +262,7 @@ function filesystem.open(path, mode, bufferSize)
             write = function(writedata)
                 if bufferSize then
                     writeBuffer = (writeBuffer or "") .. writedata
-                    if #writeBuffer > bufferSize then
+                    if tool.len(writeBuffer) > bufferSize then
                         local result = proxy.write(result, writeBuffer)
                         writeBuffer = nil
                         return result
@@ -267,7 +277,11 @@ function filesystem.open(path, mode, bufferSize)
                 end
                 return proxy.close(result, ...)
             end,
-            seek = function(...) return proxy.seek(result, ...) end,
+
+            --don`t use with buffered mode!
+            seek = function(...)
+                return proxy.seek(result, ...)
+            end,
             readAll = function()
                 local buffer = ""
                 repeat
@@ -276,8 +290,9 @@ function filesystem.open(path, mode, bufferSize)
                 until not data
                 return buffer
             end,
-            readMax = function() return proxy.read(result, math.huge) end,
-            handle = result,
+            readMax = function()
+                return proxy.read(result, math.huge)
+            end
         }
 
         return handle
