@@ -237,16 +237,14 @@ function filesystem.open(path, mode, bufferSize)
         local handle = {
             read = function(readsize)
                 if bufferSize then
-                    if readBuffer then
-                        local str = readBuffer:sub(1, readsize)
-                        readBuffer = readBuffer:sub(readsize + 1, #readBuffer)
-                        if #readBuffer == 0 then
-                            readBuffer = nil
-                        end
-                        return str
-                    else
+                    if not readBuffer then
                         readBuffer = proxy.read(result, bufferSize)
                     end
+
+                    local str = readBuffer:sub(1, readsize)
+                    readBuffer = readBuffer:sub(readsize + 1, #readBuffer)
+                    if #readBuffer == 0 then readBuffer = nil end
+                    return str
                 else
                     return proxy.read(result, readsize)
                 end
