@@ -153,8 +153,8 @@ end
 function internet.gets(gets)
     local thread = require("thread")
     local threads = {}
-    for _, get in ipairs(gets) do
-        local th = thread.create(internet.get, table.unpack(get))
+    for _, url in ipairs(gets) do
+        local th = thread.create(internet.get, url)
         table.insert(threads, th)
         th:resume()
     end
