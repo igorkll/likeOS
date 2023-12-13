@@ -9,7 +9,26 @@ internet.settings.downloadPart = 1024 * 32
 
 local unknown = "unknown error"
 
-function internet.wait(handle)
+local cardIterator
+function internet.card() --поралелит нагрузку на несколько инетных карт, чтобы можно было открыть больше сокетов итд
+    if cardIterator then
+        local result = cardIterator()
+        if result then
+            return result
+        end
+    end
+
+    cardIterator = component.list("internet")
+    if cardIterator then
+        return cardIterator()
+    end
+end
+
+function internet.cardProxy()
+    return component.proxy(internet.card() or "")
+end
+
+function internet.wait(handle, waittime)
     local startTime = computer.uptime()
     while true do
         local successfully, err = handle.finishConnect()
@@ -19,7 +38,7 @@ function internet.wait(handle)
             return nil, tostring(err or unknown)
         end
 
-        if computer.uptime() - startTime > internet.settings.timeout then
+        if computer.uptime() - startTime > (waittime or internet.settings.timeout) then
             return nil, "timeout error"
         end
 
@@ -28,7 +47,7 @@ function internet.wait(handle)
 end
 
 function internet.get(url)
-    local inet = component.proxy(component.list("internet")() or "")
+    local inet = internet.cardProxy()
     if not inet then
         return nil, "no internet-card"
     end
@@ -61,7 +80,7 @@ function internet.get(url)
 end
 
 function internet.download(url, path)
-    local inet = component.proxy(component.list("internet")() or "")
+    local inet = internet.cardProxy()
     if not inet then
         return nil, "no internet-card"
     end
@@ -109,6 +128,10 @@ function internet.download(url, path)
     else
         return nil, tostring(err or unknown)
     end
+end
+
+function internet.downloads(downloads)
+    
 end
 
 internet.getInternetFile = internet.get

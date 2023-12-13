@@ -143,6 +143,26 @@ function thread.timer(time, func, times)
     return require("event").timer(time, func, times, thread.current())
 end
 
+local function wait(timeout, forAny, threads)
+    while true do
+        
+    end
+end
+
+local function parseWait(forAny, ...)
+    local threads = {...}
+    local timeout = math.huge
+    if type(threads[#threads]) == "number" then
+        timeout = threads[#threads]
+        table.remove(threads, #threads)
+    end
+    wait(timeout, forAny, threads)
+end
+
+function thread.waitForAll(...)
+    local threads = {}
+end
+
 ------------------------------------thread functions
 
 function raw_kill(t) --не стоит убивать паток через raw_kill
