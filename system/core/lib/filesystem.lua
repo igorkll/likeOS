@@ -223,14 +223,52 @@ function filesystem.rename(fromPath, toPath)
     return true
 end
 
-function filesystem.open(path, mode)
+function filesystem.open(path, mode, bufferSize)
     local proxy, proxyPath = filesystem.get(path)
     local result, reason = proxy.open(proxyPath, mode)
     if result then
-        local handle = { --а нам он и нафиг не нужен цей файл buffer...
-            read = function(...) return proxy.read(result, ...) end,
-            write = function(...) return proxy.write(result, ...) end,
-            close = function(...) return proxy.close(result, ...) end,
+        if bufferSize == true then
+            bufferSize = 16 * 1024
+        end
+
+        local readBuffer
+        local writeBuffer
+
+        local handle = {
+            read = function(readsize)
+                if bufferSize then
+                    if readBuffer then
+                        local str = readBuffer:sub(1, readsize)
+                        readBuffer = readBuffer:sub(readsize + 1, #readBuffer)
+                        if #readBuffer == 0 then
+                            readBuffer = nil
+                        end
+                        return str
+                    else
+                        readBuffer = proxy.read(result, bufferSize)
+                    end
+                else
+                    return proxy.read(result, readsize)
+                end
+            end,
+            write = function(writedata)
+                if bufferSize then
+                    writeBuffer = (writeBuffer or "") .. writedata
+                    if #writeBuffer > bufferSize then
+                        local result = proxy.write(result, writeBuffer)
+                        writeBuffer = nil
+                        return result
+                    end
+                else
+                    return proxy.write(result, writedata)
+                end
+            end,
+            close = function(...)
+                if writeBuffer then
+                    return proxy.write(result, writeBuffer)
+                end
+                return proxy.close(result, ...)
+            end,
             seek = function(...) return proxy.seek(result, ...) end,
             readAll = function()
                 local buffer = ""
