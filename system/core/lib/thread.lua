@@ -143,7 +143,7 @@ function thread.timer(time, func, times)
     return event.timer(time, func, times, thread.current())
 end
 
-local function wait(timeout, forAny, threads)
+local function wait(forAny, threads, timeout)
     local startTime = computer.uptime()
     while true do
         local deadCount = 0
@@ -156,39 +156,27 @@ local function wait(timeout, forAny, threads)
             end
         end
 
-        if deadCount >= #threads or computer.uptime() - startTime > timeout then
+        if deadCount >= #threads or (timeout and computer.uptime() - startTime > timeout) then
             break
         end
 
         event.yield()
     end
 
-    for _, th in ipairs(threads) do
-        th:kill()
-    end
-end
-
-local function parseWait(forAny, ...)
-    local threads = {...}
-    local timeout = math.huge
-    if type(threads[#threads]) == "number" then
-        timeout = threads[#threads]
-        table.remove(threads, #threads)
-    end
-    wait(timeout, forAny, threads)
     local results = {}
     for _, th in ipairs(threads) do
+        th:kill()
         table.insert(results, {th:decode()})
     end
     return results
 end
 
-function thread.waitForAll(...)
-    return parseWait(false, ...)
+function thread.waitForAll(threads, timeout)
+    return wait(false, threads, timeout)
 end
 
-function thread.waitForAny(...)
-    return parseWait(true, ...)
+function thread.waitForAny(threads, timeout)
+    return wait(true, threads, timeout)
 end
 
 ------------------------------------thread functions
