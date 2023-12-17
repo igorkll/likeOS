@@ -193,6 +193,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
 
     local sizeY = 1
     local isMultiline = sizeY ~= 1 --пока что не работает
+    local whitelist
 
     local maxX, maxY = self.x + (x - 1) + (sizeX - 1), self.y + (y - 1) + (sizeY - 1)
     
@@ -621,7 +622,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
             redraw()
         end
 
-        if allowUse then
+        if allowUse and (not whitelist or whitelist[eventData[3]]) then
             if eventData[1] == "key_down" then
                 if eventData[4] == 28 then
                     historyIndex = nil
@@ -779,6 +780,8 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
         maxDataSize = max
     end, setTitle = function (t, tc)
         title, titleColor = t, tc
+    end, setWhitelist = function(list)
+        whitelist = list
     end}
 end
 
