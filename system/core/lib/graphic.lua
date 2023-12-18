@@ -550,18 +550,22 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
         end
     end
 
+    local function wlCheck(chr)
+        return not whitelist or whitelist[chr]
+    end
+
     local function add(inputStr)
         historyIndex = nil
         removeSelectedContent()
         for i = 1, unicode.len(inputStr) do
             local chr = unicode.sub(inputStr, i, i)
             if chr == "\n" then
-                if isMultiline then
+                if isMultiline and wlCheck(chr) then
                     buffer = buffer .. chr
                 else
                     return buffer
                 end
-            elseif not unicode.isWide(chr) then
+            elseif not unicode.isWide(chr) and wlCheck(chr) then
                 buffer = buffer .. chr
             end
         end
@@ -622,7 +626,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
             redraw()
         end
 
-        if allowUse and (not whitelist or whitelist[eventData[3]]) then
+        if allowUse then
             if eventData[1] == "key_down" then
                 if eventData[4] == 28 then
                     historyIndex = nil
@@ -742,7 +746,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                 elseif eventData[3] > 0 then --any char
                     historyIndex = nil
                     local char = unicode.char(eventData[3])
-                    if not unicode.isWide(char) then
+                    if not unicode.isWide(char) and wlCheck(char) then
                         add(char)
                     end
                 end
