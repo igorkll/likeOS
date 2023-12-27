@@ -279,6 +279,13 @@ function filesystem.open(path, mode, bufferSize)
                     return proxy.write(result, writedata)
                 end
             end,
+            seek = function(...)
+                readBuffer = nil
+                if bufferSize and writeBuffer then
+                    proxy.write(result, writeBuffer)
+                end
+                return proxy.seek(result, ...)
+            end,
             close = function(...)
                 if writeBuffer then
                     return proxy.write(result, writeBuffer)
@@ -287,9 +294,6 @@ function filesystem.open(path, mode, bufferSize)
             end,
 
             --don`t use with buffered mode!
-            seek = function(...)
-                return proxy.seek(result, ...)
-            end,
             readAll = function()
                 local buffer = ""
                 repeat
