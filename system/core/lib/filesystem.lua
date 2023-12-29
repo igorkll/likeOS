@@ -37,6 +37,13 @@ local function noEndSlash(path)
     return path
 end
 
+local function ifSuccessful(func, ok, ...)
+    if ok then
+        func()
+    end
+    return ok, ...
+end
+
 ------------------------------------ mounting functions
 
 function filesystem.mount(proxy, path)
@@ -209,7 +216,7 @@ end
 
 function filesystem.remove(path)
     local proxy, proxyPath = filesystem.get(path)
-    return proxy.remove(proxyPath)
+    return ifSuccessful(function() filesystem.clearAttributes(path) end, proxy.remove(proxyPath))
 end
 
 function filesystem.list(path, fullpaths, force)
@@ -470,6 +477,14 @@ local function getAttributesPath(path)
     return paths.concat(filesystem.point(proxy.address), paths.concat("/.data", ".attributes" .. tostring(math.round(attributeNumber))))
 end
 
+local function checkGlobalAttributes(globalAttributes)
+    for path, data in pairs(globalAttributes) do
+        local systemData = data[1]
+        if not filesystem.exists(path) or systemData.dir ~= filesystem.isDirectory(path) then
+            globalAttributes[path] = nil
+        end
+    end
+end
 
 
 function filesystem.clearAttributes(path)
@@ -480,12 +495,13 @@ function filesystem.clearAttributes(path)
     local globalAttributes
     if filesystem.exists(attributesPath) then
         globalAttributes = serialization.load(attributesPath)
+        checkGlobalAttributes(globalAttributes)
     else
         globalAttributes = {}
     end
 
     globalAttributes[proxyPath] = nil
-    return serialization.save(path, globalAttributes)
+    return serialization.save(attributesPath, globalAttributes)
 end
 
 function filesystem.getAttributes(path)
@@ -493,6 +509,8 @@ function filesystem.getAttributes(path)
     local attributesPath = getAttributesPath(path)
     if filesystem.exists(attributesPath) then
         local globalAttributes = require("serialization").load(attributesPath)
+        checkGlobalAttributes(globalAttributes)
+
         if globalAttributes[proxyPath] then
             local systemData = globalAttributes[proxyPath][1]
             if systemData.dir == filesystem.isDirectory(path) then
@@ -507,6 +525,10 @@ function filesystem.setAttributes(path, data)
     checkArg(1, path, "string")
     checkArg(2, data, "table")
 
+    if not filesystem.exists(path) then
+        return nil, "no such file or directory"
+    end
+
     local proxy, proxyPath = filesystem.get(path)
     local attributesPath = getAttributesPath(path)
     local serialization = require("serialization")
@@ -514,6 +536,7 @@ function filesystem.setAttributes(path, data)
     local globalAttributes
     if filesystem.exists(attributesPath) then
         globalAttributes = serialization.load(attributesPath)
+        checkGlobalAttributes(globalAttributes)
     else
         globalAttributes = {}
     end
@@ -526,7 +549,7 @@ function filesystem.setAttributes(path, data)
     end
 
     globalAttributes[proxyPath] = {attributesSystemData(path, systemData), data}
-    return serialization.save(path, globalAttributes)
+    return serialization.save(attributesPath, globalAttributes)
 end
 
 
