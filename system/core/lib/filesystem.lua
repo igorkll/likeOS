@@ -452,6 +452,11 @@ end
 
 ------------------------------------ attributes
 
+local function attributesSystemData(path, data)
+    data.dir = filesystem.isDirectory(path)
+    return data
+end
+
 function filesystem.getAttributesPath(path)
     local proxy, proxyPath = filesystem.get(path)
 
@@ -467,7 +472,40 @@ end
 
 function filesystem.getAttributes(path)
     local proxy, proxyPath = filesystem.get(path)
-    filesystem.getAttributesPath(path)
+    local attributesPath = filesystem.getAttributesPath(path)
+    if filesystem.exists(attributesPath) then
+        local globalAttributes = require("serialization").load(attributesPath)
+        if globalAttributes[proxyPath] then
+            local systemData = globalAttributes[proxyPath][1]
+            if systemData.dir == filesystem.isDirectory(path) then
+                return globalAttributes[proxyPath][2] or {}
+            end
+        end
+    end
+    return {}
+end
+
+function filesystem.setAttributes(path, data)
+    local proxy, proxyPath = filesystem.get(path)
+    local attributesPath = filesystem.getAttributesPath(path)
+    local serialization = require("serialization")
+
+    local globalAttributes
+    if filesystem.exists(attributesPath) then
+        globalAttributes = serialization.load(attributesPath)
+    else
+        globalAttributes = {}
+    end
+
+    local systemData
+    if globalAttributes[proxyPath] then
+        systemData = globalAttributes[proxyPath][1] or {}
+    else
+        systemData = {}
+    end
+
+    globalAttributes[proxyPath] = {attributesSystemData(path, systemData), data}
+    serialization.save(path, globalAttributes)
 end
 
 ------------------------------------ init

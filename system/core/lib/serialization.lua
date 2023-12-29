@@ -172,5 +172,11 @@ function serialization.load(path)
     return serialization.unserialize(content)
 end
 
+function serialization.save(path, data)
+    checkArg(1, path, "string")
+    checkArg(2, data, "table")
+    return fs.writeFile(path, serialization.serialize(data))
+end
+
 serialization.unloadable = true
 return serialization

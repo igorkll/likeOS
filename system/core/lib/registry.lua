@@ -16,7 +16,7 @@ local function new(path, data)
     end
 
     function lreg.save()
-        return fs.writeFile(lreg.path, serialization.serialize(lreg.data))
+        return serialization.save(lreg.path, lreg.data)
     end
 
     function lreg.apply(tbl)
