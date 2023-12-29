@@ -453,14 +453,21 @@ end
 ------------------------------------ attributes
 
 function filesystem.getAttributesPath(path)
+    local proxy, proxyPath = filesystem.get(path)
+
     local attributeNumber = 0
-    for i = 1, #path do
-        local pathbyte = path:byte(i)
+    for i = 1, #proxyPath do
+        local pathbyte = proxyPath:byte(i)
         attributeNumber = attributeNumber + (pathbyte * i)
     end
     attributeNumber = attributeNumber % 64
 
-    
+    return paths.concat(filesystem.point(proxy.address), paths.concat("/.data", ".attributes" .. tostring(math.round(attributeNumber))))
+end
+
+function filesystem.getAttributes(path)
+    local proxy, proxyPath = filesystem.get(path)
+    filesystem.getAttributesPath(path)
 end
 
 ------------------------------------ init
