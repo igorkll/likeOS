@@ -457,7 +457,7 @@ local function attributesSystemData(path, data)
     return data
 end
 
-function filesystem.getAttributesPath(path)
+local function getAttributesPath(path)
     local proxy, proxyPath = filesystem.get(path)
 
     local attributeNumber = 0
@@ -470,9 +470,27 @@ function filesystem.getAttributesPath(path)
     return paths.concat(filesystem.point(proxy.address), paths.concat("/.data", ".attributes" .. tostring(math.round(attributeNumber))))
 end
 
+
+
+function filesystem.clearAttributes(path)
+    local proxy, proxyPath = filesystem.get(path)
+    local attributesPath = getAttributesPath(path)
+    local serialization = require("serialization")
+
+    local globalAttributes
+    if filesystem.exists(attributesPath) then
+        globalAttributes = serialization.load(attributesPath)
+    else
+        globalAttributes = {}
+    end
+
+    globalAttributes[proxyPath] = nil
+    return serialization.save(path, globalAttributes)
+end
+
 function filesystem.getAttributes(path)
     local proxy, proxyPath = filesystem.get(path)
-    local attributesPath = filesystem.getAttributesPath(path)
+    local attributesPath = getAttributesPath(path)
     if filesystem.exists(attributesPath) then
         local globalAttributes = require("serialization").load(attributesPath)
         if globalAttributes[proxyPath] then
@@ -486,8 +504,11 @@ function filesystem.getAttributes(path)
 end
 
 function filesystem.setAttributes(path, data)
+    checkArg(1, path, "string")
+    checkArg(2, data, "table")
+
     local proxy, proxyPath = filesystem.get(path)
-    local attributesPath = filesystem.getAttributesPath(path)
+    local attributesPath = getAttributesPath(path)
     local serialization = require("serialization")
 
     local globalAttributes
@@ -505,7 +526,19 @@ function filesystem.setAttributes(path, data)
     end
 
     globalAttributes[proxyPath] = {attributesSystemData(path, systemData), data}
-    serialization.save(path, globalAttributes)
+    return serialization.save(path, globalAttributes)
+end
+
+
+
+function filesystem.getAttribute(path, key)
+    return filesystem.getAttributes(path)[key]
+end
+
+function filesystem.setAttribute(path, key, value)
+    local data = filesystem.getAttributes(path)
+    data[key] = value
+    return filesystem.setAttributes(path, data)
 end
 
 ------------------------------------ init
