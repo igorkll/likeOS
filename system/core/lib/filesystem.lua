@@ -4,10 +4,14 @@ local unicode = require("unicode")
 local paths = require("paths")
 local bootloader = require("bootloader")
 
-------------------------------------
+------------------------------------ base
 
 local filesystem = {}
+filesystem.bootaddress = bootloader.bootaddress
+filesystem.tmpaddress = bootloader.tmpaddress
+
 filesystem.mountList = {}
+filesystem.srvList = {"/.data"}
 filesystem.baseFileDirectorySize = 512 --задаеться к конфиге мода(по умалчанию 512 байт)
 filesystem.autoMount = true
 filesystem.inited = false
@@ -32,6 +36,8 @@ local function noEndSlash(path)
     end
     return path
 end
+
+------------------------------------ mounting functions
 
 function filesystem.mount(proxy, path)
     if type(proxy) == "string" then
@@ -84,6 +90,13 @@ function filesystem.mounts()
     return list
 end
 
+function filesystem.point(address)
+    local mounts = filesystem.mounts()
+    if mounts[address] then
+        return mounts[address][2]
+    end
+end
+
 function filesystem.get(path)
     path = endSlash(paths.absolute(path))
     
@@ -103,6 +116,22 @@ function filesystem.get(path)
         return filesystem.mountList[1][1], filesystem.mountList[1][2], filesystem.mountList[1][3]
     end
 end
+
+------------------------------------ internal functions
+
+function filesystem.isService(path)
+    local proxy, proxyPath = filesystem.get(path)
+
+    for _, checkpath in ipairs(filesystem.srvList) do
+        if paths.equals(checkpath, proxyPath) then
+            return true
+        end
+    end
+
+    return false
+end
+
+------------------------------------ main functions
 
 function filesystem.exists(path)
     local proxy, proxyPath = filesystem.get(path)
@@ -183,12 +212,19 @@ function filesystem.remove(path)
     return proxy.remove(proxyPath)
 end
 
-function filesystem.list(path, fullpaths)
+function filesystem.list(path, fullpaths, force)
     local proxy, proxyPath = filesystem.get(path)
     local tbl = proxy.list(proxyPath)
 
     if tbl then
         tbl.n = nil
+        if not force then
+            for i = #tbl, 1, -1 do
+                if filesystem.isService(paths.concat(path, tbl[i])) then
+                    table.remove(tbl, i)
+                end
+            end
+        end
         for i = 1, #filesystem.mountList do
             if paths.absolute(path) == paths.path(filesystem.mountList[i][2]) then
                 table.insert(tbl, paths.name(filesystem.mountList[i][2]))
@@ -279,12 +315,15 @@ function filesystem.open(path, mode, bufferSize)
                     return proxy.write(result, writedata)
                 end
             end,
-            seek = function(...)
-                readBuffer = nil
-                if bufferSize and writeBuffer then
-                    proxy.write(result, writeBuffer)
+            seek = function(whence, offset)
+                if whence then
+                    readBuffer = nil
+                    if bufferSize and writeBuffer then
+                        proxy.write(result, writeBuffer)
+                    end
                 end
-                return proxy.seek(result, ...)
+
+                return proxy.seek(result, whence, offset)
             end,
             close = function(...)
                 if writeBuffer then
@@ -363,6 +402,8 @@ function filesystem.copy(fromPath, toPath, fcheck)
     return copyRecursively(fromPath, toPath)
 end
 
+------------------------------------ additional functions
+
 function filesystem.writeFile(path, data)
     filesystem.makeDirectory(paths.path(path))
     local file, err = filesystem.open(path, "wb")
@@ -409,8 +450,20 @@ function filesystem.equals(path1, path2)
     return true
 end
 
-filesystem.bootaddress = bootloader.bootaddress
-filesystem.tmpaddress = bootloader.tmpaddress
+------------------------------------ attributes
+
+function filesystem.getAttributesPath(path)
+    local attributeNumber = 0
+    for i = 1, #path do
+        local pathbyte = path:byte(i)
+        attributeNumber = attributeNumber + (pathbyte * i)
+    end
+    attributeNumber = attributeNumber % 64
+
+    
+end
+
+------------------------------------ init
 
 assert(filesystem.mount(filesystem.bootaddress, "/"))
 if filesystem.autoMount then
