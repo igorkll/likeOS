@@ -102,6 +102,22 @@ function table.high(tbl)
     return newtbl
 end
 
+function table.fromIterator(...)
+    local tbl = {}
+    for a, b, c, d, e, f, g, h, j, k in ... do
+        table.insert(tbl, {a, b, c, d, e, f, g, h, j, k})
+    end
+    return tbl
+end
+
+function table.len(tbl)
+    local len = 0
+    for i, v in pairs(tbl) do
+        len = len + 1
+    end
+    return len
+end
+
 
 --bit32
 function bit32.readbit(byte, index)

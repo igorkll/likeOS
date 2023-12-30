@@ -594,8 +594,17 @@ function filesystem.setAttributes(path, data)
         systemData = {}
     end
 
-    globalAttributes[proxyPath] = {attributesSystemData(path, systemData), data}
-    return serialization.save(attributesPath, globalAttributes)
+    if table.len(data) > 0 then
+        globalAttributes[proxyPath] = {attributesSystemData(path, systemData), data}
+    else
+        globalAttributes[proxyPath] = nil
+    end
+
+    if table.len(globalAttributes) > 0 then
+        return serialization.save(attributesPath, globalAttributes)
+    end
+
+    return true
 end
 
 
