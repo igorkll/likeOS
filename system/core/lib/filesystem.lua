@@ -16,6 +16,7 @@ filesystem.autoMount = true
 filesystem.inited = false
 
 local srvList = {"/.data"}
+local forceMode = false
 
 local function startSlash(path)
     if unicode.sub(path, 1, 1) ~= "/" then
@@ -55,6 +56,24 @@ local function isService(path)
     end
 
     return false
+end
+
+local function recursionDeleteAttribute(path)
+    for _, fullpath in filesystem.recursion(path) do
+        filesystem.clearAttributes(fullpath)
+    end
+end
+
+local function recursionCloneAttribute(path, path2)
+    forceMode = true
+    for lpath, fullpath in filesystem.recursion(path) do
+        local ok, err = filesystem.setAttributes(paths.concat(path2, lpath), filesystem.getAttributes(fullpath), true)
+        if not ok then
+            forceMode = false
+            return nil, err
+        end
+    end
+    forceMode = false
 end
 
 ------------------------------------ mounting functions
@@ -113,7 +132,7 @@ end
 function filesystem.point(address)
     local mounts = filesystem.mounts()
     if mounts[address] then
-        return mounts[address][2]
+        return noEndSlash(mounts[address][2])
     end
 end
 
@@ -217,7 +236,7 @@ end
 
 function filesystem.remove(path)
     local proxy, proxyPath = filesystem.get(path)
-    return ifSuccessful(function() filesystem.clearAttributes(path) end, proxy.remove(proxyPath))
+    return ifSuccessful(function() recursionDeleteAttribute(path) end, proxy.remove(proxyPath))
 end
 
 function filesystem.list(path, fullpaths, force)
@@ -258,8 +277,10 @@ function filesystem.rename(fromPath, toPath)
     local fromProxy, fromProxyPath = filesystem.get(fromPath)
     local toProxy, toProxyPath = filesystem.get(toPath)
 
+    recursionCloneAttribute(fromPath, toPath)
+
     if fromProxy.address == toProxy.address then
-        return fromProxy.rename(fromProxyPath, toProxyPath)
+        return ifSuccessful(function() recursionDeleteAttribute(fromPath) end, fromProxy.rename(fromProxyPath, toProxyPath))
     else
         local success, err = filesystem.copy(fromPath, toPath)
         if not success then
@@ -270,9 +291,10 @@ function filesystem.rename(fromPath, toPath)
         if not success then
             return nil, err
         end
-    end
 
-    return true
+        recursionDeleteAttribute(fromPath)
+        return true
+    end
 end
 
 function filesystem.open(path, mode, bufferSize)
@@ -407,7 +429,7 @@ function filesystem.copy(fromPath, toPath, fcheck)
         return true
     end
 
-    return copyRecursively(fromPath, toPath)
+    return ifSuccessful(function() recursionCloneAttribute(fromPath, toPath) end, copyRecursively(fromPath, toPath))
 end
 
 ------------------------------------ additional functions
@@ -549,7 +571,7 @@ function filesystem.setAttributes(path, data)
     checkArg(1, path, "string")
     checkArg(2, data, "table")
 
-    if not filesystem.exists(path) then
+    if not forceMode and not filesystem.exists(path) then
         return nil, "no such file or directory"
     end
 
