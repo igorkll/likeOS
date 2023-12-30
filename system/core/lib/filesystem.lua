@@ -11,10 +11,11 @@ filesystem.bootaddress = bootloader.bootaddress
 filesystem.tmpaddress = bootloader.tmpaddress
 
 filesystem.mountList = {}
-filesystem.srvList = {"/.data"}
 filesystem.baseFileDirectorySize = 512 --задаеться к конфиге мода(по умалчанию 512 байт)
 filesystem.autoMount = true
 filesystem.inited = false
+
+local srvList = {"/.data"}
 
 local function startSlash(path)
     if unicode.sub(path, 1, 1) ~= "/" then
@@ -42,6 +43,18 @@ local function ifSuccessful(func, ok, ...)
         func()
     end
     return ok, ...
+end
+
+local function isService(path)
+    local proxy, proxyPath = filesystem.get(path)
+
+    for _, checkpath in ipairs(srvList) do
+        if paths.equals(checkpath, proxyPath) then
+            return true
+        end
+    end
+
+    return false
 end
 
 ------------------------------------ mounting functions
@@ -124,20 +137,6 @@ function filesystem.get(path)
     end
 end
 
------------------------------------- internal functions
-
-function filesystem.isService(path)
-    local proxy, proxyPath = filesystem.get(path)
-
-    for _, checkpath in ipairs(filesystem.srvList) do
-        if paths.equals(checkpath, proxyPath) then
-            return true
-        end
-    end
-
-    return false
-end
-
 ------------------------------------ main functions
 
 function filesystem.exists(path)
@@ -180,8 +179,10 @@ function filesystem.size(path)
 end
 
 function filesystem.isDirectory(path)
+    path = paths.absolute(path)
+
     for i, v in ipairs(filesystem.mountList) do
-        if v[2] == paths.absolute(path) then
+        if v[2] == path then
             return true
         end
     end
@@ -227,7 +228,7 @@ function filesystem.list(path, fullpaths, force)
         tbl.n = nil
         if not force then
             for i = #tbl, 1, -1 do
-                if filesystem.isService(paths.concat(path, tbl[i])) then
+                if isService(paths.concat(path, tbl[i])) then
                     table.remove(tbl, i)
                 end
             end
@@ -455,6 +456,29 @@ function filesystem.equals(path1, path2)
     file1.close()
     file2.close()
     return true
+end
+
+function filesystem.recursion(gpath)
+    local function process(lpath)
+        local fullpath = paths.concat(gpath, lpath)
+        coroutine.yield({lpath, fullpath})
+
+        if filesystem.isDirectory(fullpath) then
+            for _, llpath in ipairs(filesystem.list(fullpath)) do
+                process(paths.concat(lpath, llpath))
+            end
+        end
+    end
+
+    local t = coroutine.create(process)
+    return function ()
+        if coroutine.status(t) ~= "dead" then
+            local _, info = coroutine.resume(t, "/")
+            if type(info) == "table" then
+                return table.unpack(info)
+            end
+        end
+    end
 end
 
 ------------------------------------ attributes
