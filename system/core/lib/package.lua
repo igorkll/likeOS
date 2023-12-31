@@ -23,6 +23,44 @@ end
 
 package.allowEnclosedLoadingCycle = false
 package.hardAutoUnloading = false
+package.hooks = {}
+
+------------------------------------
+
+local function raw_require(name)
+    if not package.loaded[name] and not package.cache[name] then
+        local finded = package.find(name)
+        if not finded then
+            error("lib " .. name .. " is not found", 3)
+        end
+
+        package.loadingList[name] = true
+        local lib = assert(loadfile(finded, nil, bootloader.createEnv()))()
+        package.loadingList[name] = nil
+
+        if type(lib) ~= "table" or lib.unloadable then
+            package.cache[name] = lib
+        else
+            package.loaded[name] = lib
+        end
+    end
+
+    if not package.loaded[name] and not package.cache[name] then
+        error("lib " .. name .. " is not found" , 3)
+    end
+
+    return package.loaded[name] or package.cache[name]
+end
+
+local function hooked_require(name)
+    local lib = raw_require(name)
+    for _, hook in ipairs(package.hooks) do
+        lib = hook(name, lib)
+    end
+    return lib
+end
+
+------------------------------------
 
 function package.find(name)
     local fs = require("filesystem")
@@ -57,34 +95,9 @@ function package.find(name)
     end
 end
 
-function package.raw_require(name)
-    if not package.loaded[name] and not package.cache[name] then
-        local finded = package.find(name)
-        if not finded then
-            error("lib " .. name .. " is not found", 3)
-        end
-
-        package.loadingList[name] = true
-        local lib = assert(loadfile(finded, nil, bootloader.createEnv()))()
-        package.loadingList[name] = nil
-
-        if type(lib) ~= "table" or lib.unloadable then
-            package.cache[name] = lib
-        else
-            package.loaded[name] = lib
-        end
-    end
-
-    if not package.loaded[name] and not package.cache[name] then
-        error("lib " .. name .. " is not found" , 3)
-    end
-
-    return package.loaded[name] or package.cache[name]
-end
-
 function package.require(name, force)
     if force then
-        return package.raw_require(name)
+        return hooked_require(name)
     end
 
     local lib = package.loaded[name] or package.cache[name]
@@ -96,9 +109,9 @@ function package.require(name, force)
                 return package.libStubsCache[name]
             else
                 package.libStubsCache[name] = setmetatable({}, {__index = function (_, key)
-                    return (package.raw_require(name))[key]
+                    return (hooked_require(name))[key]
                 end, __newindex = function (_, key, value)
-                    (package.raw_require(name))[key] = value
+                    (hooked_require(name))[key] = value
                 end})
                 return package.libStubsCache[name]
             end
@@ -106,7 +119,7 @@ function package.require(name, force)
             error("enclosed loading cycle is disabled", 2)
         end
     else
-        return package.raw_require(name)
+        return hooked_require(name)
     end
 end
 
@@ -122,7 +135,15 @@ function package.isInstalled(name)
     return not not package.find(name)
 end
 
-function package.raw_reg(name, path)
+function package.applyHook(hook)
+    table.insert(package.hooks, hook)
+end
+
+function package.cancelHook(hook)
+    table.clear(package.hooks, hook)
+end
+
+function package.register(name, path)
     if bootloader.bootfs.exists(path) and not package.loaded[name] and not package.cache[name] then
         local lib = bootloader.dofile(path, nil, bootloader.createEnv())
         if type(lib) ~= "table" or lib.unloadable then

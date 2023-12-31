@@ -1,4 +1,4 @@
---math
+------------------------------------------------ math
 function math.round(number)
     if number >= 0 then
         return math.floor(number + 0.5)
@@ -32,7 +32,8 @@ function math.clampRound(value, min, max)
 end
 
 
---table
+------------------------------------------------ table
+
 function table.clone(tbl)
     local newtbl = {}
     for k, v in pairs(tbl) do
@@ -119,7 +120,8 @@ function table.len(tbl)
 end
 
 
---bit32
+------------------------------------------------ bit32
+
 function bit32.readbit(byte, index)
     return byte >> index & 1 == 1
 end
@@ -139,7 +141,7 @@ function bit32.writebit(byte, index, newstate)
 end
 
 
---other
+------------------------------------------------ other
 function xor(...)
     local state = false
     for _, flag in ipairs({...}) do

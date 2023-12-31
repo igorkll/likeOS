@@ -18,5 +18,17 @@ function utils.openPort(modem, port)
     return result, err
 end
 
+function utils.safeExec(func, errorOutput) --для event.hyperHook или других hyper методов, обрабатывает ошибку и пишет в лог в случаи чего
+    local result = {xpcall(func, debug.traceback)}
+    if not result[1] then
+        require("logs").log(result[2], "safe exec error")
+        if errorOutput then
+            return table.unpack(errorOutput)
+        end
+    else
+        return table.unpack(result, 2)
+    end
+end
+
 utils.unloadable = true
 return utils

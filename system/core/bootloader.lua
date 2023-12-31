@@ -184,12 +184,12 @@ function bootloader.bootstrap()
     _G.component = nil
     _G.unicode = nil
     _G.natives = nil
-    package.raw_reg("paths",      "/system/core/lib/paths.lua")
-    package.raw_reg("filesystem", "/system/core/lib/filesystem.lua")
-    require("vcomponent")
+    package.register("paths",      "/system/core/lib/paths.lua")
+    package.register("filesystem", "/system/core/lib/filesystem.lua")
+    require("vcomponent") --подключения библиотеки виртуальных компонентов
     local event = require("event")
     local lastinfo = require("lastinfo")
-    require("service")
+    require("service") --подключения сервисной (упровляющей) библиотеки
 
     --проверка целосности системы (юнит тесты)
     bootloader.unittests("/system/core/unittests")
