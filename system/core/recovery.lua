@@ -147,6 +147,38 @@ local function menu(label, strs, funcs, withoutBackButton, refresh)
     end
 end
 
+local function yesno(title)
+    local result = false
+    menu(title,
+        {
+            "No",
+            "No",
+            "No",
+            "No",
+            "No",
+            "No",
+            "Yes",
+            "No",
+            "No",
+            "No"
+        },
+        {
+            nil,
+            nil,
+            nil,
+            nil,
+            nil,
+            nil,
+            function ()
+                result = true
+                return true
+            end
+        },
+        true
+    )
+    return result
+end
+
 local function info(strs, withoutWaitEnter)
     clearScreen()
 
@@ -371,7 +403,8 @@ local recoveryApi = {
     selectfile = selectfile,
     loadfile = loadfile,
     isKeyboard = isKeyboard,
-    wget = wget
+    wget = wget,
+    yesno = yesno
 }
 
 local function createSandbox()
@@ -421,38 +454,14 @@ menu(bootloader.coreversion .. " recovery",
             end
         end,
         function (str)
-            menu(str,
-                {
-                    "No",
-                    "No",
-                    "No",
-                    "No",
-                    "No",
-                    "No",
-                    "Yes",
-                    "No",
-                    "No",
-                    "No"
-                },
-                {
-                    nil,
-                    nil,
-                    nil,
-                    nil,
-                    nil,
-                    nil,
-                    function ()
-                        local result = {bootloader.bootfs.remove("/data")}
-                        if not result[1] then
-                            info(result[2] or "No Data Partition Found")
-                        else
-                            info("Data Successfully Wiped")
-                        end
-                        return true
-                    end
-                },
-                true
-            )
+            if yesno(str) then
+                local result = {bootloader.bootfs.remove("/data")}
+                if not result[1] then
+                    info(result[2] or "No Data Partition Found")
+                else
+                    info("Data Successfully Wiped")
+                end
+            end
         end,
         function ()
             local script, nickname = input("script")
