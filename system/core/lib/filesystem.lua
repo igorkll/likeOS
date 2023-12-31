@@ -546,7 +546,11 @@ function filesystem.clearAttributes(path)
         globalAttributes = {}
     end
 
+    local cache = require("cache")
+    if not cache.cache.attributes then cache.cache.attributes = {} end
+
     globalAttributes[proxyPath] = nil
+    cache.cache.attributes[attributesPath] = globalAttributes
     return serialization.save(attributesPath, globalAttributes)
 end
 
@@ -554,8 +558,15 @@ function filesystem.getAttributes(path)
     local proxy, proxyPath = filesystem.get(path)
     local attributesPath = getAttributesPath(path)
     if filesystem.exists(attributesPath) then
-        local globalAttributes = require("serialization").load(attributesPath)
-        checkGlobalAttributes(globalAttributes)
+        local cache = require("cache")
+        if not cache.cache.attributes then cache.cache.attributes = {} end
+
+        local globalAttributes = cache.cache.attributes[attributesPath]
+        if not globalAttributes then
+            globalAttributes = require("serialization").load(attributesPath)
+            checkGlobalAttributes(globalAttributes)
+            cache.cache.attributes[attributesPath] = globalAttributes
+        end
 
         if globalAttributes[proxyPath] then
             local systemData = globalAttributes[proxyPath][1]
@@ -600,9 +611,14 @@ function filesystem.setAttributes(path, data)
         globalAttributes[proxyPath] = nil
     end
 
+    local cache = require("cache")
+    if not cache.cache.attributes then cache.cache.attributes = {} end
+
     if table.len(globalAttributes) > 0 then
+        cache.cache.attributes[attributesPath] = globalAttributes
         return serialization.save(attributesPath, globalAttributes)
     elseif filesystem.exists(attributesPath) then
+        cache.cache.attributes[attributesPath] = nil
         return filesystem.remove(attributesPath)
     else
         return true
