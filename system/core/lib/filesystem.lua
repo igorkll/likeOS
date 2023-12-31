@@ -602,9 +602,11 @@ function filesystem.setAttributes(path, data)
 
     if table.len(globalAttributes) > 0 then
         return serialization.save(attributesPath, globalAttributes)
+    elseif filesystem.exists(attributesPath) then
+        return filesystem.remove(attributesPath)
+    else
+        return true
     end
-
-    return true
 end
 
 
