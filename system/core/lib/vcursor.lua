@@ -16,10 +16,12 @@ function vcursor.hook(screen)
     local posx, posy = 1, 1
 
     local function invertPos(x, y)
-        local char, fore, back = graphic.get(screen, x or posx, y or posy)
-        if char then
-            graphic.set(screen, x or posx, y or posy, 0xffffff - back, 0xffffff - fore, char)
-        end
+        pcall(function ()
+            local char, fore, back = graphic.get(screen, x or posx, y or posy)
+            if char then
+                graphic.set(screen, x or posx, y or posy, 0xffffff - back, 0xffffff - fore, char)
+            end
+        end)
     end
 
     event.hyperHook(function (...)

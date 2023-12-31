@@ -209,6 +209,10 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
     local gpu = graphic.findGpu(self.screen)
     local depth = gpu.getDepth()
 
+    if depth == 1 then
+        syntax = nil
+    end
+
     local function getPalColor(pal)
         if graphic.fakePalette then
             return graphic.fakePalette[pal] or 0
@@ -1422,6 +1426,19 @@ event.hyperListen(function(eventType, _, ctype)
 end)
 
 ------------------------------------
+
+function graphic.getDeviceTier(address)
+    local capacity = lastinfo.deviceinfo[address].capacity
+    if capacity == "8000" then
+        return 3
+    elseif capacity == "2000" then
+        return 2
+    elseif capacity == "800" then
+        return 1
+    else
+        return -1
+    end
+end
 
 function graphic.screenshot(screen, x, y, sx, sy)
     local gpu = graphic.findGpu(screen)
