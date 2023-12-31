@@ -342,6 +342,44 @@ function vgpu.createStub(gpu)
     local fore, forePal = gpu.getForeground()
     local bgUpdated, fgUpdated = false, false
 
+    local vpal = {}
+    local depth = gpu.getDepth()
+
+    function obj.setDepth(d)
+        local out = gpu.setDepth(d)
+        depth = d
+        if d > 1 then
+            for i = 0, 15 do
+                vpal[i] = gpu.getPaletteColor(i)
+            end
+        else
+            for i = 0, 15 do
+                vpal[i] = 0
+            end
+        end
+        return out
+    end
+    obj.setDepth(depth)
+
+    function obj.getDepth()
+        return depth
+    end
+
+    function obj.getPaletteColor(i)
+        return vpal[i]
+    end
+
+    function obj.setPaletteColor(i, v)
+        local out
+        if depth > 1 then
+            out = gpu.setPaletteColor(i, v)
+        else
+            out = vpal[i]
+        end
+        vpal[i] = v
+        return out
+    end
+
     function obj.getBackground()
         return back, backPal
     end
@@ -364,8 +402,19 @@ function vgpu.createStub(gpu)
         return old, oldPal
     end
 
+
+    local function formatPal(col, isPal)
+        if depth == 1 and isPal then
+            return vpal[col] or 0
+        end
+        return col, isPal
+    end
+
     function obj.set(x, y, text, vertical)
-        local newBack, newBackPal, newFore, newForePal, text = graphic._formatColor(gpu, back, backPal, fore, forePal, text)
+        local newBack, newBackPal, newFore, newForePal, text = graphic._formatColor(obj, back, backPal, fore, forePal, text)
+        newBack, newBackPal = formatPal(newBack, newBackPal)
+        newFore, newForePal = formatPal(newFore, newForePal)
+
         if fgUpdated then
             gpu.setForeground(newFore, newForePal)            
             fgUpdated = false
@@ -378,7 +427,10 @@ function vgpu.createStub(gpu)
     end
 
     function obj.fill(x, y, sx, sy, char)
-        local newBack, newBackPal, newFore, newForePal, char = graphic._formatColor(gpu, back, backPal, fore, forePal, char)
+        local newBack, newBackPal, newFore, newForePal, char = graphic._formatColor(obj, back, backPal, fore, forePal, char)
+        newBack, newBackPal = formatPal(newBack, newBackPal)
+        newFore, newForePal = formatPal(newFore, newForePal)
+
         if fgUpdated then
             gpu.setForeground(newFore, newForePal)            
             fgUpdated = false
