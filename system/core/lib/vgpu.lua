@@ -185,7 +185,7 @@ function vgpu.create(gpu, screen)
     end
 
     function obj.set(x, y, text, vertical)
-        local currentBack, _, currentFore, _, text = formatColor(gpu, currentBack, currentBackPal, currentFore, currentForePal, text, true)
+        local currentBack, _, currentFore, _, text = formatColor(obj, currentBack, currentBackPal, currentFore, currentForePal, text, true)
         x = floor(x)
         y = floor(y)
 
@@ -211,7 +211,7 @@ function vgpu.create(gpu, screen)
     end
 
     function obj.fill(x, y, sizeX, sizeY, char)
-        local currentBack, _, currentFore, _, char = formatColor(gpu, currentBack, currentBackPal, currentFore, currentForePal, char, true)
+        local currentBack, _, currentFore, _, char = formatColor(obj, currentBack, currentBackPal, currentFore, currentForePal, char, true)
         x = floor(x)
         y = floor(y)
         sizeX = floor(sizeX)

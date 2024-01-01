@@ -928,7 +928,7 @@ function graphic._formatColor(gpu, back, backPal, fore, forePal, text, noPalInde
             col = gpu.getPaletteColor(col)
         end
         
-        local r, g, b = colors.unBlend(col)
+        local r, g, b = colors.unBlend(col or 0x000000)
         local step = math.round(255 / #gradients)
         local val = ((r + g + b) / 3)
         local index = 1
