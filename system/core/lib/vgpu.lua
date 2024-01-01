@@ -5,6 +5,10 @@ local vgpu = {}
 local formatColor = graphic._formatColor
 local floor = math.floor
 local concat = table.concat
+local huge = math.huge
+
+local unicode_len = unicode.len
+local unicode_sub = unicode.sub
 
 function vgpu.create(gpu, screen)
     local obj = {}
@@ -162,7 +166,7 @@ function vgpu.create(gpu, screen)
                 chars[i] = " "
             end
         end
-        for i = rsmax + 1, math.huge do
+        for i = rsmax + 1, huge do
             if backgrounds[i] then
                 backgrounds[i] = nil
                 foregrounds[i] = nil
@@ -188,20 +192,20 @@ function vgpu.create(gpu, screen)
         y = floor(y)
 
         if vertical then
-            for i = 1, unicode.len(text) do
+            for i = 1, unicode_len(text) do
                 if y + (i - 1) > ry then break end
                 index = ((x - 1) * rx) + ((y + (i - 1)) - 1)
                 backgrounds[index] = currentBack
                 foregrounds[index] = currentFore
-                chars[index] = unicode.sub(text, i, i)
+                chars[index] = unicode_sub(text, i, i)
             end
         else
-            for i = 1, unicode.len(text) do
+            for i = 1, unicode_len(text) do
                 if x + (i - 1) > rx then break end
                 index = ((x + (i - 1)) - 1) + ((y - 1) * rx)
                 backgrounds[index] = currentBack
                 foregrounds[index] = currentFore
-                chars[index] = unicode.sub(text, i, i)
+                chars[index] = unicode_sub(text, i, i)
             end
         end
 
@@ -285,16 +289,17 @@ function vgpu.create(gpu, screen)
                     foregrounds[i] ~= currentForegrounds[i] or
                     chars[i] ~= currentChars[i] or
                     (i + 1) % rx == 0) then
-                    buff = {}
-                    buffI = 1
+                    
                     back = backgrounds[i]
                     fore = foregrounds[i]
+
+                    buff = {}
+                    buffI = 1
                     index = i
                     while true do
                         buff[buffI] = chars[i]
                         buffI = buffI + 1
-                        if back == backgrounds[i + 1] and fore == foregrounds[i + 1] and
-                        (i + 1) % rx ~= 0 then
+                        if back == backgrounds[i + 1] and fore == foregrounds[i + 1] and (i + 1) % rx ~= 0 then
                             currentBackgrounds[i] = backgrounds[i]
                             currentForegrounds[i] = foregrounds[i]
                             currentChars[i] = chars[i]
