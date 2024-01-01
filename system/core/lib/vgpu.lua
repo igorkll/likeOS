@@ -155,6 +155,22 @@ function vgpu.create(gpu, screen)
         setResolution(x, y)
         rx, ry = x, y
         rsmax = (rx - 1) + ((ry - 1) * rx)
+        for i = 0, rsmax do
+            if not backgrounds[i] then
+                backgrounds[i] = 0
+                foregrounds[i] = 0xffffff
+                chars[i] = " "
+            end
+        end
+        for i = rsmax + 1, math.huge do
+            if backgrounds[i] then
+                backgrounds[i] = nil
+                foregrounds[i] = nil
+                chars[i] = nil
+            else
+                break
+            end
+        end
     end
 
     local index
