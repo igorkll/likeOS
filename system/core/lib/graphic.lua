@@ -145,9 +145,11 @@ local function uploadEvent(self, eventData)
             local oldSelected = self.selected
             local rePosX = (eventData[3] - self.x) + 1
             local rePosY = (eventData[4] - self.y) + 1
+            local crePosX = math.ceil(rePosX)
+            local crePosY = math.ceil(rePosY)
             self.selected = false
 
-            local inside = rePosX >= 1 and rePosY >= 1 and rePosX <= self.sizeX and rePosY <= self.sizeY
+            local inside = crePosX >= 1 and crePosY >= 1 and crePosX <= self.sizeX and crePosY <= self.sizeY
             if inside or self.outsideEvents then
                 self.selected = true
                 newEventData = {eventData[1], eventData[2], rePosX, rePosY, eventData[5], eventData[6]}
