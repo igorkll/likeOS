@@ -2,6 +2,7 @@ local unicode = require("unicode")
 local graphic = require("graphic")
 local vgpu = {}
 
+local formatColor = graphic._formatColor
 local floor = math.floor
 local concat = table.concat
 
@@ -37,14 +38,10 @@ function vgpu.create(gpu, screen)
 
     local currentBackgrounds = {}
     local currentForegrounds = {}
-    --local currentBackgroundsPal = {}
-    --local currentForegroundsPal = {}
     local currentChars = {}
 
     local backgrounds = {}
     local foregrounds = {}
-    --local backgroundsPal = {}
-    --local foregroundsPal = {}
     local chars = {}
 
     local currentBack, currentBackPal = getBackground()
@@ -63,6 +60,48 @@ function vgpu.create(gpu, screen)
         obj[key] = value
     end
 
+
+
+    local vpal = {}
+    local depth = gpu.getDepth()
+
+    function obj.setDepth(d)
+        local out = gpu.setDepth(d)
+        depth = d
+        if d > 1 then
+            for i = 0, 15 do
+                vpal[i] = getPaletteColor(i)
+            end
+        else
+            for i = 0, 15 do
+                vpal[i] = 0
+            end
+        end
+        return out
+    end
+    obj.setDepth(depth)
+
+    function obj.getDepth()
+        return depth
+    end
+
+    function obj.getPaletteColor(i)
+        return vpal[i]
+    end
+
+    function obj.setPaletteColor(i, v)
+        local out
+        if depth > 1 then
+            out = setPaletteColor(i, v)
+        else
+            out = vpal[i]
+        end
+        vpal[i] = v
+        return out
+    end
+
+
+
     function obj.getBackground()
         return origCurrentBack, currentBackPal
     end
@@ -79,7 +118,7 @@ function vgpu.create(gpu, screen)
         old = currentBack
         oldPal = currentBackPal
         if isPal then
-            currentBack = getPaletteColor(col)
+            currentBack = vpal[col]
         else
             currentBack = col
         end
@@ -95,7 +134,7 @@ function vgpu.create(gpu, screen)
         old = currentFore
         oldPal = currentForePal
         if isPal then
-            currentFore = getPaletteColor(col)
+            currentFore = vpal[col]
         else
             currentFore = col
         end
@@ -128,7 +167,7 @@ function vgpu.create(gpu, screen)
     end
 
     function obj.set(x, y, text, vertical)
-        local currentBack, _, currentFore, _, text = graphic._formatColor(gpu, currentBack, currentBackPal, currentFore, currentForePal, text, true)
+        local currentBack, _, currentFore, _, text = formatColor(gpu, currentBack, currentBackPal, currentFore, currentForePal, text, true)
         x = floor(x)
         y = floor(y)
 
@@ -138,8 +177,6 @@ function vgpu.create(gpu, screen)
                 index = ((x - 1) * rx) + ((y + (i - 1)) - 1)
                 backgrounds[index] = currentBack
                 foregrounds[index] = currentFore
-                --backgroundsPal[index] = currentBackPal
-                --foregroundsPal[index] = currentForePal
                 chars[index] = unicode.sub(text, i, i)
             end
         else
@@ -148,8 +185,6 @@ function vgpu.create(gpu, screen)
                 index = ((x + (i - 1)) - 1) + ((y - 1) * rx)
                 backgrounds[index] = currentBack
                 foregrounds[index] = currentFore
-                --backgroundsPal[index] = currentBackPal
-                --foregroundsPal[index] = currentForePal
                 chars[index] = unicode.sub(text, i, i)
             end
         end
@@ -158,41 +193,18 @@ function vgpu.create(gpu, screen)
     end
 
     function obj.fill(x, y, sizeX, sizeY, char)
-        local currentBack, _, currentFore, _, char = graphic._formatColor(gpu, currentBack, currentBackPal, currentFore, currentForePal, char, true)
+        local currentBack, _, currentFore, _, char = formatColor(gpu, currentBack, currentBackPal, currentFore, currentForePal, char, true)
         x = floor(x)
         y = floor(y)
         sizeX = floor(sizeX)
         sizeY = floor(sizeY)
 
-        --[[
-        --фактически делаем заливка
-        gpu.setBackground(currentBack)
-        gpu.setForeground(currentFore)
-        gpu.fill(x, y, sizeX, sizeY, char)
-
-        for ix = x, x + (sizeX - 1) do
-            for iy = y, y + (sizeY - 1) do
-                local index = (ix - 1) + ((iy - 1) * rx)
-
-                backgrounds[index] = currentBack
-                foregrounds[index] = currentFore
-                chars[index] = char
-
-                currentBackgrounds[index] = currentBack --чтобы это не требовалось перерисовывать(так как этот метод применяет изображения сразу)
-                currentForegrounds[index] = currentFore
-                currentChars[index] = char
-            end
-        end
-        ]]
-        
         for ix = x, x + (sizeX - 1) do
             for iy = y, y + (sizeY - 1) do
                 if ix > rx or iy > ry then break end
                 index = (ix - 1) + ((iy - 1) * rx)
                 backgrounds[index] = currentBack
                 foregrounds[index] = currentFore
-                --backgroundsPal[index] = currentBackPal
-                --foregroundsPal[index] = currentForePal
                 chars[index] = char
             end
         end
@@ -229,8 +241,6 @@ function vgpu.create(gpu, screen)
 
                 newB[newindex] = backgrounds[index]
                 newF[newindex] = foregrounds[index]
-                --newBP[newindex] = backgroundsPal[index]
-                --newFP[newindex] = foregroundsPal[index]
                 newC[newindex] = chars[index]
             end
         end
@@ -238,89 +248,59 @@ function vgpu.create(gpu, screen)
         for newindex in pairs(newC) do
             backgrounds[newindex] = newB[newindex]
             foregrounds[newindex] = newF[newindex]
-            --backgroundsPal[newindex] = newBP[newindex]
-            --foregroundsPal[newindex] = newFP[newindex]
             chars[newindex] = newC[newindex]
             
             currentBackgrounds[newindex] = newB[newindex] --чтобы это не требовалось перерисовывать(так как этот метод применяет изображения сразу)
             currentForegrounds[newindex] = newF[newindex]
-            --currentBackgroundsPal[newindex] = newBP[newindex]
-            --currentForegroundsPal[newindex] = newFP[newindex]
             currentChars[newindex] = newC[newindex]
         end
-
-        --[[
-        newB, newF, newC = {}, {}, {}
-        for ix = x, x + (sx - 1) do 
-            for iy = y, y + (sy - 1) do
-                index = (ix - 1) + ((iy - 1) * rx)
-                newindex = ((ix + ox) - 1) + (((iy + oy) - 1) * rx)
-
-                newB[newindex] = backgrounds[index]
-                newF[newindex] = foregrounds[index]
-                newC[newindex] = chars[index]
-            end
-        end
-
-        for newindex in pairs(newC) do
-            backgrounds[newindex] = newB[newindex]
-            foregrounds[newindex] = newF[newindex]
-            chars[newindex] = newC[newindex]
-        end
-
-        updated = true
-        ]]
     end
 
+    local oldBg, oldFg
     function obj.update()
         if updated then
             init()
 
             local index, buff, buffI, back, fore
             local i = 0
-            --local backPal, forePal
             while i <= rsmax do
                 if backgrounds[i] and (
                     backgrounds[i] ~= currentBackgrounds[i] or
                     foregrounds[i] ~= currentForegrounds[i] or
-                    --backgroundsPal[i] ~= currentBackgroundsPal[i] or
-                    --foregroundsPal[i] ~= currentForegroundsPal[i] or
                     chars[i] ~= currentChars[i] or
                     (i + 1) % rx == 0) then
                     buff = {}
                     buffI = 1
                     back = backgrounds[i]
                     fore = foregrounds[i]
-                    --backPal = backgroundsPal[i]
-                    --forePal = foregroundsPal[i]
                     index = i
                     while true do
                         buff[buffI] = chars[i]
                         buffI = buffI + 1
                         if back == backgrounds[i + 1] and fore == foregrounds[i + 1] and
-                        --backPal == backgroundsPal[i + 1] and forePal == foregroundsPal[i + 1] and
                         (i + 1) % rx ~= 0 then
                             currentBackgrounds[i] = backgrounds[i]
                             currentForegrounds[i] = foregrounds[i]
-                            --currentBackgroundsPal[i] = backgroundsPal[i]
-                            --currentForegroundsPal[i] = foregroundsPal[i]
                             currentChars[i] = chars[i]
                             i = i + 1
                         else
                             break
                         end
                     end
-                    --gpu.setBackground(back, backPal)
-                    --gpu.setForeground(fore, forePal)
-                    setBackground(back)
-                    setForeground(fore)
+
+                    if back ~= oldBg then
+                        setBackground(back)
+                        oldBg = back
+                    end
+                    if fore ~= oldFg then
+                        setForeground(fore)
+                        oldFg = fore
+                    end
                     set((index % rx) + 1, (index // rx) + 1, concat(buff))
                 end
 
                 currentBackgrounds[i] = backgrounds[i]
                 currentForegrounds[i] = foregrounds[i]
-                --currentBackgroundsPal[i] = backgroundsPal[i]
-                --currentForegroundsPal[i] = foregroundsPal[i]
                 currentChars[i] = chars[i]
                 i = i + 1
             end
@@ -380,6 +360,9 @@ function vgpu.createStub(gpu)
         return out
     end
 
+
+
+
     function obj.getBackground()
         return back, backPal
     end
@@ -411,7 +394,7 @@ function vgpu.createStub(gpu)
     end
 
     function obj.set(x, y, text, vertical)
-        local newBack, newBackPal, newFore, newForePal, text = graphic._formatColor(obj, back, backPal, fore, forePal, text)
+        local newBack, newBackPal, newFore, newForePal, text = formatColor(obj, back, backPal, fore, forePal, text)
         newBack, newBackPal = formatPal(newBack, newBackPal)
         newFore, newForePal = formatPal(newFore, newForePal)
 
@@ -427,7 +410,7 @@ function vgpu.createStub(gpu)
     end
 
     function obj.fill(x, y, sx, sy, char)
-        local newBack, newBackPal, newFore, newForePal, char = graphic._formatColor(obj, back, backPal, fore, forePal, char)
+        local newBack, newBackPal, newFore, newForePal, char = formatColor(obj, back, backPal, fore, forePal, char)
         newBack, newBackPal = formatPal(newBack, newBackPal)
         newFore, newForePal = formatPal(newFore, newForePal)
 
