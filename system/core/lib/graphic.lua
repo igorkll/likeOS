@@ -85,7 +85,7 @@ local function copy(self, x, y, sizeX, sizeY, offsetX, offsetY)
 end
 
 local function clear(self, color, pal)
-    self:fill(1, 1, self.sizeX, self.sizeY, color, 0, " ", pal)
+    self:fill(1, 1, self.sizeX, self.sizeY, color, color, " ", pal)
 end
 
 local function setCursor(self, x, y)
