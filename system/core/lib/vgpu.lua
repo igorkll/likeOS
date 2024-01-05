@@ -54,9 +54,10 @@ function vgpu.create(gpu, screen)
 
     local currentBack, currentBackPal = getBackground()
     local currentFore, currentForePal = getForeground()
+    local origCurrentBack, origCurrentFore = currentBack, currentFore
+
     local rx, ry = getResolution()
     local rsmax = (rx - 1) + ((ry - 1) * rx)
-    local origCurrentBack, origCurrentFore = currentBack, currentFore
 
     for key, value in pairs(gpu) do
         obj[key] = value
@@ -293,6 +294,7 @@ function vgpu.create(gpu, screen)
 
             local index, buff, buffI, back, fore
             local i = 0
+            local pixels = {}
             while i <= rsmax do
                 if (backgrounds[i] or allBackground) ~= currentBackgrounds[i] or
                     (foregrounds[i] or allForeground) ~= currentForegrounds[i] or
@@ -318,6 +320,7 @@ function vgpu.create(gpu, screen)
                         end
                     end
 
+                    --[[
                     if back ~= oldBg then
                         setBackground(back)
                         oldBg = back
@@ -327,12 +330,33 @@ function vgpu.create(gpu, screen)
                         oldFg = fore
                     end
                     set((index % rx) + 1, (index // rx) + 1, concat(buff))
+                    ]]
+
+                    if not pixels[back] then pixels[back] = {} end
+                    if not pixels[back][fore] then pixels[back][fore] = {} end
+                    pixels[back][fore][index] = concat(buff)
                 end
 
                 currentBackgrounds[i] = backgrounds[i] or allBackground
                 currentForegrounds[i] = foregrounds[i] or allForeground
                 currentChars[i] = chars[i] or allChar
                 i = i + 1
+            end
+
+            for bg, fgs in pairs(pixels) do
+                if bg ~= oldBg then
+                    setBackground(bg)
+                    oldBg = bg
+                end
+                for fg, sets in pairs(fgs) do
+                    if fg ~= oldFg then
+                        setForeground(fg)
+                        oldFg = fg
+                    end
+                    for idx, text in pairs(sets) do
+                        set((idx % rx) + 1, (idx // rx) + 1, text)
+                    end
+                end
             end
 
             updated = false
