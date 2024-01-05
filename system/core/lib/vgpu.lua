@@ -227,8 +227,9 @@ function vgpu.create(gpu, screen)
             chars = {}
         else
             for ix = x, x + (sizeX - 1) do
+                if ix > rx then break end
                 for iy = y, y + (sizeY - 1) do
-                    if ix > rx or iy > ry then break end
+                    if iy > ry then break end
                     index = (ix - 1) + ((iy - 1) * rx)
                     backgrounds[index] = currentBack
                     foregrounds[index] = currentFore

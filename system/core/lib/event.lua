@@ -110,15 +110,14 @@ end
 function event.listen(eventType, func, th)
     checkArg(1, eventType, "string", "nil")
     checkArg(2, func, "function")
-    return tableInsert(event.listens, {th = th, eventType = eventType, func = func, type = "l"}) --нет класический table.insert не подайдет, так как он не дает понять, нуда вставил значения
+    return tableInsert(event.listens, {th = th, eventType = eventType, func = func, type = true}) --нет класический table.insert не подайдет, так как он не дает понять, нуда вставил значения
 end
 
 function event.timer(time, func, times, th)
     checkArg(1, time, "number")
     checkArg(2, func, "function")
     checkArg(3, times, "number", "nil")
-    return tableInsert(event.listens, {th = th, time = time, func = func, times = times or 1,
-    type = "t", lastTime = computer.uptime()})
+    return tableInsert(event.listens, {th = th, time = time, func = func, times = times or 1, lastTime = computer.uptime(), type = false})
 end
 
 function event.cancel(num)
@@ -247,7 +246,7 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
         else
             --поиск времени до первого таймера, что обязательно на него успеть
             for k, v in pairs(event.listens) do --нет ipairs неподайдет, так могут быть дырки
-                if v.type == "t" and not v.killed and v.th == current then
+                if not v.type and not v.killed and v.th == current then
                     local timerTime = v.time - (computer.uptime() - v.lastTime)
                     if timerTime < realWaitTime then
                         realWaitTime = timerTime
@@ -283,8 +282,9 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
             end
         end
 
+        local isEvent = #eventData > 0
         for k, v in pairs(event.listens) do --таймеры. нет ipairs неподайдет, там могуть быть дырки
-            if v.type == "t" and not v.killed and v.th == current then
+            if not v.type and not v.killed and v.th == current then
                 if not v.th or v.th:status() == "running" then
                     local uptime = computer.uptime() 
                     if uptime - v.lastTime >= v.time then
@@ -302,25 +302,20 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
                 elseif v.th:status() == "dead" then
                     event.listens[k] = nil
                 end
-            end
-        end
-
-        if #eventData > 0 then
-            for k, v in pairs(event.listens) do --слушатели. нет ipairs неподайдет, так могут быть дырки
-                if v.type == "l" and not v.killed and v.th == current then
-                    if not v.th or v.th:status() == "running" then
-                        if not v.eventType or v.eventType == eventData[1] then
-                            runCallback(false, v.func, k, table.unpack(eventData))
-                        end
-                    elseif v.th:status() == "dead" then
-                        event.listens[k] = nil
+            elseif isEvent and v.type and not v.killed and v.th == current then
+                if not v.th or v.th:status() == "running" then
+                    if not v.eventType or v.eventType == eventData[1] then
+                        runCallback(false, v.func, k, table.unpack(eventData))
                     end
+                elseif v.th:status() == "dead" then
+                    event.listens[k] = nil
                 end
             end
-            return table.unpack(eventData)
         end
 
-        if isEnd then
+        if isEvent then
+            return table.unpack(eventData)
+        elseif isEnd then
             break
         end
     end
