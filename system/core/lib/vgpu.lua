@@ -2,13 +2,113 @@ local unicode = require("unicode")
 local graphic = require("graphic")
 local vgpu = {}
 
-local formatColor = graphic._formatColor
+local pairs = pairs
 local floor = math.floor
 local concat = table.concat
 local huge = math.huge
 
 local unicode_len = unicode.len
 local unicode_sub = unicode.sub
+
+local gradients = {"░", "▒", "▓"}
+local function formatColor(gpu, back, backPal, fore, forePal, text, noPalIndex)
+    local depth = gpu.getDepth()
+    if not graphic.colorAutoFormat or depth > 1 then
+        return back, backPal, fore, forePal, text
+    end
+
+    local function getGradient(col, pal)
+        if pal and col >= 0 and col <= 15 then
+            col = gpu.getPaletteColor(col)
+        end
+        
+        local r, g, b = colors.unBlend(col or 0x000000)
+        local step = math.round(255 / #gradients)
+        local val = ((r + g + b) / 3)
+        local index = 1
+        for i = 0, 255, step do
+            if i > val then
+                return gradients[math.min(index - 1, #gradients)]
+            end
+            index = index + 1
+        end
+        return gradients[#gradients]
+    end
+
+    local function formatCol(col, pal)
+        if depth == 1 then
+            if pal and col >= 0 and col <= 15 then
+                col = gpu.getPaletteColor(col)
+            end
+
+            if col == 0x000000 then
+                return 0x000000
+            elseif col == 0xffffff then
+                return 0xffffff
+            end
+        else
+            return col, pal
+        end
+    end
+
+    local oldEquals = back == fore
+    local newBack, newBackPal = formatCol(back, backPal)
+    local newFore, newForePal = formatCol(fore, forePal)
+    local gradient, gradientEmpty = nil, true
+
+    if not newBack then
+        newBack = 0x000000
+        gradient = getGradient(back, backPal)
+        local buff = {}
+        local buffI = 1
+        for i = 1, unicode.len(text) do
+            local char = unicode.sub(text, i, i)
+            if char == " " then
+                buff[buffI] = gradient
+            else
+                buff[buffI] = char
+                gradientEmpty = false
+            end
+            buffI = buffI + 1
+        end
+        text = table.concat(buff)
+    end
+
+    if not newFore then
+        newFore = 0xffffff
+    end
+
+    if depth == 1 then
+        if not oldEquals and newBack == newFore then
+            if gradient and gradientEmpty then
+                newBack = 0x000000
+                newFore = 0xffffff
+            else
+                if newFore == 0 then
+                    newBack = 0xffffff
+                else
+                    newFore = 0
+                end
+            end
+        end
+    elseif noPalIndex then
+        if newBackPal then
+            if newBack >= 0 and newBack <= 15 then
+                newBack = gpu.getPaletteColor(newBack)
+            end
+            newBackPal = false
+        end
+
+        if newForePal then
+            if newFore >= 0 and newFore <= 15 then
+                newFore = gpu.getPaletteColor(newFore)
+            end
+            newForePal = false
+        end
+    end
+
+    return newBack, newBackPal, newFore, newForePal, text
+end
 
 function vgpu.create(gpu, screen)
     local obj = {}
