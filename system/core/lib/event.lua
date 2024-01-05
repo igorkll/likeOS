@@ -62,6 +62,10 @@ end
 
 ------------------------------------------------------------------------
 
+function event.stub()
+    event.push("stub")
+end
+
 function event.errLog(data)
     require("logs").log(data)
 end
