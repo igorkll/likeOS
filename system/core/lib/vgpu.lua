@@ -139,6 +139,7 @@ function vgpu.create(gpu, screen)
     init()
 
     local updated = false
+    local forceUpdate = true
 
     local currentBackgrounds = {}
     local currentForegrounds = {}
@@ -256,8 +257,10 @@ function vgpu.create(gpu, screen)
 
         init()
         setResolution(x, y)
+
         rx, ry = x, y
         rsmax = (rx - 1) + ((ry - 1) * rx)
+        
         for i = 0, rsmax do
             if not backgrounds[i] then
                 backgrounds[i] = 0
@@ -396,7 +399,7 @@ function vgpu.create(gpu, screen)
             local i = 0
             local pixels = {}
             while i <= rsmax do
-                if (backgrounds[i] or allBackground) ~= currentBackgrounds[i] or
+                if forceUpdate or (backgrounds[i] or allBackground) ~= currentBackgrounds[i] or
                     (foregrounds[i] or allForeground) ~= currentForegrounds[i] or
                     (chars[i] or allChar) ~= currentChars[i] or
                     (i + 1) % rx == 0 then
@@ -432,8 +435,8 @@ function vgpu.create(gpu, screen)
                     set((index % rx) + 1, (index // rx) + 1, concat(buff))
                     ]]
 
-                    if not pixels[back] then pixels[back] = {} end
-                    if not pixels[back][fore] then pixels[back][fore] = {} end
+                    pixels[back] = pixels[back] or {}
+                    pixels[back][fore] = pixels[back][fore] or {}
                     pixels[back][fore][index] = concat(buff)
                 end
 
@@ -453,6 +456,7 @@ function vgpu.create(gpu, screen)
                         setForeground(fg)
                         oldFg = fg
                     end
+
                     for idx, text in pairs(sets) do
                         set((idx % rx) + 1, (idx // rx) + 1, text)
                     end
@@ -460,6 +464,7 @@ function vgpu.create(gpu, screen)
             end
 
             updated = false
+            forceUpdate = false
         end
     end
 
