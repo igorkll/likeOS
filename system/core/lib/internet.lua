@@ -28,6 +28,21 @@ function internet.cardProxy()
     return component.proxy(internet.card() or "")
 end
 
+function internet.check()
+    local proxy = internet.cardProxy()
+    if proxy then
+        local handle = proxy.request("http://google.com")
+        if handle then
+            local data = handle.read()
+            pcall(handle.close)
+            if data then
+                return true
+            end
+        end
+    end
+    return false
+end
+
 function internet.wait(handle, waittime)
     local startTime = computer.uptime()
     while true do
