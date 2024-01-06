@@ -390,6 +390,8 @@ function vgpu.create(gpu, screen)
         end
     end
 
+    --------------------------------
+
     local oldBg, oldFg
     function obj.update()
         if updated then
