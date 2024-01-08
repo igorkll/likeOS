@@ -6,6 +6,7 @@ local computer = require("computer")
 local internet = {settings = {}}
 internet.settings.timeout = 3
 internet.settings.downloadPart = 1024 * 32
+internet.settings.pingHost = "http://google.com"
 
 local unknown = "unknown error"
 
@@ -31,7 +32,7 @@ end
 function internet.check()
     local proxy = internet.cardProxy()
     if proxy then
-        local handle = proxy.request("http://google.com")
+        local handle = proxy.request(internet.settings.pingHost)
         if handle then
             local data = handle.read()
             pcall(handle.close)
@@ -61,6 +62,29 @@ function internet.wait(handle, waittime)
     end
 end
 
+function internet.readAll(handle)
+    local successfully, err = internet.wait(handle)
+    if not successfully then
+        return nil, err
+    end
+
+    local data = {}
+    while true do
+        local result, reason = handle.read(math.huge) 
+        if result then
+            table.insert(data, result)
+        else
+            handle.close()
+            
+            if reason then
+                return nil, reason
+            else
+                return table.concat(data)
+            end
+        end
+    end
+end
+
 function internet.get(url)
     local inet = internet.cardProxy()
     if not inet then
@@ -69,26 +93,7 @@ function internet.get(url)
 
     local handle, err = inet.request(url)
     if handle then
-        local successfully, err = internet.wait(handle)
-        if not successfully then
-            return nil, err
-        end
-
-        local data = {}
-        while true do
-            local result, reason = handle.read(math.huge) 
-            if result then
-                table.insert(data, result)
-            else
-                handle.close()
-                
-                if reason then
-                    return nil, reason
-                else
-                    return table.concat(data)
-                end
-            end
-        end
+        return internet.readAll(handle)
     else
         return nil, tostring(err or unknown)
     end
