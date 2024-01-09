@@ -804,8 +804,8 @@ end
 function graphic.createWindow(screen, x, y, sizeX, sizeY, selected, isPal)
     local obj = {
         screen = screen,
-        x = x,
-        y = y,
+        x = x or 1,
+        y = y or 1,
         sizeX = sizeX,
         sizeY = sizeY,
         cursorX = 1,
@@ -826,6 +826,12 @@ function graphic.createWindow(screen, x, y, sizeX, sizeY, selected, isPal)
         setCursor = setCursor,
         isPal = isPal or false,
     }
+
+    if not sizeX or not sizeY then
+        local rx, ry = graphic.getResolution(screen)
+        obj.sizeX = sizeX or rx
+        obj.sizeY = sizeY or ry
+    end
 
     if selected ~= nil then
         obj.selected = selected
