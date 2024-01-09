@@ -3,7 +3,16 @@
 ------------------------------------base init
 
 local component, computer, unicode = component, computer, unicode
-pcall(computer.setArchitecture, "Lua 5.3")
+
+local architecture = "unknown"
+if computer.getArchitecture then architecture = computer.getArchitecture() end
+local supportedArchitectures = {
+    ["Lua 5.3"] = true,
+    ["Lua 5.4"] = true
+}
+if not supportedArchitectures[architecture] then
+    pcall(computer.setArchitecture, "Lua 5.3")
+end
 
 local pullSignal = computer.pullSignal
 local shutdown = computer.shutdown
