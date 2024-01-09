@@ -154,6 +154,23 @@ function package.register(name, path)
     end
 end
 
+function package.invoke(libname, method, ...)
+    local lib = require(libname)
+    local obj = lib[method]
+    if type(obj) == "function" then
+        return obj(...)
+    else
+        return obj
+    end
+end
+
+function package.diskFunction(lib, path)
+    path = package.invoke("system", "getResourcePath", path)
+    return function (...)
+        return dofile(path, lib, ...)
+    end
+end
+
 function package.delay(lib, action)
     local mt = {}
     function mt.__index(tbl, key)
