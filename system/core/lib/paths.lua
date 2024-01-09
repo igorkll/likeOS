@@ -128,6 +128,10 @@ function paths.extension(path)
     end
 end
 
+function paths.changeExtension(path, exp)
+    return paths.hideExtension(path) .. (exp and ("." .. exp) or "")
+end
+
 function paths.hideExtension(path)
     path = paths.canonical(path)
 

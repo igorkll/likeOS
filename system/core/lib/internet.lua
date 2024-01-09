@@ -63,11 +63,6 @@ function internet.wait(handle, waittime)
 end
 
 function internet.readAll(handle)
-    local successfully, err = internet.wait(handle)
-    if not successfully then
-        return nil, err
-    end
-
     local data = {}
     while true do
         local result, reason = handle.read(math.huge) 
@@ -93,6 +88,11 @@ function internet.get(url)
 
     local handle, err = inet.request(url)
     if handle then
+        local successfully, err = internet.wait(handle)
+        if not successfully then
+            return nil, err
+        end
+
         return internet.readAll(handle)
     else
         return nil, tostring(err or unknown)
