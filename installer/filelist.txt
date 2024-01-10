@@ -13,6 +13,7 @@
 /system/core/lib/event.lua
 /system/core/lib/filesystem.lua
 /system/core/lib/graphic.lua
+/system/core/lib/hook.lua
 /system/core/lib/internet.lua
 /system/core/lib/lastinfo.lua
 /system/core/lib/logs.lua

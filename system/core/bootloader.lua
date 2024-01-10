@@ -11,6 +11,7 @@ local supportedArchitectures = {
     ["Lua 5.4"] = true
 }
 if not supportedArchitectures[architecture] then
+    pcall(computer.setArchitecture, "Lua 5.4")
     pcall(computer.setArchitecture, "Lua 5.3")
 end
 
@@ -195,10 +196,11 @@ function bootloader.bootstrap()
     _G.natives = nil
     package.register("paths",      "/system/core/lib/paths.lua")
     package.register("filesystem", "/system/core/lib/filesystem.lua")
-    require("vcomponent") --подключения библиотеки виртуальных компонентов
-    local event = require("event")
-    local lastinfo = require("lastinfo")
-    require("service") --подключения сервисной (упровляющей) библиотеки
+    require("vcomponent", true) --подключения библиотеки виртуальных компонентов
+    require("hook", true) --подключения библиотеки хуков
+    local event = require("event", true)
+    local lastinfo = require("lastinfo", true)
+    require("service", true) --подключения сервисной (управляющей) библиотеки
 
     --проверка целосности системы (юнит тесты)
     bootloader.unittests("/system/core/unittests")
