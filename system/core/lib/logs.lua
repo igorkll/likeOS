@@ -1,4 +1,5 @@
 local fs = require("filesystem")
+local paths = require("paths")
 local logs = {}
 logs.defaultLogPath = "/data/errorlog.log"
 logs.timeZone = 0
@@ -9,9 +10,23 @@ function logs.timetag()
 end
 
 function logs.log(logdata, tag, path)
-    fs.makeDirectory("/data")
-    local file = assert(fs.open(path or logs.defaultLogPath, "ab"))
+    path = path or logs.defaultLogPath
+    fs.makeDirectory(paths.path(path))
+
+    local file = assert(fs.open(path, "ab"))
     assert(file.write(logs.timetag() .. (tag and (" \"" .. tag .. "\"") or "") .. ": " .. tostring(logdata or "unknown error") .. "\n"))
+    file.close()
+end
+
+function logs.logs(logsdata, tag, path)
+    path = path or logs.defaultLogPath
+    fs.makeDirectory(paths.path(path))
+
+    local timetag = logs.timetag()
+    local file = assert(fs.open(path, "ab", true))
+    for i, logdata in ipairs(logsdata) do
+        assert(file.write(timetag .. (tag and (" \"" .. tag .. "\"") or "") .. ": " .. tostring(logdata or "unknown error") .. "\n"))
+    end
     file.close()
 end
 

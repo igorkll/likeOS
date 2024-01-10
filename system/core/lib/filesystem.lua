@@ -340,6 +340,8 @@ function filesystem.open(path, mode, bufferSize)
                         local result = proxy.write(result, writeBuffer)
                         writeBuffer = nil
                         return result
+                    else
+                        return true
                     end
                 else
                     return proxy.write(result, writedata)
