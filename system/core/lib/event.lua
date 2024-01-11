@@ -3,7 +3,6 @@ local fs = require("filesystem")
 local package = require("package")
 
 local event = {}
-event.forceGC = true
 event.minTime = 0 --минимальное время прирывания, можно увеличить, это вызовет подения производительности но уменьшет энергопотребления
 event.listens = {}
 
@@ -264,26 +263,13 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
             eventData = {coroutine.yield()}
         else
             eventData = {computer_pullSignal(realWaitTime)} --обязательно повисеть в pullSignal
-            if event.forceGC and computer.freeMemory() < 64 * 1024 then
-                if collectgarbage then
-                    collectgarbage("collect")
-                else
-                    for i = 1, 9 do --чистка памяти
-                        local localEventData = {raw_computer_pullSignal(0)}
-                        if #localEventData > 0 then
-                            insert(customQueue, localEventData)
-                        end
-                    end
-                end
-            end
-
             if not event.isListen then
                 runThreads(eventData)
             end
         end
 
         local isEvent = #eventData > 0
-        for k, v in pairs(event.listens) do --таймеры. нет ipairs неподайдет, там могуть быть дырки
+        for k, v in pairs(event.listens) do --таймеры. нет ipairs неподайдет, там могут быть дырки
             if not v.type and not v.killed and v.th == current then
                 if not v.th or v.th:status() == "running" then
                     local uptime = computer.uptime() 

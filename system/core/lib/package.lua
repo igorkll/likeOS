@@ -5,25 +5,32 @@ local unicode = unicode
 
 ------------------------------------
 
-local package = {}
-package.loadingList = {}
-package.paths = {"/data/lib",  "/vendor/lib", "/system/lib", "/system/core/lib"} --позиция по мере снижения приоритета(первый элемент это самый высокий приоритет)
+local loadingNow = {}
+local package = {
+    paths = {"/data/lib", "/vendor/lib", "/system/lib", "/system/core/lib"}, --позиция по мере снижения приоритета(первый элемент это самый высокий приоритет)
+    allowEnclosedLoadingCycle = false,
+    hardAutoUnloading = false,
+    hooks = {}
+}
 
-package.cache = {}
-package.libStubsCache = {}
+------------------------------------ adding static libraries to the list
+
 package.loaded = {
     ["package"] = package,
     ["bootloader"] = bootloader
 }
+
 for key, value in pairs(_G) do
     if type(value) == "table" then
         package.loaded[key] = value
     end
 end
 
-package.allowEnclosedLoadingCycle = false
-package.hardAutoUnloading = false
-package.hooks = {}
+------------------------------------ caches
+
+package.cache = {}
+package.diskFunctionsCache = {}
+package.libStubsCache = {}
 
 ------------------------------------
 
@@ -34,9 +41,9 @@ local function raw_require(name)
             error("lib " .. name .. " is not found", 3)
         end
 
-        package.loadingList[name] = true
+        loadingNow[name] = true
         local lib = assert(loadfile(finded, nil, bootloader.createEnv()))()
-        package.loadingList[name] = nil
+        loadingNow[name] = nil
 
         if type(lib) ~= "table" or lib.unloadable then
             package.cache[name] = lib
@@ -103,7 +110,7 @@ function package.require(name, force)
     local lib = package.loaded[name] or package.cache[name]
     if lib then
         return lib
-    elseif package.hardAutoUnloading or package.loadingList[name] then
+    elseif package.hardAutoUnloading or loadingNow[name] then
         if package.hardAutoUnloading or package.allowEnclosedLoadingCycle then
             if package.libStubsCache[name] then
                 return package.libStubsCache[name]
@@ -164,11 +171,17 @@ function package.invoke(libname, method, ...)
     end
 end
 
-function package.diskFunction(lib, path)
+function package.rawDiskFunction(lib, path)
     path = package.invoke("system", "getResourcePath", path)
     return function (...)
-        return dofile(path, lib, ...)
+        local code = package.diskFunctionsCache[path] or assert(loadfile(path, nil, _G))
+        package.diskFunctionsCache[path] = code
+        return code(lib, ...)
     end
+end
+
+function package.diskFunction(lib, path)
+    lib[paths.name(path)] = package.rawDiskFunction(lib, path)
 end
 
 function package.delay(lib, action)

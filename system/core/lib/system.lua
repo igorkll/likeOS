@@ -70,14 +70,19 @@ function system.getDeviceType()
 end
 
 function system.getCpuLevel()
-    local processor = -1
+    local processor, isAPU = -1, false
 
     for _, value in pairs(lastinfo.deviceinfo) do
-        if value.class == "processor" then
-            if value.clock == "1500" or value.clock == "1000+1280/1280/160/2560/640/1280" or value.clock == "1500+2560/2560/320/5120/1280/2560" then
+        if value.clock and value.class == "processor" then
+            local apu34 = value.clock == "1000+1280/1280/160/2560/640/1280" or value.clock == "1500+2560/2560/320/5120/1280/2560"
+            local apu2 = value.clock == "500+640/640/40/1280/320/640"
+            
+            if value.clock == "1500" or apu34 then
+                isAPU = apu34
                 processor = 3
                 break
-            elseif value.clock == "1000" or value.clock == "500+640/640/40/1280/320/640" then
+            elseif value.clock == "1000" or apu2 then
+                isAPU = apu2
                 processor = 2
                 break
             elseif value.clock == "500" then
@@ -87,7 +92,7 @@ function system.getCpuLevel()
         end
     end
 
-    return processor
+    return processor, isAPU
 end
 
 function system.getCurrentComponentCount()
@@ -170,6 +175,7 @@ function system.setUnloadState(state)
     if currentUnloadState == state then return end
     currentUnloadState = state
 
+    cacheMode(package.diskFunctionsCache, state)
     cacheMode(package.libStubsCache, state)
     cacheMode(package.cache, state)
 end
