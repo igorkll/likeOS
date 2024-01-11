@@ -45,11 +45,12 @@ local function runThreads(eventData)
     end
 end
 
+local isListen = false
 local function runCallback(isTimer, func, index, ...)
-    local oldState = event.isListen
-    event.isListen = true
+    isListen = true
     local ok, err = xpcall(func, debug.traceback, ...)
-    event.isListen = oldState
+    isListen = false
+
     if ok then
         if err == false then --таймер/слушатель хочет отключиться
             event.listens[index] = nil
@@ -224,6 +225,10 @@ end
 ------------------------------------------------------------------------
 
 function computer.pullSignal(waitTime) --кастомный pullSignal для работы background процессов
+    if isListen then
+        error("cannot use the pullSignal in the listener", 2)
+    end
+
     waitTime = waitTime or math.huge
     if waitTime < event.minTime then
         waitTime = event.minTime
@@ -263,7 +268,7 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
             eventData = {coroutine.yield()}
         else
             eventData = {computer_pullSignal(realWaitTime)} --обязательно повисеть в pullSignal
-            if not event.isListen then
+            if not isListen then
                 runThreads(eventData)
             end
         end
