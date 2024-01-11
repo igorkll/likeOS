@@ -171,19 +171,6 @@ function package.invoke(libname, method, ...)
     end
 end
 
-function package.rawDiskFunction(lib, path)
-    path = package.invoke("system", "getResourcePath", path)
-    return function (...)
-        local code = package.diskFunctionsCache[path] or assert(loadfile(path, nil, _G))
-        package.diskFunctionsCache[path] = code
-        return code(lib, ...)
-    end
-end
-
-function package.diskFunction(lib, path)
-    lib[paths.name(path)] = package.rawDiskFunction(lib, path)
-end
-
 function package.delay(lib, action)
     local mt = {}
     function mt.__index(tbl, key)
@@ -218,6 +205,21 @@ function package.unload(name, force)
         table.clear(package.cache[name])
         package.cache[name] = nil
     end
+end
+
+------------------------------------
+
+function package.rawDiskFunction(lib, path)
+    path = package.invoke("system", "getResourcePath", path)
+    return function (...)
+        local code = package.diskFunctionsCache[path] or assert(loadfile(path, nil, _G))
+        package.diskFunctionsCache[path] = code
+        return code(lib, ...)
+    end
+end
+
+function package.diskFunction(lib, path)
+    lib[paths.name(path)] = package.rawDiskFunction(lib, path)
 end
 
 ------------------------------------
