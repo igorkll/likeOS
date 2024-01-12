@@ -11,7 +11,7 @@ service.unloadTimer = event.timer(2, function()
     --check RAM
     local free = computer.freeMemory()
     if not oldFree or free > oldFree then --проверка сборшика мусора
-        if free < computer.totalMemory() / 3 then
+        if free < computer.totalMemory() / 5 then
             require("system").setUnloadState(true)
             cache.clearCache()
         else
