@@ -22,7 +22,7 @@ service.unloadTimer = event.timer(2, function()
 end, math.huge)
 
 event.hyperListen(function (eventType, componentUuid, componentType)
-    if fs.autoMount and componentType == "filesystem" then
+    if componentType == "filesystem" then
         local path = paths.concat("/mnt", componentUuid)
         if eventType == "component_added" then
             fs.mount(component.proxy(componentUuid), path)

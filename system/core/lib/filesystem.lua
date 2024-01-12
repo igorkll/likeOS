@@ -12,7 +12,6 @@ filesystem.tmpaddress = bootloader.tmpaddress
 
 filesystem.mountList = {}
 filesystem.baseFileDirectorySize = 512 --задаеться к конфиге мода(по умалчанию 512 байт)
-filesystem.autoMount = true
 filesystem.inited = false
 
 local srvList = {"/.data"}
@@ -548,6 +547,20 @@ local function cacheAttributes()
     return cache.cache.attributes
 end
 
+local function getGlobalAttributes(attributesPath)
+    local serialization = require("serialization")
+    local cAttributes = cacheAttributes()
+
+    local globalAttributes = cAttributes[attributesPath]
+    if not globalAttributes and filesystem.exists(attributesPath) then
+        globalAttributes = serialization.load(attributesPath)
+        checkGlobalAttributes(globalAttributes)
+        cAttributes[attributesPath] = globalAttributes
+    end
+
+    return globalAttributes or {}
+end
+
 local function saveGlobalAttributes(attributesPath, globalAttributes)
     local serialization = require("serialization")
     local cAttributes = cacheAttributes()
@@ -567,16 +580,8 @@ end
 function filesystem.clearAttributes(path)
     local proxy, proxyPath = filesystem.get(path)
     local attributesPath = getAttributesPath(path)
-    local serialization = require("serialization")
 
-    local globalAttributes
-    if filesystem.exists(attributesPath) then
-        globalAttributes = serialization.load(attributesPath)
-        checkGlobalAttributes(globalAttributes)
-    else
-        globalAttributes = {}
-    end
-
+    local globalAttributes = getGlobalAttributes(attributesPath)
     globalAttributes[proxyPath] = nil
     return saveGlobalAttributes(attributesPath, globalAttributes)
 end
@@ -586,7 +591,7 @@ function filesystem.getAttributes(path)
     local attributesPath = getAttributesPath(path)
     if filesystem.exists(attributesPath) then
         local cAttributes = cacheAttributes()
-        
+
         local globalAttributes = cAttributes[attributesPath]
         if not globalAttributes then
             globalAttributes = require("serialization").load(attributesPath)
@@ -614,15 +619,7 @@ function filesystem.setAttributes(path, data)
 
     local proxy, proxyPath = filesystem.get(path)
     local attributesPath = getAttributesPath(path)
-    local serialization = require("serialization")
-
-    local globalAttributes
-    if filesystem.exists(attributesPath) then
-        globalAttributes = serialization.load(attributesPath)
-        checkGlobalAttributes(globalAttributes)
-    else
-        globalAttributes = {}
-    end
+    local globalAttributes = getGlobalAttributes(attributesPath)
 
     local systemData
     if globalAttributes[proxyPath] then
@@ -655,11 +652,9 @@ end
 ------------------------------------ init
 
 assert(filesystem.mount(filesystem.bootaddress, "/"))
-if filesystem.autoMount then
-    assert(filesystem.mount(filesystem.tmpaddress, "/tmp"))
-    assert(filesystem.mount(filesystem.tmpaddress, "/mnt/tmpfs"))
-    assert(filesystem.mount(filesystem.bootaddress, "/mnt/root"))
-end
+assert(filesystem.mount(filesystem.tmpaddress, "/tmp"))
+assert(filesystem.mount(filesystem.tmpaddress, "/mnt/tmpfs"))
+assert(filesystem.mount(filesystem.bootaddress, "/mnt/root"))
 
 filesystem.inited = true
 return filesystem
