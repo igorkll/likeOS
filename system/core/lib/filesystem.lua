@@ -540,15 +540,23 @@ local function checkGlobalAttributes(globalAttributes)
     end
 end
 
-local function saveGlobalAttributes(attributesPath, globalAttributes)
+local function cacheAttributes()
     local cache = require("cache")
+    if not cache.cache.attributes then
+        cache.cache.attributes = {}
+    end
+    return cache.cache.attributes
+end
+
+local function saveGlobalAttributes(attributesPath, globalAttributes)
     local serialization = require("serialization")
-    if not cache.cache.attributes then cache.cache.attributes = {} end
+    local cAttributes = cacheAttributes()
+
     if table.len(globalAttributes) > 0 then
-        cache.cache.attributes[attributesPath] = globalAttributes
+        cAttributes[attributesPath] = globalAttributes
         return serialization.save(attributesPath, globalAttributes)
     elseif filesystem.exists(attributesPath) then
-        cache.cache.attributes[attributesPath] = nil
+        cAttributes[attributesPath] = nil
         return filesystem.remove(attributesPath)
     else
         return true
@@ -569,9 +577,6 @@ function filesystem.clearAttributes(path)
         globalAttributes = {}
     end
 
-    local cache = require("cache")
-    if not cache.cache.attributes then cache.cache.attributes = {} end
-
     globalAttributes[proxyPath] = nil
     return saveGlobalAttributes(attributesPath, globalAttributes)
 end
@@ -580,14 +585,13 @@ function filesystem.getAttributes(path)
     local proxy, proxyPath = filesystem.get(path)
     local attributesPath = getAttributesPath(path)
     if filesystem.exists(attributesPath) then
-        local cache = require("cache")
-        if not cache.cache.attributes then cache.cache.attributes = {} end
-
-        local globalAttributes = cache.cache.attributes[attributesPath]
+        local cAttributes = cacheAttributes()
+        
+        local globalAttributes = cAttributes[attributesPath]
         if not globalAttributes then
             globalAttributes = require("serialization").load(attributesPath)
             checkGlobalAttributes(globalAttributes)
-            cache.cache.attributes[attributesPath] = globalAttributes
+            cAttributes[attributesPath] = globalAttributes
         end
 
         if globalAttributes[proxyPath] then
