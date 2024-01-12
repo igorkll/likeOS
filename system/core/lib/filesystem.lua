@@ -462,6 +462,18 @@ function filesystem.readFile(path)
     return table.unpack(result)
 end
 
+function filesystem.minifierReadFile(path)
+    local file, err = filesystem.open(path, "rb")
+    if not file then return nil, err or "unknown error" end
+
+    local buffer = ""
+    repeat
+        local data = file.readMax()
+        buffer = buffer .. (data or "")
+    until not data
+    return buffer
+end
+
 function filesystem.readSignature(path, size)
     local file, err = filesystem.open(path, "rb")
     if not file then return nil, err or "unknown error" end

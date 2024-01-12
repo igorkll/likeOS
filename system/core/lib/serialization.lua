@@ -166,7 +166,7 @@ end
 function serialization.load(path)
     checkArg(1, path, "string")
     
-    local content, err = fs.readFile(path)
+    local content, err = fs.minifierReadFile(path)
     if not content then return nil, err end
 
     return serialization.unserialize(content)
