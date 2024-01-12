@@ -138,6 +138,10 @@ function package.isLoaded(name)
     return not not package.get(name)
 end
 
+function package.isLoadingNow(name)
+    return not not loadingNow[name]
+end
+
 function package.isInstalled(name)
     return not not package.find(name)
 end

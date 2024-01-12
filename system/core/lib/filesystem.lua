@@ -315,9 +315,26 @@ function filesystem.open(path, mode, bufferSize)
         local readBuffer
         local writeBuffer
 
-        local handle = {
+        local handle
+        handle = {
             handle = result,
 
+            readLine = function()
+                local str = ""
+                while true do
+                    local char = handle.read()
+                    if not char then
+                        if #str > 0 then
+                            return str
+                        end
+                        return
+                    elseif char == "\n" then
+                        return str
+                    else
+                        str = str .. char
+                    end
+                end
+            end,
             read = function(readsize)
                 if not readsize then
                     readsize = 1
@@ -382,7 +399,6 @@ function filesystem.open(path, mode, bufferSize)
                 return proxy.read(result, math.huge)
             end
         }
-
         return handle
     end
     return nil, reason
@@ -463,14 +479,19 @@ function filesystem.readFile(path)
 end
 
 function filesystem.minifierReadFile(path)
-    local file, err = filesystem.open(path, "rb")
-    if not file then return nil, err or "unknown error" end
+    if require("package").isLoadingNow("text") then
+        return filesystem.readFile(path)
+    end
 
+    local file, err = filesystem.open(path, "rb", true)
+    if not file then return nil, err or "unknown error" end
+    local text = require("text")
     local buffer = ""
-    repeat
-        local data = file.readMax()
-        buffer = buffer .. (data or "")
-    until not data
+    while true do
+        local line = file.readLine()
+        if not line then break end
+        buffer = buffer .. text.trim(unicode, line) .. "\n"
+    end
     return buffer
 end
 
@@ -489,14 +510,15 @@ function filesystem.equals(path1, path2)
         local chunk1 = file1.readMax()
         local chunk2 = file2.readMax()
         if not chunk1 and not chunk2 then
-            break
+            file1.close()
+            file2.close()
+            return true
         elseif chunk1 ~= chunk2 then
+            file1.close()
+            file2.close()
             return false
         end
     end
-    file1.close()
-    file2.close()
-    return true
 end
 
 function filesystem.recursion(gpath)

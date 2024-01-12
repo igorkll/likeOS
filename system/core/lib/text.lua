@@ -1,4 +1,4 @@
-local text = {trimLetters = {" ", "\t", "\r"}}
+local text = {trimLetters = {" ", "\t", "\r", "\n"}}
 
 function text.startwith(tool, str, startCheck)
     return tool.sub(str, 1, tool.len(startCheck)) == startCheck
@@ -16,7 +16,7 @@ function text.trimLeft(tool, str, list)
     for i = 1, tool.len(str) do
         local char = tool.sub(str, i, i)
         if allowTrim then
-            if not list[char] then
+            if not table.exists(list, char) then
                 newstr = newstr .. char
                 allowTrim = false
             end
@@ -35,7 +35,7 @@ function text.trimRight(tool, str, list)
     for i = tool.len(str), 1, -1 do
         local char = tool.sub(str, i, i)
         if allowTrim then
-            if not list[char] then
+            if not table.exists(list, char) then
                 newstr = char .. newstr
                 allowTrim = false
             end
