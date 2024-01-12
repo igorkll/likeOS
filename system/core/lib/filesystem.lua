@@ -478,23 +478,6 @@ function filesystem.readFile(path)
     return table.unpack(result)
 end
 
-function filesystem.minifierReadFile(path)
-    if require("package").isLoadingNow("text") then
-        return filesystem.readFile(path)
-    end
-
-    local file, err = filesystem.open(path, "rb", true)
-    if not file then return nil, err or "unknown error" end
-    local text = require("text")
-    local buffer = ""
-    while true do
-        local line = file.readLine()
-        if not line then break end
-        buffer = buffer .. text.trim(unicode, line) .. "\n"
-    end
-    return buffer
-end
-
 function filesystem.readSignature(path, size)
     local file, err = filesystem.open(path, "rb")
     if not file then return nil, err or "unknown error" end

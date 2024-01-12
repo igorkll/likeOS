@@ -1,6 +1,6 @@
 function _G.loadfile(path, mode, env)
     local fs = require("filesystem")
-    local content, err = fs.minifierReadFile(path)
+    local content, err = fs.readFile(path)
     if not content then return nil, err end
     return load(content, "=" .. path, mode, env or require("bootloader").createEnv())
 end
