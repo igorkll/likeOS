@@ -159,6 +159,13 @@ end
 ------------------------------------ main functions
 
 function filesystem.exists(path)
+    path = paths.absolute(path)
+    for i, v in ipairs(filesystem.mountList) do
+        if v[2] == path then
+            return true
+        end
+    end
+
     local proxy, proxyPath = filesystem.get(path)
     return proxy.exists(proxyPath)
 end
@@ -199,7 +206,6 @@ end
 
 function filesystem.isDirectory(path)
     path = paths.absolute(path)
-
     for i, v in ipairs(filesystem.mountList) do
         if v[2] == path then
             return true
