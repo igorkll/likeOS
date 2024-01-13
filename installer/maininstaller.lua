@@ -28,7 +28,7 @@ local depth = gpu.getDepth()
 
 local drive = component.proxy(computer.getBootAddress())
 local internet = component.proxy(component.list("internet")() or "")
-local installerVersion = "likeOS installer v1.1"
+local installerVersion = "likeOS legacy installer v1.1"
 
 ------------------------------------
 
