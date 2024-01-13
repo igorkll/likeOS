@@ -110,6 +110,9 @@ end
 
 function paths.extension(path)
     local name = paths.name(path)
+    if not name then
+        return
+    end
 
 	local exp
     for i = 1, unicode.len(name) do
