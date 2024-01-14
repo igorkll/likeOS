@@ -19,7 +19,7 @@ function internet.card() --поралелит нагрузку на нескол
         end
     end
 
-    cardIterator = component.list("internet")
+    cardIterator = component.list("internet", true)
     if cardIterator then
         return (cardIterator())
     end
