@@ -201,7 +201,7 @@ function vgpu.create(gpu, screen)
             out = vpal[i]
         end
         vpal[i] = v
-        forceUpdate = true
+        --forceUpdate = true
         return out
     end
 
