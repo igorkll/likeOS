@@ -201,6 +201,7 @@ function vgpu.create(gpu, screen)
             out = vpal[i]
         end
         vpal[i] = v
+        forceUpdate = true
         return out
     end
 
@@ -394,7 +395,7 @@ function vgpu.create(gpu, screen)
 
     local oldBg, oldFg
     function obj.update()
-        if updated then
+        if updated or forceUpdate then
             init()
 
             local index, buff, buffI, back, fore
