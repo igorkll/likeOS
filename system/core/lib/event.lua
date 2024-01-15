@@ -53,6 +53,7 @@ local function runCallback(isTimer, func, index, ...)
 
     if ok then
         if err == false then --таймер/слушатель хочет отключиться
+            event.listens[index].killed = true
             event.listens[index] = nil
         end
     else
@@ -245,6 +246,13 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
         local realWaitTime = waitTime - (computer.uptime() - startTime)
         local isEnd = realWaitTime <= 0
 
+        for k, v in pairs(event.listens) do --очистка от дохлых таймеров и слушателей
+            if v.killed or (v.th and v.th:status() == "dead") then
+                v.killed = true
+                event.listens[k] = nil
+            end
+        end
+
         if thread then
             realWaitTime = event.minTime
         else
@@ -281,16 +289,19 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
                     if uptime - v.lastTime >= v.time then
                         v.lastTime = uptime --ДО выполнения функции ресатаем таймер, чтобы тайминги не поплывали при долгих функциях
                         if v.times <= 0 then
+                            v.killed = true
                             event.listens[k] = nil
                         else
                             runCallback(true, v.func, k)
                             v.times = v.times - 1
                             if v.times <= 0 then
+                                v.killed = true
                                 event.listens[k] = nil
                             end
                         end
                     end
                 elseif v.th:status() == "dead" then
+                    v.killed = true
                     event.listens[k] = nil
                 end
             elseif isEvent and v.type and not v.killed and v.th == current then
@@ -299,6 +310,7 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
                         runCallback(false, v.func, k, table.unpack(eventData))
                     end
                 elseif v.th:status() == "dead" then
+                    v.killed = true
                     event.listens[k] = nil
                 end
             end
