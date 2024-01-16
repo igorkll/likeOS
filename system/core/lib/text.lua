@@ -52,5 +52,9 @@ function text.trim(tool, str, list)
     return str
 end
 
+function text.escapePattern(str)
+    return str:gsub("([^%w])", "%%%1")
+end
+
 text.unloadable = true
 return text
