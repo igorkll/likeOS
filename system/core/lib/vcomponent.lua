@@ -1,17 +1,20 @@
 --было довно от куда-то стырино(с github, но теперь его на github и нет вроде)
 --данная либа позваляет регать виртуальные компаненты
 --подгружаеться автоматически на этапе загрузки ядра, чтобы избежать проблем с неопределениям виртуальных компонентов
-
 --нада добавить: возможность подключения к getDeviceInfo(сделал)
 
 local component = require("component")
 local computer = require("computer")
+
+-------------------------------- storage
 
 local proxylist = {}
 local proxyobjs = {}
 local typelist = {}
 local doclist = {}
 local infolist = {}
+
+-------------------------------- hooks
 
 local getDeviceInfo = computer.getDeviceInfo
 function computer.getDeviceInfo()
@@ -131,14 +134,15 @@ function component.fields(address)
     return ofields(address)
 end
 
+-------------------------------- control
+
+local vcomponent = {}
 local componentCallback =
 {
     __call = function(self, ...) return proxylist[self.address][self.name](...) end,
     __tostring = function(self) return (doclist[self.address] ~= nil and doclist[self.address][self.name] ~= nil) and
         doclist[self.address][self.name] or "function" end
 }
-
-local vcomponent = {}
 
 function vcomponent.register(address, ctype, proxy, doc, info)
     checkArg(1, address, "string")
@@ -213,6 +217,10 @@ end
 
 function vcomponent.uuid()
     return require("uuid").next()
+end
+
+function vcomponent.isVirtual(address)
+    return not not proxylist[address]
 end
 
 return vcomponent
