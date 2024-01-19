@@ -139,7 +139,8 @@ function filesystem.get(path)
     path = endSlash(paths.absolute(path))
     
     for i = #filesystem.mountList, 1, -1 do
-        if component.isConnected and not component.isConnected(filesystem.mountList[i][1]) then
+        local mount = filesystem.mountList[i]
+        if not mount[1].virtual and component.isConnected and not component.isConnected(mount[1]) then
             table.remove(filesystem.mountList, i)
         end
     end
