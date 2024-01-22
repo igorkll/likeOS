@@ -51,6 +51,10 @@ function table.exists(tbl, val)
     return false
 end
 
+function table.find(tbl, val)
+    return select(2, table.exists(tbl, val))
+end
+
 function table.clear(tbl, val)
     local state = false
     for k, v in pairs(tbl) do
