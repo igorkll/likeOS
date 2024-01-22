@@ -143,7 +143,7 @@ function event.pull(waitTime, ...) --реализует фильтер
         waitTime = math.huge
     end
 
-    if #filters == 0 then
+    if filters.n == 0 then
         return computer.pullSignal(waitTime)
     end
     
