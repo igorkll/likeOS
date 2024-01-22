@@ -123,19 +123,35 @@ function filesystem.mounts()
         local proxy, path = v[1], v[2]
         list[path] = v
         list[proxy.address] = v
+        list[proxy] = v
         list[i] = v
     end
     return list
 end
 
-function filesystem.point(address)
+function filesystem.point(addressOrProxy)
     local mounts = filesystem.mounts()
-    if mounts[address] then
-        return noEndSlash(mounts[address][2])
+    if mounts[addressOrProxy] then
+        return noEndSlash(mounts[addressOrProxy][2])
     end
 end
 
-function filesystem.get(path)
+function filesystem.get(path, allowProxy)
+    local function returnData(lpath, i)
+        return filesystem.mountList[i][1], lpath, filesystem.mountList[i][3]
+    end
+
+    -- find from proxy
+    if allowProxy and type(path) == "table" then
+        for i = 1, #filesystem.mountList do
+            if filesystem.mountList[i][1] == path then
+                return returnData("/", i)
+            end
+        end
+        return
+    end
+
+    -- find from path
     path = endSlash(paths.absolute(path))
     
     for i = #filesystem.mountList, 1, -1 do
@@ -147,7 +163,7 @@ function filesystem.get(path)
 
     for i = 1, #filesystem.mountList do
         if unicode.sub(path, 1, unicode.len(filesystem.mountList[i][2])) == filesystem.mountList[i][2] then
-            return filesystem.mountList[i][1], noEndSlash(startSlash(unicode.sub(path, unicode.len(filesystem.mountList[i][2]) + 1, unicode.len(path)))), filesystem.mountList[i][3]
+            return returnData(noEndSlash(startSlash(unicode.sub(path, unicode.len(filesystem.mountList[i][2]) + 1, unicode.len(path)))), i)
         end
     end
 
@@ -216,17 +232,20 @@ function filesystem.isDirectory(path)
     return proxy.isDirectory(proxyPath)
 end
 
-function filesystem.isReadOnly(path)
-    local proxy, proxyPath, mountData = filesystem.get(path)
+function filesystem.isReadOnly(pathOrProxy)
+    local proxy, proxyPath, mountData = filesystem.get(pathOrProxy, true)
     if mountData.ro ~= nil then return mountData.ro end
     mountData.ro = proxy.isReadOnly()
     return mountData.ro
 end
 
-function filesystem.isLabelReadOnly(path)
-    local proxy, proxyPath, mountData = filesystem.get(path)
+function filesystem.isLabelReadOnly(pathOrProxy)
+    local proxy, proxyPath, mountData = filesystem.get(pathOrProxy, true)
     if mountData.lro ~= nil then return mountData.lro end
     mountData.lro = not pcall(proxy.setLabel, proxy.getLabel() or nil)
+    if mountData.lro then
+        mountData.lro = not pcall(proxy.setLabel, proxy.getLabel() or "")
+    end
     return mountData.lro
 end
 
