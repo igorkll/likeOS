@@ -54,6 +54,14 @@ function system.getSelfScriptPath()
     end
 end
 
+function system.getCpuLoadLevel(waitTime)
+    waitTime = waitTime or 1
+    local clock1 = os.clock()
+    os.sleep(waitTime)
+    local clock2 = os.clock()
+    return (clock2 - clock1) / waitTime
+end
+
 function system.getDeviceType()
     local function isType(ctype)
         return natives.component.list(ctype)() and ctype
