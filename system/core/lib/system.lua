@@ -59,7 +59,7 @@ function system.getCpuLoadLevel(waitTime)
     local clock1 = os.clock()
     os.sleep(waitTime)
     local clock2 = os.clock()
-    return (clock2 - clock1) / waitTime
+    return math.clamp((clock2 - clock1) / waitTime, 0, 1)
 end
 
 function system.getDeviceType()
