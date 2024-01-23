@@ -115,11 +115,11 @@ function component.setPrimary(componentType, address)
     end
 end
 
-function component.isConnected(proxy)
-    if type(proxy) == "table" then
-        proxy = proxy.address
+function component.isConnected(proxyOrAddress)
+    if type(proxyOrAddress) == "table" then
+        proxyOrAddress = proxyOrAddress.address
     end
-    return not not pcall(component.doc, proxy, "")
+    return not not pcall(component.doc, proxyOrAddress, "")
 end
 
 function component.getReal(ctype, gproxy)
