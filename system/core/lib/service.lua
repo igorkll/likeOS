@@ -91,19 +91,21 @@ end
 ------ registrations
 
 service.addShutdownHandler(function ()
-    local vcomponent = require("vcomponent")
     local gpu = component.getReal("gpu", true)
 
-    for screen in component.list("screen") do
-        if not vcomponent.isVirtual(screen) then
-            if gpu.getScreen() ~= screen then gpu.bind(screen, false) end
-            if gpu.setActiveBuffer then gpu.setActiveBuffer(0) end
-            gpu.setDepth(1)
-            gpu.setDepth(gpu.maxDepth())
-            gpu.setBackground(0)
-            gpu.setForeground(0xFFFFFF)
-            gpu.setResolution(50, 16)
-            gpu.fill(1, 1, 50, 16, " ")
+    if gpu then
+        local vcomponent = require("vcomponent")
+        for screen in component.list("screen") do
+            if not vcomponent.isVirtual(screen) then
+                if gpu.getScreen() ~= screen then gpu.bind(screen, false) end
+                if gpu.setActiveBuffer then gpu.setActiveBuffer(0) end
+                gpu.setDepth(1)
+                gpu.setDepth(gpu.maxDepth())
+                gpu.setBackground(0)
+                gpu.setForeground(0xFFFFFF)
+                gpu.setResolution(50, 16)
+                gpu.fill(1, 1, 50, 16, " ")
+            end
         end
     end
 end)
