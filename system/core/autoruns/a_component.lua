@@ -74,8 +74,6 @@ function component.setPrimary(componentType, address)
     checkArg(1, componentType, "string")
     checkArg(2, address, "string", "nil")
 
-    local event = require("event")
-
     if address ~= nil then
         address = component.get(address, componentType)
         assert(address, "no such component")

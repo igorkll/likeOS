@@ -46,17 +46,30 @@ end
 
 local shutdown = computer.shutdown
 local function shutdownProcess(mode)
+    -- shutdown all process
+    event.push("shutdown")
+    os.sleep(0.1)
+
+    -- run shutdown handlers
+    local logs = require("logs")
+    for handler in pairs(shutdownHandlers) do
+        logs.assert(handler())
+    end
+    os.sleep(0.1)
+
+    -- real shutdown
     computer.shutdown(mode)
 end
 function computer.shutdown(mode)
     local thread = package.get("thread")
     if thread then
+        thread.createBackground(shutdownProcess):resume()
         local current = thread.current()
         if current then pcall(current.kill, current) end --kill self thread
-        thread.createBackground(shutdownProcess):resume()
     else
         shutdownProcess(mode)
     end
+    event.wait()
 end
 
 ------ registrations
