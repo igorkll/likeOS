@@ -124,6 +124,19 @@ function component.isConnected(proxy)
     return not not pcall(component.doc, proxy, "")
 end
 
+function component.getReal(ctype, gproxy)
+    local vcomponent = require("vcomponent")
+    for address in component.list(ctype, true) do
+        if not vcomponent.isVirtual(address) then
+            if gproxy then
+                return component.proxy(address)
+            else
+                return address
+            end
+        end
+    end
+end
+
 -------------------------------------------------------------------------------
 
 local function onComponentAdded(_, address, componentType)
