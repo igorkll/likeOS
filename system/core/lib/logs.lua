@@ -48,5 +48,13 @@ function logs.check(...)
     return ...
 end
 
+function logs.checkWithTag(tag, ...)
+    local ok, err = ...
+    if not ok then
+        logs.log(err, tag)
+    end
+    return ...
+end
+
 logs.unloadable = true
 return logs

@@ -56,7 +56,7 @@ local function shutdownProcess(mode)
     -- run shutdown handlers
     local logs = require("logs")
     for handler in pairs(shutdownHandlers) do
-        logs.assert(handler())
+        logs.checkWithTag("shutdown handler error", handler())
     end
     os.sleep(0.1)
 
@@ -99,6 +99,7 @@ service.addShutdownHandler(function ()
             if gpu.getScreen() ~= screen then gpu.bind(screen, false) end
             if gpu.setActiveBuffer then gpu.setActiveBuffer(0) end
             gpu.setDepth(1)
+            gpu.setDepth(gpu.maxDepth())
             gpu.setBackground(0)
             gpu.setForeground(0xFFFFFF)
             gpu.setResolution(50, 16)
