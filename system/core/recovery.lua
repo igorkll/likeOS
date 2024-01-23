@@ -305,7 +305,7 @@ local function loadfile(fs, path, mode, env)
 end
 
 local function offScreens()
-    local gpu = component.proxy(component.list("gpu", true) or "")
+    local gpu = component.proxy(component.list("gpu", true)() or "")
 
     if gpu then
         for screen in component.list("screen") do
