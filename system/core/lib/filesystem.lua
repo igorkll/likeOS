@@ -9,12 +9,11 @@ local bootloader = require("bootloader")
 local filesystem = {}
 filesystem.bootaddress = bootloader.bootaddress
 filesystem.tmpaddress = bootloader.tmpaddress
-
-filesystem.mountList = {}
 filesystem.baseFileDirectorySize = 512 --задаеться к конфиге мода(по умалчанию 512 байт)
-filesystem.inited = false
 
 local srvList = {"/.data"}
+local mountList = {}
+local virtualDirectories = {}
 local forceMode = false
 
 local function startSlash(path)
@@ -88,18 +87,18 @@ function filesystem.mount(proxy, path)
 
     path = paths.absolute(path)
     if filesystem.inited then
-        filesystem.makeDirectory(paths.path(path))
+        filesystem.makeVirtualDirectory(paths.path(path))
     end
 
     path = endSlash(path)
-    for i, v in ipairs(filesystem.mountList) do
+    for i, v in ipairs(mountList) do
         if v[2] == path then
             return nil, "another filesystem is already mounted here"
         end
     end
 
-    table.insert(filesystem.mountList, {proxy, path, {}})
-    table.sort(filesystem.mountList, function(a, b) --просто нужно, иначе все по бараде пойдет
+    table.insert(mountList, {proxy, path, {}})
+    table.sort(mountList, function(a, b) --просто нужно, иначе все по бараде пойдет
         return unicode.len(a[2]) > unicode.len(b[2])
     end)
 
@@ -108,9 +107,9 @@ end
 
 function filesystem.umount(path)
     path = endSlash(paths.absolute(path))
-    for i, v in ipairs(filesystem.mountList) do
+    for i, v in ipairs(mountList) do
         if v[2] == path then
-            table.remove(filesystem.mountList, i)
+            table.remove(mountList, i)
             return true
         end
     end
@@ -119,7 +118,7 @@ end
 
 function filesystem.mounts()
     local list = {}
-    for i, v in ipairs(filesystem.mountList) do
+    for i, v in ipairs(mountList) do
         local proxy, path = v[1], v[2]
         list[path] = v
         list[proxy.address] = v
@@ -138,13 +137,13 @@ end
 
 function filesystem.get(path, allowProxy)
     local function returnData(lpath, i)
-        return filesystem.mountList[i][1], lpath, filesystem.mountList[i][3]
+        return mountList[i][1], lpath, mountList[i][3]
     end
 
     -- find from proxy
     if allowProxy and type(path) == "table" then
-        for i = 1, #filesystem.mountList do
-            if filesystem.mountList[i][1] == path then
+        for i = 1, #mountList do
+            if mountList[i][1] == path then
                 return returnData("/", i)
             end
         end
@@ -154,21 +153,21 @@ function filesystem.get(path, allowProxy)
     -- find from path
     path = endSlash(paths.absolute(path))
     
-    for i = #filesystem.mountList, 1, -1 do
-        local mount = filesystem.mountList[i]
+    for i = #mountList, 1, -1 do
+        local mount = mountList[i]
         if not mount[1].virtual and component.isConnected and not component.isConnected(mount[1]) then
-            table.remove(filesystem.mountList, i)
+            table.remove(mountList, i)
         end
     end
 
-    for i = 1, #filesystem.mountList do
-        if unicode.sub(path, 1, unicode.len(filesystem.mountList[i][2])) == filesystem.mountList[i][2] then
-            return returnData(noEndSlash(startSlash(unicode.sub(path, unicode.len(filesystem.mountList[i][2]) + 1, unicode.len(path)))), i)
+    for i = 1, #mountList do
+        if unicode.sub(path, 1, unicode.len(mountList[i][2])) == mountList[i][2] then
+            return returnData(noEndSlash(startSlash(unicode.sub(path, unicode.len(mountList[i][2]) + 1, unicode.len(path)))), i)
         end
     end
 
-    if filesystem.mountList[1] then
-        return filesystem.mountList[1][1], filesystem.mountList[1][2], filesystem.mountList[1][3]
+    if mountList[1] then
+        return mountList[1][1], mountList[1][2], mountList[1][3]
     end
 end
 
@@ -176,7 +175,12 @@ end
 
 function filesystem.exists(path)
     path = paths.absolute(path)
-    for i, v in ipairs(filesystem.mountList) do
+
+    if virtualDirectories[path] or paths.equals(path, "/") then
+        return true
+    end
+    
+    for i, v in ipairs(mountList) do
         if v[2] == path then
             return true
         end
@@ -222,7 +226,7 @@ end
 
 function filesystem.isDirectory(path)
     path = paths.absolute(path)
-    for i, v in ipairs(filesystem.mountList) do
+    for i, v in ipairs(mountList) do
         if v[2] == path then
             return true
         end
@@ -260,6 +264,11 @@ function filesystem.lastModified(path)
 end
 
 function filesystem.remove(path)
+    path = paths.absolute(path)
+    if virtualDirectories[path] then
+        virtualDirectories[path] = nil
+        return true
+    end
     local proxy, proxyPath = filesystem.get(path)
     return ifSuccessful(function() recursionDeleteAttribute(path) end, proxy.remove(proxyPath))
 end
@@ -269,7 +278,11 @@ function filesystem.list(path, fullpaths, force)
     local tbl = proxy.list(proxyPath)
 
     if tbl then
-        tbl.n = nil
+        for lpath in pairs(virtualDirectories) do
+            if paths.equals(paths.path(lpath), path) then
+                table.insert(paths.name(lpath))
+            end
+        end
         if not force then
             for i = #tbl, 1, -1 do
                 if isService(paths.concat(path, tbl[i])) then
@@ -277,9 +290,9 @@ function filesystem.list(path, fullpaths, force)
                 end
             end
         end
-        for i = 1, #filesystem.mountList do
-            if paths.absolute(path) == paths.path(filesystem.mountList[i][2]) then
-                table.insert(tbl, paths.name(filesystem.mountList[i][2]))
+        for i = 1, #mountList do
+            if paths.absolute(path) == paths.path(mountList[i][2]) then
+                table.insert(tbl, paths.name(mountList[i][2]))
             end
         end
         if fullpaths then
@@ -288,6 +301,7 @@ function filesystem.list(path, fullpaths, force)
             end
         end
         table.sort(tbl)
+        tbl.n = #tbl
         return tbl
     else
         return {}
@@ -547,6 +561,24 @@ function filesystem.recursion(gpath)
     end
 end
 
+------------------------------------ virtual control functions
+
+function filesystem.makeVirtualDirectory(path)
+    path = paths.absolute(path)
+
+    if filesystem.exists(path) then
+        return false
+    end
+
+    local parentPath = paths.path(path)
+    if not filesystem.exists(parentPath) then
+        filesystem.makeVirtualDirectory(parentPath)
+    end
+    
+    virtualDirectories[path] = true
+    return true
+end
+
 ------------------------------------ attributes
 
 local function attributesSystemData(path, data)
@@ -693,5 +725,4 @@ assert(filesystem.mount(filesystem.tmpaddress, "/tmp"))
 assert(filesystem.mount(filesystem.tmpaddress, "/mnt/tmpfs"))
 assert(filesystem.mount(filesystem.bootaddress, "/mnt/root"))
 
-filesystem.inited = true
 return filesystem
