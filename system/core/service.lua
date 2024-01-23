@@ -36,6 +36,8 @@ event.hyperListen(function (eventType, componentUuid, componentType)
 end)
 
 ------ shutdown processing
+
+-- handlers
 local shutdownHandlers = {}
 function service.addShutdownHandler(func)
     shutdownHandlers[func] = true
@@ -44,7 +46,8 @@ function service.delShutdownHandler(func)
     shutdownHandlers[func] = nil
 end
 
-local shutdown = computer.shutdown
+-- process
+local rawShutdown = computer.shutdown
 local function shutdownProcess(mode)
     -- shutdown all process
     event.push("shutdown")
@@ -58,12 +61,25 @@ local function shutdownProcess(mode)
     os.sleep(0.1)
 
     -- real shutdown
-    computer.shutdown(mode)
+    rawShutdown(mode)
 end
+
+-- hook
+local shutdownState
 function computer.shutdown(mode)
     local thread = package.get("thread")
+
+    if shutdownState then
+        if thread then
+            local current = thread.current()
+            if current then pcall(current.kill, current) end --kill self thread
+        end
+        return
+    end
+    shutdownState = true
+    
     if thread then
-        thread.createBackground(shutdownProcess):resume()
+        thread.createBackground(shutdownProcess, mode):resume()
         local current = thread.current()
         if current then pcall(current.kill, current) end --kill self thread
     else
