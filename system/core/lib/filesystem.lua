@@ -277,46 +277,45 @@ end
 function filesystem.list(path, fullpaths, force)
     path = paths.absolute(path)
     local proxy, proxyPath = filesystem.get(path)
-    local tbl = proxy.list(proxyPath)
+    local tbl = proxy.list(proxyPath) or {}
 
-    if tbl then
-        -- virtual directories
-        for lpath in pairs(virtualDirectories) do
-            if paths.equals(paths.path(lpath), path) then
-                table.insert(tbl, paths.name(lpath))
-            end
+    -- virtual directories
+    for lpath in pairs(virtualDirectories) do
+        if paths.equals(paths.path(lpath), path) then
+            table.insert(tbl, paths.name(lpath) .. "/")
         end
-
-        -- removing service objects
-        if not force then
-            for i = #tbl, 1, -1 do
-                if isService(paths.concat(path, tbl[i])) then
-                    table.remove(tbl, i)
-                end
-            end
-        end
-
-        -- mounts
-        for i = 1, #mountList do
-            if paths.equals(path, paths.path(mountList[i][2])) then
-                table.insert(tbl, paths.name(mountList[i][2]))
-            end
-        end
-
-        -- full paths
-        if fullpaths then
-            for i, v in ipairs(tbl) do
-                tbl[i] = paths.concat(path, v)
-            end
-        end
-
-        -- sort & return
-        table.sort(tbl)
-        tbl.n = #tbl
-        return tbl
-    else
-        return {}
     end
+
+    -- removing service objects
+    if not force then
+        for i = #tbl, 1, -1 do
+            if isService(paths.concat(path, tbl[i])) then
+                table.remove(tbl, i)
+            end
+        end
+    end
+
+    -- mounts
+    for i = 1, #mountList do
+        if paths.equals(path, paths.path(mountList[i][2])) then
+            local mountName = paths.name(mountList[i][2])
+            if mountName then
+                table.insert(tbl, mountName .. "/")
+            end
+        end
+    end
+
+    -- full paths
+    if fullpaths then
+        for i, v in ipairs(tbl) do
+            tbl[i] = paths.concat(path, v)
+        end
+    end
+
+    -- sort & return
+    table.sort(tbl)
+    tbl.n = #tbl
+    return tbl
 end
 
 function filesystem.rename(fromPath, toPath)
