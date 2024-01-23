@@ -203,7 +203,7 @@ function bootloader.bootstrap()
     require("hook", true) --подключения библиотеки хуков
     local event = require("event", true)
     local lastinfo = require("lastinfo", true)
-    require("/system/core/service.lua", true) --подключения сервисной (управляющей) библиотеки
+    require("service", true) --подключения сервисной (управляющей) библиотеки
 
     --проверка целосности системы (юнит тесты)
     bootloader.unittests("/system/core/unittests")

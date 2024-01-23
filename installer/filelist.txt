@@ -2,7 +2,6 @@
 /system/core/LICENSE
 /system/core/logo.lua
 /system/core/recovery.lua
-/system/core/service.lua
 /system/core/autoruns/a_component.lua
 /system/core/boot/a_functions.lua
 /system/core/boot/b_lua_improvements.lua
@@ -25,6 +24,7 @@
 /system/core/lib/programs.lua
 /system/core/lib/registry.lua
 /system/core/lib/serialization.lua
+/system/core/lib/service.lua
 /system/core/lib/sha256.lua
 /system/core/lib/sides.lua
 /system/core/lib/syntax.lua
