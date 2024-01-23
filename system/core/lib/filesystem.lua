@@ -275,15 +275,19 @@ function filesystem.remove(path)
 end
 
 function filesystem.list(path, fullpaths, force)
+    path = paths.absolute(path)
     local proxy, proxyPath = filesystem.get(path)
     local tbl = proxy.list(proxyPath)
 
     if tbl then
+        -- virtual directories
         for lpath in pairs(virtualDirectories) do
             if paths.equals(paths.path(lpath), path) then
                 table.insert(tbl, paths.name(lpath))
             end
         end
+
+        -- removing service objects
         if not force then
             for i = #tbl, 1, -1 do
                 if isService(paths.concat(path, tbl[i])) then
@@ -291,16 +295,22 @@ function filesystem.list(path, fullpaths, force)
                 end
             end
         end
+
+        -- mounts
         for i = 1, #mountList do
-            if paths.absolute(path) == paths.path(mountList[i][2]) then
+            if paths.equals(path, paths.path(mountList[i][2])) then
                 table.insert(tbl, paths.name(mountList[i][2]))
             end
         end
+
+        -- full paths
         if fullpaths then
             for i, v in ipairs(tbl) do
                 tbl[i] = paths.concat(path, v)
             end
         end
+
+        -- sort & return
         table.sort(tbl)
         tbl.n = #tbl
         return tbl
