@@ -48,17 +48,18 @@ end
 
 -- process
 local rawShutdown = computer.shutdown
-local function shutdownProcess(mode)
+local function shutdownProcess(mode, force)
     -- shutdown all process
-    event.push("shutdown")
-    os.sleep(0.1)
+    if not force then
+        event.push("shutdown")
+        os.sleep(0.1)
+    end
 
     -- run shutdown handlers
     local logs = require("logs")
     for handler in pairs(shutdownHandlers) do
         logs.checkWithTag("shutdown handler error", pcall(handler))
     end
-    os.sleep(0.1)
 
     -- real shutdown
     rawShutdown(mode)
@@ -66,7 +67,7 @@ end
 
 -- hook
 local shutdownState
-function computer.shutdown(mode)
+function computer.shutdown(mode, force)
     local thread = package.get("thread")
 
     if shutdownState then
@@ -79,11 +80,11 @@ function computer.shutdown(mode)
     shutdownState = true
     
     if thread then
-        thread.createBackground(shutdownProcess, mode):resume()
+        thread.createBackground(shutdownProcess, mode, force):resume()
         local current = thread.current()
         if current then pcall(current.kill, current) end --kill self thread
     else
-        shutdownProcess(mode)
+        shutdownProcess(mode, force)
     end
     event.wait()
 end
