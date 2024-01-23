@@ -56,7 +56,7 @@ local function shutdownProcess(mode)
     -- run shutdown handlers
     local logs = require("logs")
     for handler in pairs(shutdownHandlers) do
-        logs.checkWithTag("shutdown handler error", handler())
+        logs.checkWithTag("shutdown handler error", pcall(handler))
     end
     os.sleep(0.1)
 
