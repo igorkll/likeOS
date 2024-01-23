@@ -463,7 +463,8 @@ if not getRegistry().disableRecovery then
         bootloader.bootSplash("Press R to open recovery menu")
 
         local recoveryScreen, playerNickname
-        for i = 1, 10 do
+        local startTime = computer.uptime()
+        while computer.uptime() - startTime <= 1 do
             local eventData = {computer.pullSignal(0.1)}
             if eventData[1] == "key_down" and eventData[4] == 19 then
                 for address in component.list("screen") do
