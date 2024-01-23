@@ -86,9 +86,7 @@ function filesystem.mount(proxy, path)
     end
 
     path = paths.absolute(path)
-    if filesystem.inited then
-        filesystem.makeVirtualDirectory(paths.path(path))
-    end
+    filesystem.makeVirtualDirectory(paths.path(path))
 
     path = endSlash(path)
     for i, v in ipairs(mountList) do
@@ -175,7 +173,6 @@ end
 
 function filesystem.exists(path)
     path = paths.absolute(path)
-
     if virtualDirectories[path] or paths.equals(path, "/") then
         return true
     end
@@ -226,6 +223,10 @@ end
 
 function filesystem.isDirectory(path)
     path = paths.absolute(path)
+    if virtualDirectories[path] or paths.equals(path, "/") then
+        return true
+    end
+
     for i, v in ipairs(mountList) do
         if v[2] == path then
             return true
@@ -280,7 +281,7 @@ function filesystem.list(path, fullpaths, force)
     if tbl then
         for lpath in pairs(virtualDirectories) do
             if paths.equals(paths.path(lpath), path) then
-                table.insert(paths.name(lpath))
+                table.insert(tbl, paths.name(lpath))
             end
         end
         if not force then
@@ -565,7 +566,6 @@ end
 
 function filesystem.makeVirtualDirectory(path)
     path = paths.absolute(path)
-
     if filesystem.exists(path) then
         return false
     end
