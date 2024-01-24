@@ -608,10 +608,10 @@ local function getAttributesPath(path)
     return paths.concat(filesystem.point(proxy.address), paths.concat("/.data", ".attributes" .. tostring(math.round(attributeNumber))))
 end
 
-local function checkGlobalAttributes(globalAttributes)
+local function checkGlobalAttributes(proxy, globalAttributes)
     for path, data in pairs(globalAttributes) do
         local systemData = data[1]
-        if not filesystem.exists(path) or systemData.dir ~= filesystem.isDirectory(path) then
+        if not proxy.exists(path) or systemData.dir ~= proxy.isDirectory(path) then
             globalAttributes[path] = nil
         end
     end
@@ -625,14 +625,14 @@ local function cacheAttributes()
     return cache.cache.attributes
 end
 
-local function getGlobalAttributes(attributesPath)
+local function getGlobalAttributes(proxy, attributesPath) --attributesPath сдесь это глобальный путь
     local serialization = require("serialization")
     local cAttributes = cacheAttributes()
 
     local globalAttributes = cAttributes[attributesPath]
     if not globalAttributes and filesystem.exists(attributesPath) then
         globalAttributes = serialization.load(attributesPath)
-        checkGlobalAttributes(globalAttributes)
+        checkGlobalAttributes(proxy, globalAttributes)
         cAttributes[attributesPath] = globalAttributes
     end
 
@@ -659,7 +659,7 @@ function filesystem.clearAttributes(path)
     local proxy, proxyPath = filesystem.get(path)
     local attributesPath = getAttributesPath(path)
 
-    local globalAttributes = getGlobalAttributes(attributesPath)
+    local globalAttributes = getGlobalAttributes(proxy, attributesPath)
     globalAttributes[proxyPath] = nil
     return saveGlobalAttributes(attributesPath, globalAttributes)
 end
@@ -672,7 +672,7 @@ function filesystem.getAttributes(path)
         local globalAttributes = cAttributes[attributesPath]
         if not globalAttributes then
             globalAttributes = require("serialization").load(attributesPath)
-            checkGlobalAttributes(globalAttributes)
+            checkGlobalAttributes(proxy, globalAttributes)
             cAttributes[attributesPath] = globalAttributes
         end
 
@@ -696,7 +696,7 @@ function filesystem.setAttributes(path, data)
 
     local proxy, proxyPath = filesystem.get(path)
     local attributesPath = getAttributesPath(path)
-    local globalAttributes = getGlobalAttributes(attributesPath)
+    local globalAttributes = getGlobalAttributes(proxy, attributesPath)
 
     local systemData
     if globalAttributes[proxyPath] then
