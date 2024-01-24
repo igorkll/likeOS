@@ -194,7 +194,7 @@ function filesystem.size(path)
 
     local function recurse(lpath)
         sizeWithBaseCost = sizeWithBaseCost + filesystem.baseFileDirectorySize
-        for _, filename in ipairs(filesystem.list(lpath)) do
+        for _, filename in ipairs(proxy.list(lpath)) do
             local fullpath = paths.concat(lpath, filename)
             if proxy.isDirectory(fullpath) then
                 recurse(fullpath)
