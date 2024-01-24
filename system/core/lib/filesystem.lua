@@ -667,9 +667,8 @@ end
 function filesystem.getAttributes(path)
     local proxy, proxyPath = filesystem.get(path)
     local attributesPath = getAttributesPath(path)
-    if filesystem.exists(attributesPath) then
-        local cAttributes = cacheAttributes()
-
+    local cAttributes = cacheAttributes()
+    if cAttributes[attributesPath] or filesystem.exists(attributesPath) then
         local globalAttributes = cAttributes[attributesPath]
         if not globalAttributes then
             globalAttributes = require("serialization").load(attributesPath)
