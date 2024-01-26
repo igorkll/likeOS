@@ -202,7 +202,7 @@ function bootloader.bootstrap()
     require("vcomponent", true) --подключения библиотеки виртуальных компонентов
     require("hook", true) --подключения библиотеки хуков
     local event = require("event", true)
-    local lastinfo = require("lastinfo", true)
+    require("lastinfo", true)
     require("service", true) --подключения сервисной (управляющей) библиотеки
 
     --проверка целосности системы (юнит тесты)
@@ -215,7 +215,6 @@ function bootloader.bootstrap()
     bootloader.autorunsIn("/system/autoruns")
 
     --инициализация компонентов
-    lastinfo.update()
     for address, ctype in component.list() do
         event.push("component_added", address, ctype)
     end
