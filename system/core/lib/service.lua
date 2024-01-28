@@ -23,18 +23,6 @@ service.unloadTimer = event.timer(2, function()
     oldFree = free
 end, math.huge)
 
------- auto-mounting
-event.hyperListen(function (eventType, componentUuid, componentType)
-    if componentType == "filesystem" then
-        local path = paths.concat("/mnt", componentUuid)
-        if eventType == "component_added" then
-            fs.mount(component.proxy(componentUuid), path)
-        elseif eventType == "component_removed" then
-            fs.umount(path)
-        end
-    end
-end)
-
 ------ shutdown processing
 
 -- handlers

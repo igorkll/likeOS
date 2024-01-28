@@ -729,8 +729,27 @@ end
 ------------------------------------ init
 
 assert(filesystem.mount(filesystem.bootaddress, "/"))
-assert(filesystem.mount(filesystem.tmpaddress, "/tmp"))
-assert(filesystem.mount(filesystem.tmpaddress, "/mnt/tmpfs"))
-assert(filesystem.mount(filesystem.bootaddress, "/mnt/root"))
+function filesystem.init()
+    filesystem.init = nil
+
+    assert(filesystem.mount(filesystem.tmpaddress, "/tmp"))
+    assert(filesystem.mount(filesystem.tmpaddress, "/mnt/tmpfs"))
+    assert(filesystem.mount(filesystem.bootaddress, "/mnt/root"))
+
+    require("event").hyperListen(function (eventType, componentUuid, componentType)
+        if componentType == "filesystem" then
+            local path = paths.concat("/mnt", componentUuid)
+            if eventType == "component_added" then
+                filesystem.mount(component.proxy(componentUuid), path)
+            elseif eventType == "component_removed" then
+                filesystem.umount(path)
+            end
+        end
+    end)
+
+    for address in component.list("filesystem", true) do
+        filesystem.mount(component.proxy(address), paths.concat("/mnt", address))
+    end
+end
 
 return filesystem

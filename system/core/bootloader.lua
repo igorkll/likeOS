@@ -189,7 +189,7 @@ function bootloader.bootstrap()
         end
     end
 
-    --инициализизация библиотек
+    --инициализация библиотек
     bootloader.dofile("/system/core/luaenv/a_base.lua", bootloader.createEnv())
     local package = bootloader.dofile("/system/core/lib/package.lua", bootloader.createEnv(), bootloader)
     _G.require = package.require
@@ -198,7 +198,7 @@ function bootloader.bootstrap()
     _G.unicode = nil
     _G.natives = nil
     package.register("paths",      "/system/core/lib/paths.lua")
-    package.register("filesystem", "/system/core/lib/filesystem.lua")
+    local filesystem = package.register("filesystem", "/system/core/lib/filesystem.lua")
     require("vcomponent", true) --подключения библиотеки виртуальных компонентов
     require("hook", true) --подключения библиотеки хуков
     local event = require("event", true)
@@ -214,18 +214,11 @@ function bootloader.bootstrap()
     bootloader.autorunsIn("/system/core/autoruns")
     bootloader.autorunsIn("/system/autoruns")
 
-    --инициализация компонентов
-    for address, ctype in component.list() do
-        event.push("component_added", address, ctype)
-    end
-    event.events(0.1, {["component_added"] = true})
-
-    --установка runlevel
+    --инициализация
     bootloader.runlevel = "kernel"
-
-    --инициализация процессов
+    filesystem.init()
     event.push("init")
-    event.sleep(0.1)
+    event.sleep()
 end
 
 function bootloader.runShell(path)

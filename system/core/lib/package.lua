@@ -162,6 +162,7 @@ function package.register(name, path)
         else
             package.loaded[name] = lib
         end
+        return lib
     end
 end
 

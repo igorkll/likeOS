@@ -222,3 +222,7 @@ event.hyperListen(function (eventType, ...)
         pcall(onComponentRemoved, eventType, ...)
     end
 end)
+
+for address, ctype in component.list() do
+    pcall(onComponentAdded, "component_added", address, ctype)
+end
