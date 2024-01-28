@@ -1,4 +1,5 @@
 local computer = require("computer")
+local component = require("component")
 local fs = require("filesystem")
 local package = require("package")
 
