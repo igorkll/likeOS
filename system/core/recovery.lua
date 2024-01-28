@@ -422,7 +422,8 @@ local recoveryApi = {
     isKeyboard = isKeyboard,
     wget = wget,
     yesno = yesno,
-    offScreens = offScreens
+    offScreens = offScreens,
+    screen = screen
 }
 
 local function createSandbox()

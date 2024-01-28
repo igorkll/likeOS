@@ -234,11 +234,11 @@ function bootloader.bootstrap()
     filesystem.init()
 end
 
-function bootloader.runShell(path)
+function bootloader.runShell(path, ...)
     --запуск оболочки дистрибутива
     if require("filesystem").exists(path) then
         bootloader.bootSplash("Starting The Shell...")
-        assert(require("programs").load(path))()
+        assert(require("programs").load(path))(...)
     else
         bootloader.bootSplash("Shell Does Not Exist. Press Enter To Continue.")
         bootloader.waitEnter()
