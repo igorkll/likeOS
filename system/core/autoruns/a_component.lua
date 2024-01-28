@@ -74,8 +74,6 @@ function component.setPrimary(componentType, address)
     checkArg(1, componentType, "string")
     checkArg(2, address, "string", "nil")
 
-    local event = require("event")
-
     if address ~= nil then
         address = component.get(address, componentType)
         assert(address, "no such component")
@@ -117,11 +115,24 @@ function component.setPrimary(componentType, address)
     end
 end
 
-function component.isConnected(proxy)
-    if type(proxy) == "table" then
-        proxy = proxy.address
+function component.isConnected(proxyOrAddress)
+    if type(proxyOrAddress) == "table" then
+        proxyOrAddress = proxyOrAddress.address
     end
-    return not not pcall(component.doc, proxy, "")
+    return not not pcall(component.doc, proxyOrAddress, "")
+end
+
+function component.getReal(ctype, gproxy)
+    local vcomponent = require("vcomponent")
+    for address in component.list(ctype, true) do
+        if not vcomponent.isVirtual(address) then
+            if gproxy then
+                return component.proxy(address)
+            else
+                return address
+            end
+        end
+    end
 end
 
 -------------------------------------------------------------------------------
@@ -211,3 +222,7 @@ event.hyperListen(function (eventType, ...)
         pcall(onComponentRemoved, eventType, ...)
     end
 end)
+
+for address, ctype in component.list() do
+    pcall(onComponentAdded, "component_added", address, ctype)
+end

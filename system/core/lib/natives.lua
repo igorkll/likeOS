@@ -1,3 +1,4 @@
+local natives = {}
 --позваляет получить доступ к оригинальным методам библиотек computer и component
 --например если нужно исключить влияния vcomponent
 
@@ -26,11 +27,17 @@ local function deepclone(tbl, newtbl)
     return recurse(tbl, newtbl)
 end
 
-local natives = {}
+-- clone
 natives.component = deepclone(component)
 natives.computer = deepclone(computer)
+natives.table = deepclone(table) --table и math в likeOS содержут дополнительные методы, данные же таблицы не содержут этих методов
+natives.math = deepclone(math)
 natives.pcall = pcall
 natives.xpcall = xpcall
 natives.pairs = pairs
 natives.ipairs = ipairs
+
+-- we remove the excess
+natives.computer.runlevel = nil
+
 return natives

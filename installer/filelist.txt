@@ -2,11 +2,9 @@
 /system/core/LICENSE
 /system/core/logo.lua
 /system/core/recovery.lua
-/system/core/service.lua
 /system/core/autoruns/a_component.lua
 /system/core/boot/a_functions.lua
-/system/core/boot/b_screen.lua
-/system/core/boot/c_lua_improvements.lua
+/system/core/boot/b_lua_improvements.lua
 /system/core/lib/bit32.lua
 /system/core/lib/cache.lua
 /system/core/lib/clipboard.lua
@@ -31,6 +29,7 @@
 /system/core/lib/syntax.lua
 /system/core/lib/system.lua
 /system/core/lib/term.lua
+/system/core/lib/text.lua
 /system/core/lib/thread.lua
 /system/core/lib/time.lua
 /system/core/lib/utils.lua

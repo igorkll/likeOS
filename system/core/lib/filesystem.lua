@@ -9,13 +9,11 @@ local bootloader = require("bootloader")
 local filesystem = {}
 filesystem.bootaddress = bootloader.bootaddress
 filesystem.tmpaddress = bootloader.tmpaddress
-
-filesystem.mountList = {}
 filesystem.baseFileDirectorySize = 512 --задаеться к конфиге мода(по умалчанию 512 байт)
-filesystem.autoMount = true
-filesystem.inited = false
 
 local srvList = {"/.data"}
+local mountList = {}
+local virtualDirectories = {}
 local forceMode = false
 
 local function startSlash(path)
@@ -88,19 +86,17 @@ function filesystem.mount(proxy, path)
     end
 
     path = paths.absolute(path)
-    if filesystem.inited then
-        filesystem.makeDirectory(paths.path(path))
-    end
+    filesystem.makeVirtualDirectory(paths.path(path))
 
     path = endSlash(path)
-    for i, v in ipairs(filesystem.mountList) do
+    for i, v in ipairs(mountList) do
         if v[2] == path then
             return nil, "another filesystem is already mounted here"
         end
     end
 
-    table.insert(filesystem.mountList, {proxy, path, {}})
-    table.sort(filesystem.mountList, function(a, b) --просто нужно, иначе все по бараде пойдет
+    table.insert(mountList, {proxy, path, {}})
+    table.sort(mountList, function(a, b) --просто нужно, иначе все по бараде пойдет
         return unicode.len(a[2]) > unicode.len(b[2])
     end)
 
@@ -109,9 +105,9 @@ end
 
 function filesystem.umount(path)
     path = endSlash(paths.absolute(path))
-    for i, v in ipairs(filesystem.mountList) do
+    for i, v in ipairs(mountList) do
         if v[2] == path then
-            table.remove(filesystem.mountList, i)
+            table.remove(mountList, i)
             return true
         end
     end
@@ -120,45 +116,73 @@ end
 
 function filesystem.mounts()
     local list = {}
-    for i, v in ipairs(filesystem.mountList) do
+    for i, v in ipairs(mountList) do
         local proxy, path = v[1], v[2]
         list[path] = v
         list[proxy.address] = v
+        list[proxy] = v
         list[i] = v
     end
     return list
 end
 
-function filesystem.point(address)
+function filesystem.point(addressOrProxy)
     local mounts = filesystem.mounts()
-    if mounts[address] then
-        return noEndSlash(mounts[address][2])
+    if mounts[addressOrProxy] then
+        return noEndSlash(mounts[addressOrProxy][2])
     end
 end
 
-function filesystem.get(path)
+function filesystem.get(path, allowProxy)
+    local function returnData(lpath, i)
+        return mountList[i][1], lpath, mountList[i][3]
+    end
+
+    -- find from proxy
+    if allowProxy and type(path) == "table" then
+        for i = 1, #mountList do
+            if mountList[i][1] == path then
+                return returnData("/", i)
+            end
+        end
+        return
+    end
+
+    -- find from path
     path = endSlash(paths.absolute(path))
     
-    for i = #filesystem.mountList, 1, -1 do
-        if component.isConnected and not component.isConnected(filesystem.mountList[i][1]) then
-            table.remove(filesystem.mountList, i)
+    for i = #mountList, 1, -1 do
+        local mount = mountList[i]
+        if not mount[1].virtual and component.isConnected and not component.isConnected(mount[1]) then
+            table.remove(mountList, i)
         end
     end
 
-    for i = 1, #filesystem.mountList do
-        if unicode.sub(path, 1, unicode.len(filesystem.mountList[i][2])) == filesystem.mountList[i][2] then
-            return filesystem.mountList[i][1], noEndSlash(startSlash(unicode.sub(path, unicode.len(filesystem.mountList[i][2]) + 1, unicode.len(path)))), filesystem.mountList[i][3]
+    for i = 1, #mountList do
+        if unicode.sub(path, 1, unicode.len(mountList[i][2])) == mountList[i][2] then
+            return returnData(noEndSlash(startSlash(unicode.sub(path, unicode.len(mountList[i][2]) + 1, unicode.len(path)))), i)
         end
     end
 
-    if filesystem.mountList[1] then
-        return filesystem.mountList[1][1], filesystem.mountList[1][2], filesystem.mountList[1][3]
+    if mountList[1] then
+        return mountList[1][1], mountList[1][2], mountList[1][3]
     end
 end
 
 ------------------------------------ main functions
 
 function filesystem.exists(path)
+    path = paths.absolute(path)
+    if virtualDirectories[path] or paths.equals(path, "/") then
+        return true
+    end
+    
+    for i, v in ipairs(mountList) do
+        if v[2] == path then
+            return true
+        end
+    end
+
     local proxy, proxyPath = filesystem.get(path)
     return proxy.exists(proxyPath)
 end
@@ -170,7 +194,7 @@ function filesystem.size(path)
 
     local function recurse(lpath)
         sizeWithBaseCost = sizeWithBaseCost + filesystem.baseFileDirectorySize
-        for _, filename in ipairs(filesystem.list(lpath)) do
+        for _, filename in ipairs(proxy.list(lpath)) do
             local fullpath = paths.concat(lpath, filename)
             if proxy.isDirectory(fullpath) then
                 recurse(fullpath)
@@ -199,8 +223,11 @@ end
 
 function filesystem.isDirectory(path)
     path = paths.absolute(path)
+    if virtualDirectories[path] or paths.equals(path, "/") then
+        return true
+    end
 
-    for i, v in ipairs(filesystem.mountList) do
+    for i, v in ipairs(mountList) do
         if v[2] == path then
             return true
         end
@@ -210,17 +237,20 @@ function filesystem.isDirectory(path)
     return proxy.isDirectory(proxyPath)
 end
 
-function filesystem.isReadOnly(path)
-    local proxy, proxyPath, mountData = filesystem.get(path)
+function filesystem.isReadOnly(pathOrProxy)
+    local proxy, proxyPath, mountData = filesystem.get(pathOrProxy, true)
     if mountData.ro ~= nil then return mountData.ro end
     mountData.ro = proxy.isReadOnly()
     return mountData.ro
 end
 
-function filesystem.isLabelReadOnly(path)
-    local proxy, proxyPath, mountData = filesystem.get(path)
+function filesystem.isLabelReadOnly(pathOrProxy)
+    local proxy, proxyPath, mountData = filesystem.get(pathOrProxy, true)
     if mountData.lro ~= nil then return mountData.lro end
     mountData.lro = not pcall(proxy.setLabel, proxy.getLabel() or nil)
+    if mountData.lro then
+        mountData.lro = not pcall(proxy.setLabel, proxy.getLabel() or "")
+    end
     return mountData.lro
 end
 
@@ -235,38 +265,57 @@ function filesystem.lastModified(path)
 end
 
 function filesystem.remove(path)
+    path = paths.absolute(path)
+    if virtualDirectories[path] then
+        virtualDirectories[path] = nil
+        return true
+    end
     local proxy, proxyPath = filesystem.get(path)
     return ifSuccessful(function() recursionDeleteAttribute(path) end, proxy.remove(proxyPath))
 end
 
 function filesystem.list(path, fullpaths, force)
+    path = paths.absolute(path)
     local proxy, proxyPath = filesystem.get(path)
-    local tbl = proxy.list(proxyPath)
+    local tbl = proxy.list(proxyPath) or {}
 
-    if tbl then
-        tbl.n = nil
-        if not force then
-            for i = #tbl, 1, -1 do
-                if isService(paths.concat(path, tbl[i])) then
-                    table.remove(tbl, i)
-                end
-            end
+    -- virtual directories
+    for lpath in pairs(virtualDirectories) do
+        if paths.equals(paths.path(lpath), path) then
+            table.insert(tbl, paths.name(lpath) .. "/")
         end
-        for i = 1, #filesystem.mountList do
-            if paths.absolute(path) == paths.path(filesystem.mountList[i][2]) then
-                table.insert(tbl, paths.name(filesystem.mountList[i][2]))
-            end
-        end
-        if fullpaths then
-            for i, v in ipairs(tbl) do
-                tbl[i] = paths.concat(path, v)
-            end
-        end
-        table.sort(tbl)
-        return tbl
-    else
-        return {}
     end
+
+    -- removing service objects
+    if not force then
+        for i = #tbl, 1, -1 do
+            if isService(paths.concat(path, tbl[i])) then
+                table.remove(tbl, i)
+            end
+        end
+    end
+
+    -- mounts
+    for i = 1, #mountList do
+        if paths.equals(path, paths.path(mountList[i][2])) then
+            local mountName = paths.name(mountList[i][2])
+            if mountName then
+                table.insert(tbl, mountName .. "/")
+            end
+        end
+    end
+
+    -- full paths
+    if fullpaths then
+        for i, v in ipairs(tbl) do
+            tbl[i] = paths.concat(path, v)
+        end
+    end
+
+    -- sort & return
+    table.sort(tbl)
+    tbl.n = #tbl
+    return tbl
 end
 
 function filesystem.rename(fromPath, toPath)
@@ -310,9 +359,26 @@ function filesystem.open(path, mode, bufferSize)
         local readBuffer
         local writeBuffer
 
-        local handle = {
+        local handle
+        handle = {
             handle = result,
 
+            readLine = function()
+                local str = ""
+                while true do
+                    local char = handle.read()
+                    if not char then
+                        if #str > 0 then
+                            return str
+                        end
+                        return
+                    elseif char == "\n" then
+                        return str
+                    else
+                        str = str .. char
+                    end
+                end
+            end,
             read = function(readsize)
                 if not readsize then
                     readsize = 1
@@ -377,7 +443,6 @@ function filesystem.open(path, mode, bufferSize)
                 return proxy.read(result, math.huge)
             end
         }
-
         return handle
     end
     return nil, reason
@@ -472,14 +537,15 @@ function filesystem.equals(path1, path2)
         local chunk1 = file1.readMax()
         local chunk2 = file2.readMax()
         if not chunk1 and not chunk2 then
-            break
+            file1.close()
+            file2.close()
+            return true
         elseif chunk1 ~= chunk2 then
+            file1.close()
+            file2.close()
             return false
         end
     end
-    file1.close()
-    file2.close()
-    return true
 end
 
 function filesystem.recursion(gpath)
@@ -505,6 +571,23 @@ function filesystem.recursion(gpath)
     end
 end
 
+------------------------------------ virtual control functions
+
+function filesystem.makeVirtualDirectory(path)
+    path = paths.absolute(path)
+    if filesystem.exists(path) then
+        return false
+    end
+
+    local parentPath = paths.path(path)
+    if not filesystem.exists(parentPath) then
+        filesystem.makeVirtualDirectory(parentPath)
+    end
+    
+    virtualDirectories[path] = true
+    return true
+end
+
 ------------------------------------ attributes
 
 local function attributesSystemData(path, data)
@@ -525,12 +608,49 @@ local function getAttributesPath(path)
     return paths.concat(filesystem.point(proxy.address), paths.concat("/.data", ".attributes" .. tostring(math.round(attributeNumber))))
 end
 
-local function checkGlobalAttributes(globalAttributes)
+local function checkGlobalAttributes(proxy, globalAttributes)
     for path, data in pairs(globalAttributes) do
         local systemData = data[1]
-        if not filesystem.exists(path) or systemData.dir ~= filesystem.isDirectory(path) then
+        if not proxy.exists(path) or systemData.dir ~= proxy.isDirectory(path) then
             globalAttributes[path] = nil
         end
+    end
+end
+
+local function cacheAttributes()
+    local cache = require("cache")
+    if not cache.cache.attributes then
+        cache.cache.attributes = {}
+    end
+    return cache.cache.attributes
+end
+
+local function getGlobalAttributes(proxy, attributesPath) --attributesPath сдесь это глобальный путь
+    local serialization = require("serialization")
+    local cAttributes = cacheAttributes()
+
+    local globalAttributes = cAttributes[attributesPath]
+    if not globalAttributes and filesystem.exists(attributesPath) then
+        globalAttributes = serialization.load(attributesPath)
+        checkGlobalAttributes(proxy, globalAttributes)
+        cAttributes[attributesPath] = globalAttributes
+    end
+
+    return globalAttributes or {}
+end
+
+local function saveGlobalAttributes(attributesPath, globalAttributes)
+    local serialization = require("serialization")
+    local cAttributes = cacheAttributes()
+
+    if table.len(globalAttributes) > 0 then
+        cAttributes[attributesPath] = globalAttributes
+        return serialization.save(attributesPath, globalAttributes)
+    elseif filesystem.exists(attributesPath) then
+        cAttributes[attributesPath] = nil
+        return filesystem.remove(attributesPath)
+    else
+        return true
     end
 end
 
@@ -538,36 +658,22 @@ end
 function filesystem.clearAttributes(path)
     local proxy, proxyPath = filesystem.get(path)
     local attributesPath = getAttributesPath(path)
-    local serialization = require("serialization")
 
-    local globalAttributes
-    if filesystem.exists(attributesPath) then
-        globalAttributes = serialization.load(attributesPath)
-        checkGlobalAttributes(globalAttributes)
-    else
-        globalAttributes = {}
-    end
-
-    local cache = require("cache")
-    if not cache.cache.attributes then cache.cache.attributes = {} end
-
+    local globalAttributes = getGlobalAttributes(proxy, attributesPath)
     globalAttributes[proxyPath] = nil
-    cache.cache.attributes[attributesPath] = globalAttributes
-    return serialization.save(attributesPath, globalAttributes)
+    return saveGlobalAttributes(attributesPath, globalAttributes)
 end
 
 function filesystem.getAttributes(path)
     local proxy, proxyPath = filesystem.get(path)
     local attributesPath = getAttributesPath(path)
-    if filesystem.exists(attributesPath) then
-        local cache = require("cache")
-        if not cache.cache.attributes then cache.cache.attributes = {} end
-
-        local globalAttributes = cache.cache.attributes[attributesPath]
+    local cAttributes = cacheAttributes()
+    if cAttributes[attributesPath] or filesystem.exists(attributesPath) then
+        local globalAttributes = cAttributes[attributesPath]
         if not globalAttributes then
             globalAttributes = require("serialization").load(attributesPath)
-            checkGlobalAttributes(globalAttributes)
-            cache.cache.attributes[attributesPath] = globalAttributes
+            checkGlobalAttributes(proxy, globalAttributes)
+            cAttributes[attributesPath] = globalAttributes
         end
 
         if globalAttributes[proxyPath] then
@@ -590,15 +696,7 @@ function filesystem.setAttributes(path, data)
 
     local proxy, proxyPath = filesystem.get(path)
     local attributesPath = getAttributesPath(path)
-    local serialization = require("serialization")
-
-    local globalAttributes
-    if filesystem.exists(attributesPath) then
-        globalAttributes = serialization.load(attributesPath)
-        checkGlobalAttributes(globalAttributes)
-    else
-        globalAttributes = {}
-    end
+    local globalAttributes = getGlobalAttributes(proxy, attributesPath)
 
     local systemData
     if globalAttributes[proxyPath] then
@@ -613,18 +711,7 @@ function filesystem.setAttributes(path, data)
         globalAttributes[proxyPath] = nil
     end
 
-    local cache = require("cache")
-    if not cache.cache.attributes then cache.cache.attributes = {} end
-
-    if table.len(globalAttributes) > 0 then
-        cache.cache.attributes[attributesPath] = globalAttributes
-        return serialization.save(attributesPath, globalAttributes)
-    elseif filesystem.exists(attributesPath) then
-        cache.cache.attributes[attributesPath] = nil
-        return filesystem.remove(attributesPath)
-    else
-        return true
-    end
+    return saveGlobalAttributes(attributesPath, globalAttributes)
 end
 
 
@@ -642,11 +729,27 @@ end
 ------------------------------------ init
 
 assert(filesystem.mount(filesystem.bootaddress, "/"))
-if filesystem.autoMount then
+function filesystem.init()
+    filesystem.init = nil
+
     assert(filesystem.mount(filesystem.tmpaddress, "/tmp"))
     assert(filesystem.mount(filesystem.tmpaddress, "/mnt/tmpfs"))
     assert(filesystem.mount(filesystem.bootaddress, "/mnt/root"))
+
+    require("event").hyperListen(function (eventType, componentUuid, componentType)
+        if componentType == "filesystem" then
+            local path = paths.concat("/mnt", componentUuid)
+            if eventType == "component_added" then
+                filesystem.mount(component.proxy(componentUuid), path)
+            elseif eventType == "component_removed" then
+                filesystem.umount(path)
+            end
+        end
+    end)
+
+    for address in component.list("filesystem", true) do
+        filesystem.mount(component.proxy(address), paths.concat("/mnt", address))
+    end
 end
 
-filesystem.inited = true
 return filesystem

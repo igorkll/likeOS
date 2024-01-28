@@ -12,19 +12,28 @@ function component.invoke(address, method, ...)
     checkArg(2, method, "string")
 
     local args = {...}
-
+    local resultHooks = {}
+    local resultHook
     for i, hook in ipairs(globalComponentHooks) do
-        address, method, args = hook(address, method, args) --можно вернуть два nil и потом фейковый результат в таблице
+        address, method, args, resultHook = hook(address, method, args) --можно вернуть два nil и потом фейковый результат в таблице
+        if resultHook then
+            table.insert(resultHooks, resultHook)
+        end
     end
-
     if localComponentHooks[address] then
         for i, hook in ipairs(localComponentHooks[address]) do
-            address, method, args = hook(address, method, args)
+            address, method, args, resultHook = hook(address, method, args)
+            if resultHook then
+                table.insert(resultHooks, resultHook)
+            end
         end
     end
 
     if address then
         local result = {pcall(invoke, address, method, table.unpack(args))} --для правильного разположения ошибки
+        for i, v in ipairs(resultHooks) do
+            result = v(result)
+        end
         if result[1] then
             return table.unpack(result, 2)
         else

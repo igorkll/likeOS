@@ -189,7 +189,7 @@ function bootloader.bootstrap()
         end
     end
 
-    --инициализизация библиотек
+    --инициализация библиотек
     bootloader.dofile("/system/core/luaenv/a_base.lua", bootloader.createEnv())
     local package = bootloader.dofile("/system/core/lib/package.lua", bootloader.createEnv(), bootloader)
     _G.require = package.require
@@ -198,12 +198,27 @@ function bootloader.bootstrap()
     _G.unicode = nil
     _G.natives = nil
     package.register("paths",      "/system/core/lib/paths.lua")
-    package.register("filesystem", "/system/core/lib/filesystem.lua")
+    local filesystem = package.register("filesystem", "/system/core/lib/filesystem.lua")
     require("vcomponent", true) --подключения библиотеки виртуальных компонентов
     require("hook", true) --подключения библиотеки хуков
     local event = require("event", true)
-    local lastinfo = require("lastinfo", true)
-    require("/system/core/service.lua", true) --подключения сервисной (управляющей) библиотеки
+    require("lastinfo", true)
+
+    --настройка автовыгрузки
+    local oldFree
+    bootloader.autoUnloadTimer = event.timer(2, function()
+        --check RAM
+        local free = computer.freeMemory()
+        if not oldFree or free > oldFree then --проверка сборшика мусора
+            if free < computer.totalMemory() / 5 then
+                require("system").setUnloadState(true)
+                require("cache").clearCache()
+            else
+                require("system").setUnloadState(false)
+            end
+        end
+        oldFree = free
+    end, math.huge)
 
     --проверка целосности системы (юнит тесты)
     bootloader.unittests("/system/core/unittests")
@@ -214,26 +229,16 @@ function bootloader.bootstrap()
     bootloader.autorunsIn("/system/core/autoruns")
     bootloader.autorunsIn("/system/autoruns")
 
-    --инициализация компонентов
-    lastinfo.update()
-    for address, ctype in component.list() do
-        event.push("component_added", address, ctype)
-    end
-    event.events(0.1, {["component_added"] = true})
-
-    --установка runlevel
+    --инициализация
     bootloader.runlevel = "kernel"
-
-    --инициализация процессов
-    event.push("init")
-    event.sleep(0.1)
+    filesystem.init()
 end
 
-function bootloader.runShell(path)
+function bootloader.runShell(path, ...)
     --запуск оболочки дистрибутива
     if require("filesystem").exists(path) then
         bootloader.bootSplash("Starting The Shell...")
-        assert(require("programs").load(path))()
+        assert(require("programs").load(path))(...)
     else
         bootloader.bootSplash("Shell Does Not Exist. Press Enter To Continue.")
         bootloader.waitEnter()
@@ -463,7 +468,8 @@ if not getRegistry().disableRecovery then
         bootloader.bootSplash("Press R to open recovery menu")
 
         local recoveryScreen, playerNickname
-        for i = 1, 10 do
+        local startTime = computer.uptime()
+        while computer.uptime() - startTime <= 1 do
             local eventData = {computer.pullSignal(0.1)}
             if eventData[1] == "key_down" and eventData[4] == 19 then
                 for address in component.list("screen") do

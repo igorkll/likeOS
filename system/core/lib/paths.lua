@@ -46,7 +46,7 @@ function paths.sconcat(main, ...) --работает так же как concat �
     return false
 end
 
-function paths.concat(...)
+function paths.concat(...) --класический concat как в openOS
     local set = table.pack(...)
     for index, value in ipairs(set) do
         checkArg(index, value, "string")
@@ -56,7 +56,7 @@ end
 
 ------------------------------------
 
-function paths.absolute(path)
+function paths.absolute(path) --работает как canonical но обрабатывает baseDirectory
     local result = table.concat(paths.segments(path), "/")
     if unicode.sub(path, 1, 1) == "/" then
         return "/" .. result
@@ -110,6 +110,9 @@ end
 
 function paths.extension(path)
     local name = paths.name(path)
+    if not name then
+        return
+    end
 
 	local exp
     for i = 1, unicode.len(name) do

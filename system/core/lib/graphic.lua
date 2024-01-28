@@ -270,6 +270,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
     local offsetY = 0
 
     local lockState = false
+    local drawLock = false
 
     local function getBackCol(i)
         if selectFrom then
@@ -291,8 +292,11 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
     end
     
     local function redraw()
-        local gpu = graphic.findGpu(self.screen)
+        if drawLock then
+            return drawLock
+        end
 
+        local gpu = graphic.findGpu(self.screen)
         if gpu then
             local cursorPos
             local str = buffer
@@ -792,6 +796,8 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
         title, titleColor = t, tc
     end, setWhitelist = function(list)
         whitelist = list
+    end, setDrawLock = function(state)
+        drawLock = state
     end}
 end
 

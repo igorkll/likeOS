@@ -1,4 +1,5 @@
 local computer = require("computer")
+local component = require("component")
 local fs = require("filesystem")
 local package = require("package")
 
@@ -6,7 +7,7 @@ local event = {}
 event.minTime = 0 --минимальное время прирывания, можно увеличить, это вызовет подения производительности но уменьшет энергопотребления
 event.listens = {}
 
-------------------------------------------------------------------------
+------------------------------------------------------------------------ functions
 
 local function tableInsert(tbl, value) --кастомный insert с возвращения значения
     for i = 1, #tbl + 1 do
@@ -45,13 +46,15 @@ local function runThreads(eventData)
     end
 end
 
+local isListen = false
 local function runCallback(isTimer, func, index, ...)
-    local oldState = event.isListen
-    event.isListen = true
+    isListen = true
     local ok, err = xpcall(func, debug.traceback, ...)
-    event.isListen = oldState
+    isListen = false
+
     if ok then
         if err == false then --таймер/слушатель хочет отключиться
+            event.listens[index].killed = true
             event.listens[index] = nil
         end
     else
@@ -59,7 +62,7 @@ local function runCallback(isTimer, func, index, ...)
     end
 end
 
-------------------------------------------------------------------------
+------------------------------------------------------------------------ functions
 
 function event.stub()
     event.push("stub")
@@ -141,7 +144,7 @@ function event.pull(waitTime, ...) --реализует фильтер
         waitTime = math.huge
     end
 
-    if #filters == 0 then
+    if filters.n == 0 then
         return computer.pullSignal(waitTime)
     end
     
@@ -187,7 +190,7 @@ function computer.pushSignal(...)
     insert(customQueue, {...})
 end
 
-------------------------------------------------------------------------
+------------------------------------------------------------------------ hyper methods
 
 --имеет самый самый высокий приоритет из возможных
 --не может быть как либо удален до перезагрузки
@@ -221,9 +224,21 @@ function event.hyperHook(func)
     end
 end
 
-------------------------------------------------------------------------
+function event.hyperCustom(func)
+    checkArg(1, func, "function")
+    local pullSignal = computer_pullSignal
+    computer_pullSignal = function (time)
+        return func(pullSignal, time)
+    end
+end
+
+------------------------------------------------------------------------ custom pullSignal
 
 function computer.pullSignal(waitTime) --кастомный pullSignal для работы background процессов
+    if isListen then
+        error("cannot use the pullSignal in the listener", 2)
+    end
+
     waitTime = waitTime or math.huge
     if waitTime < event.minTime then
         waitTime = event.minTime
@@ -239,6 +254,13 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
     while true do
         local realWaitTime = waitTime - (computer.uptime() - startTime)
         local isEnd = realWaitTime <= 0
+
+        for k, v in pairs(event.listens) do --очистка от дохлых таймеров и слушателей
+            if v.killed or (v.th and v.th:status() == "dead") then
+                v.killed = true
+                event.listens[k] = nil
+            end
+        end
 
         if thread then
             realWaitTime = event.minTime
@@ -263,7 +285,7 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
             eventData = {coroutine.yield()}
         else
             eventData = {computer_pullSignal(realWaitTime)} --обязательно повисеть в pullSignal
-            if not event.isListen then
+            if not isListen then
                 runThreads(eventData)
             end
         end
@@ -276,16 +298,19 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
                     if uptime - v.lastTime >= v.time then
                         v.lastTime = uptime --ДО выполнения функции ресатаем таймер, чтобы тайминги не поплывали при долгих функциях
                         if v.times <= 0 then
+                            v.killed = true
                             event.listens[k] = nil
                         else
                             runCallback(true, v.func, k)
                             v.times = v.times - 1
                             if v.times <= 0 then
+                                v.killed = true
                                 event.listens[k] = nil
                             end
                         end
                     end
                 elseif v.th:status() == "dead" then
+                    v.killed = true
                     event.listens[k] = nil
                 end
             elseif isEvent and v.type and not v.killed and v.th == current then
@@ -294,6 +319,7 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
                         runCallback(false, v.func, k, table.unpack(eventData))
                     end
                 elseif v.th:status() == "dead" then
+                    v.killed = true
                     event.listens[k] = nil
                 end
             end
@@ -305,6 +331,48 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
             break
         end
     end
+end
+
+------------------------------------------------------------------------ shutdown processing
+
+local shutdownHandlers = {
+    [function ()
+        local gpu = component.getReal("gpu", true)
+
+        if gpu then
+            local vcomponent = require("vcomponent")
+            for screen in component.list("screen") do
+                if not vcomponent.isVirtual(screen) then
+                    if gpu.getScreen() ~= screen then gpu.bind(screen, false) end
+                    if gpu.setActiveBuffer then gpu.setActiveBuffer(0) end
+                    gpu.setDepth(1)
+                    gpu.setDepth(gpu.maxDepth())
+                    gpu.setBackground(0)
+                    gpu.setForeground(0xFFFFFF)
+                    gpu.setResolution(50, 16)
+                    gpu.fill(1, 1, 50, 16, " ")
+                end
+            end
+        end
+    end] = true
+}
+
+function event.addShutdownHandler(func)
+    shutdownHandlers[func] = true
+end
+
+function event.delShutdownHandler(func)
+    shutdownHandlers[func] = nil
+end
+
+local shutdown = computer.shutdown
+function computer.shutdown(mode)
+    local logs = require("logs")
+    for handler in pairs(shutdownHandlers) do
+        logs.checkWithTag("shutdown handler error", pcall(handler))
+    end
+    pcall(shutdown, mode)
+    event.wait()
 end
 
 os.sleep = event.sleep

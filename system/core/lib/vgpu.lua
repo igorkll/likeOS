@@ -22,7 +22,7 @@ local function formatColor(gpu, back, backPal, fore, forePal, text, noPalIndex)
             col = gpu.getPaletteColor(col)
         end
         
-        local r, g, b = colors.unBlend(col or 0x000000)
+        local r, g, b = require("colors").unBlend(col or 0x000000)
         local step = math.round(255 / #gradients)
         local val = ((r + g + b) / 3)
         local index = 1
@@ -201,6 +201,7 @@ function vgpu.create(gpu, screen)
             out = vpal[i]
         end
         vpal[i] = v
+        --forceUpdate = true
         return out
     end
 
@@ -394,7 +395,7 @@ function vgpu.create(gpu, screen)
 
     local oldBg, oldFg
     function obj.update()
-        if updated then
+        if updated or forceUpdate then
             init()
 
             local index, buff, buffI, back, fore

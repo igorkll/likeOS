@@ -304,6 +304,23 @@ local function loadfile(fs, path, mode, env)
     return load(data, "=" .. path, mode or "bt", env or _G)
 end
 
+local function offScreens()
+    local gpu = component.proxy(component.list("gpu", true)() or "")
+
+    if gpu then
+        for screen in component.list("screen") do
+            if gpu.getScreen() ~= screen then gpu.bind(screen, false) end
+            if gpu.setActiveBuffer then gpu.setActiveBuffer(0) end
+            gpu.setDepth(1)
+            gpu.setDepth(gpu.maxDepth())
+            gpu.setBackground(0)
+            gpu.setForeground(0xFFFFFF)
+            gpu.setResolution(50, 16)
+            gpu.fill(1, 1, 50, 16, " ")
+        end
+    end
+end
+
 -------------------------------------------------------------- micro programs
 
 local function micro_userControl(str)
@@ -404,7 +421,9 @@ local recoveryApi = {
     loadfile = loadfile,
     isKeyboard = isKeyboard,
     wget = wget,
-    yesno = yesno
+    yesno = yesno,
+    offScreens = offScreens,
+    screen = screen
 }
 
 local function createSandbox()
@@ -530,15 +549,19 @@ menu(bootloader.coreversion .. " recovery",
                 },
                 {
                     function ()
+                        offScreens()
                         computer.shutdown()
                     end,
                     function ()
+                        offScreens()
                         computer.shutdown(true)
                     end,
                     function ()
+                        offScreens()
                         computer.shutdown("fast") --поддерживаеться малым количеством bios`ов(по сути только моими)
                     end,
                     function ()
+                        offScreens()
                         computer.shutdown("bios") --поддерживаеться малым количеством bios`ов(по сути только моими)
                     end
                 }

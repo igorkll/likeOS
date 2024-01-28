@@ -17,6 +17,7 @@ syntax.keywords = {
     ["while"] = colors.purple,
     ["for"] = colors.purple,
     ["if"] = colors.purple,
+    ["in"] = colors.purple,
     ["then"] = colors.purple,
     ["end"] = colors.purple,
     ["do"] = colors.purple

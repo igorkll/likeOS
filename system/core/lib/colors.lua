@@ -1,3 +1,4 @@
+---- base
 local colors = {
     [0] = "white",
     [1] = "orange",
@@ -17,6 +18,7 @@ local colors = {
     [15] = "black"
 }
 
+---- reverse
 do
     local keys = {}
     for k in pairs(colors) do
@@ -27,13 +29,14 @@ do
     end
 end
 
+---- links
 colors.silver = colors.lightGray
 colors.lightGreen = colors.lime
-
 colors.lightblue = colors.lightBlue
 colors.lightgray = colors.lightGray
 colors.lightgreen = colors.lightGreen
 
+---- functions
 function colors.hsvToRgb(h, s, v)
     h = h / 255
     s = s / 255

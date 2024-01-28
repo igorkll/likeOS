@@ -33,7 +33,6 @@ end
 
 
 ------------------------------------------------ table
-
 function table.clone(tbl)
     local newtbl = {}
     for k, v in pairs(tbl) do
@@ -49,6 +48,10 @@ function table.exists(tbl, val)
         end
     end
     return false
+end
+
+function table.find(tbl, val)
+    return select(2, table.exists(tbl, val))
 end
 
 function table.clear(tbl, val)
@@ -118,28 +121,6 @@ function table.len(tbl)
     end
     return len
 end
-
-
------------------------------------------------- bit32
-
-function bit32.readbit(byte, index)
-    return byte >> index & 1 == 1
-end
-
-function bit32.writebit(byte, index, newstate)
-    local current = bit32.readbit(byte, index)
-
-    if current ~= newstate then
-        if newstate then
-            byte = byte + (2 ^ index)
-        else
-            byte = byte - (2 ^ index)
-        end
-    end
-
-    return math.floor(byte)
-end
-
 
 ------------------------------------------------ other
 function xor(...)

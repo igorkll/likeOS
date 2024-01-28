@@ -43,23 +43,12 @@ end
 function programs.load(name, mode, env)
     local path = programs.find(name)
     if not path then return nil, "no such program" end
-
-    local file, err = fs.open(path, "rb")
-    if not file then return nil, err end
-    local data = file.readAll()
-    file.close()
-    
-    local code, err = load(data, "=" .. path, mode, env or bootloader.createEnv())
-    if not code then return nil, err end
-
-    return code
+    return loadfile(path, mode, env or bootloader.createEnv())
 end
 
 function programs.execute(name, ...)
     local code, err = programs.load(name)
     if not code then return nil, err end
-
-    --return pcall(code, ...)
     
     local thread = package.get("thread")
     if not thread then
