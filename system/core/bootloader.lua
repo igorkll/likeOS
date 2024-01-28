@@ -203,7 +203,22 @@ function bootloader.bootstrap()
     require("hook", true) --подключения библиотеки хуков
     local event = require("event", true)
     require("lastinfo", true)
-    require("service", true) --подключения сервисной (управляющей) библиотеки
+
+    --настройка автовыгрузки
+    local oldFree
+    bootloader.autoUnloadTimer = event.timer(2, function()
+        --check RAM
+        local free = computer.freeMemory()
+        if not oldFree or free > oldFree then --проверка сборшика мусора
+            if free < computer.totalMemory() / 5 then
+                require("system").setUnloadState(true)
+                require("cache").clearCache()
+            else
+                require("system").setUnloadState(false)
+            end
+        end
+        oldFree = free
+    end, math.huge)
 
     --проверка целосности системы (юнит тесты)
     bootloader.unittests("/system/core/unittests")
@@ -217,8 +232,6 @@ function bootloader.bootstrap()
     --инициализация
     bootloader.runlevel = "kernel"
     filesystem.init()
-    event.push("init")
-    event.sleep()
 end
 
 function bootloader.runShell(path)

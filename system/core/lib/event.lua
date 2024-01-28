@@ -6,7 +6,7 @@ local event = {}
 event.minTime = 0 --минимальное время прирывания, можно увеличить, это вызовет подения производительности но уменьшет энергопотребления
 event.listens = {}
 
-------------------------------------------------------------------------
+------------------------------------------------------------------------ functions
 
 local function tableInsert(tbl, value) --кастомный insert с возвращения значения
     for i = 1, #tbl + 1 do
@@ -61,7 +61,7 @@ local function runCallback(isTimer, func, index, ...)
     end
 end
 
-------------------------------------------------------------------------
+------------------------------------------------------------------------ functions
 
 function event.stub()
     event.push("stub")
@@ -189,7 +189,7 @@ function computer.pushSignal(...)
     insert(customQueue, {...})
 end
 
-------------------------------------------------------------------------
+------------------------------------------------------------------------ hyper methods
 
 --имеет самый самый высокий приоритет из возможных
 --не может быть как либо удален до перезагрузки
@@ -223,7 +223,15 @@ function event.hyperHook(func)
     end
 end
 
-------------------------------------------------------------------------
+function event.hyperCustom(func)
+    checkArg(1, func, "function")
+    local pullSignal = computer_pullSignal
+    computer_pullSignal = function (time)
+        return func(pullSignal, time)
+    end
+end
+
+------------------------------------------------------------------------ custom pullSignal
 
 function computer.pullSignal(waitTime) --кастомный pullSignal для работы background процессов
     if isListen then
@@ -322,6 +330,48 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
             break
         end
     end
+end
+
+------------------------------------------------------------------------ shutdown processing
+
+local shutdownHandlers = {
+    [function ()
+        local gpu = component.getReal("gpu", true)
+
+        if gpu then
+            local vcomponent = require("vcomponent")
+            for screen in component.list("screen") do
+                if not vcomponent.isVirtual(screen) then
+                    if gpu.getScreen() ~= screen then gpu.bind(screen, false) end
+                    if gpu.setActiveBuffer then gpu.setActiveBuffer(0) end
+                    gpu.setDepth(1)
+                    gpu.setDepth(gpu.maxDepth())
+                    gpu.setBackground(0)
+                    gpu.setForeground(0xFFFFFF)
+                    gpu.setResolution(50, 16)
+                    gpu.fill(1, 1, 50, 16, " ")
+                end
+            end
+        end
+    end] = true
+}
+
+function event.addShutdownHandler(func)
+    shutdownHandlers[func] = true
+end
+
+function event.delShutdownHandler(func)
+    shutdownHandlers[func] = nil
+end
+
+local shutdown = computer.shutdown
+function computer.shutdown(mode)
+    local logs = require("logs")
+    for handler in pairs(shutdownHandlers) do
+        logs.checkWithTag("shutdown handler error", pcall(handler))
+    end
+    pcall(shutdown, mode)
+    event.wait()
 end
 
 os.sleep = event.sleep
