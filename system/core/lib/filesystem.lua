@@ -103,15 +103,26 @@ function filesystem.mount(proxy, path)
     return true
 end
 
-function filesystem.umount(path)
-    path = endSlash(paths.absolute(path))
-    for i, v in ipairs(mountList) do
-        if v[2] == path then
-            table.remove(mountList, i)
-            return true
+function filesystem.umount(pathOrProxy)
+    if type(pathOrProxy) == "string" then
+        pathOrProxy = endSlash(paths.absolute(pathOrProxy))
+        for i, v in ipairs(mountList) do
+            if v[2] == pathOrProxy then
+                table.remove(mountList, i)
+                return true
+            end
         end
+        return false
+    else
+        local flag = false
+        for i, v in ipairs(mountList) do
+            if v[1] == pathOrProxy then
+                table.remove(mountList, i)
+                flag = true
+            end
+        end
+        return flag
     end
-    return false
 end
 
 function filesystem.mounts()
