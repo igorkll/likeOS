@@ -582,6 +582,19 @@ function filesystem.recursion(gpath)
     end
 end
 
+function filesystem.spaceUsed(pathOrProxy)
+    return filesystem.get(pathOrProxy, true).spaceUsed()
+end
+
+function filesystem.spaceTotal(pathOrProxy)
+    return filesystem.get(pathOrProxy, true).spaceTotal()
+end
+
+function filesystem.spaceFree(pathOrProxy)
+    local proxy = filesystem.get(pathOrProxy, true)
+    return proxy.spaceTotal() - proxy.spaceUsed()
+end
+
 ------------------------------------ virtual control functions
 
 function filesystem.makeVirtualDirectory(path)
