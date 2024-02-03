@@ -183,7 +183,6 @@ function system.setUnloadState(state)
     if currentUnloadState == state then return end
     currentUnloadState = state
 
-    cacheMode(package.diskFunctionsCache, state)
     cacheMode(package.libStubsCache, state)
     cacheMode(package.cache, state)
 end
