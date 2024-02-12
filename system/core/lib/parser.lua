@@ -31,6 +31,13 @@ function parser.split(tool, str, seps) --дробит строку по разд
     return parts
 end
 
+function parser.change(tool, str, list)
+    for from, to in pairs(list) do
+        str = table.concat(parser.split(tool, str, from), to)
+    end
+    return str
+end
+
 function parser.toParts(tool, str, max) --дробит строку на куски с максимальным размером
     local strs = {}
     while tool.len(str) > 0 do
