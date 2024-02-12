@@ -48,7 +48,7 @@ local bootloaderSettingsPath_bootargs = bootloaderSettingsPath .. "/bootargs"
 -------------------------------------------- launch the bootmanager (if any)
 
 local bootmanagerfile = "/bootmanager/main.lua"
-if bootfs.exists(bootmanagerfile) and not bootfs.exists(bootloaderSettingsPath .. "/nomgr") then
+if bootfs.exists(bootmanagerfile) and not tmpfs.exists(bootloaderSettingsPath .. "/nomgr") then
     assert(loadfile(bootfs, bootmanagerfile))()
 end
 
