@@ -32,13 +32,6 @@ local function unserialize(str)
     end
 end
 
--------------------------------------------- launch the bootmanager (if any)
-
-local bootmanagerfile = "/bootmanager/main.lua"
-if bootfs.exists(bootmanagerfile) then
-    assert(loadfile(bootfs, bootmanagerfile))()
-end
-
 --------------------------------------------
 
 local bootfile = "/system/core/bootloader.lua"
@@ -51,6 +44,13 @@ local bootloaderSettingsPath = "/bootloader"
 local bootloaderSettingsPath_bootfile = bootloaderSettingsPath .. "/bootfile"
 local bootloaderSettingsPath_bootaddr = bootloaderSettingsPath .. "/bootaddr"
 local bootloaderSettingsPath_bootargs = bootloaderSettingsPath .. "/bootargs"
+
+-------------------------------------------- launch the bootmanager (if any)
+
+local bootmanagerfile = "/bootmanager/main.lua"
+if bootfs.exists(bootmanagerfile) and not bootfs.exists(bootloaderSettingsPath .. "/nomgr") then
+    assert(loadfile(bootfs, bootmanagerfile))()
+end
 
 --------------------------------------------
 
