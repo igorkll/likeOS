@@ -1264,6 +1264,11 @@ end
 
 ------------------------------------
 
+function graphic.isAvailable(screen)
+    if not component.isConnected(screen) then return false end
+    return not not component.list("gpu")()
+end
+
 function graphic.forceUpdate(screen)
     if graphic.allowSoftwareBuffer or graphic.allowHardwareBuffer then
         if screen then
