@@ -22,6 +22,13 @@ local function loadfile(fs, path, mode, env)
     return load(data, "=" .. path, mode or "bt", env or _G)
 end
 
+-------------------------------------------- launch the bootmanager (if any)
+
+local bootmanagerfile = "/bootmanager/main.lua"
+if bootfs.exists(bootmanagerfile) then
+    assert(loadfile(bootfs, bootmanagerfile))()
+end
+
 --------------------------------------------
 
 local bootfile = "/system/core/bootloader.lua"
@@ -30,8 +37,8 @@ local bootproxy = bootfs
 --------------------------------------------
 
 local bootloaderSettingsPath = "/bootloader"
-local bootloaderSettingsPath_bootfile = "/bootloader/bootfile"
-local bootloaderSettingsPath_bootaddr = "/bootloader/bootaddr"
+local bootloaderSettingsPath_bootfile = bootloaderSettingsPath .. "/bootfile"
+local bootloaderSettingsPath_bootaddr = bootloaderSettingsPath .. "/bootaddr"
 
 --------------------------------------------
 
@@ -51,11 +58,11 @@ tmpfs.remove(bootloaderSettingsPath)
 
 --------------------------------------------
 
-if bootproxy.exists(bootfile) and not bootproxy.isDirectory(bootfile) then
+if bootproxy.exists(bootfile) then
     assert(load(assert(readFile(bootproxy, bootfile)), "=" .. bootfile, nil, _ENV))()
 else
     local lowLevelInitializer = "/likeOS_startup.lua" --может использоваться для запуска обновления системы
-    if bootproxy.exists(lowLevelInitializer) and not bootproxy.isDirectory(lowLevelInitializer) then
+    if bootproxy.exists(lowLevelInitializer) then
         assert(loadfile(bootproxy, lowLevelInitializer))()
     end
 end
