@@ -652,13 +652,33 @@ function filesystem.mask(tbl, readonly)
     return proxy2
 end
 
-function filesystem.dump(path)
-    return {
-        address = require("uuid").next(),
-        type = "filesystem",
+function filesystem.dump(gpath, readonly, maxSize)
+    local parent = filesystem.get(gpath)
+    local proxy = {}
+    
+    local function repath(path)
+        return paths.sconcat(gpath, path) or gpath
+    end
 
+    local function lrepath(path)
+        local lpath = repath(path)
+        local lparent, lparentPath = filesystem.get(lpath)
+        if lparent ~= parent then
+            return gpath
+        else
+            return lparentPath
+        end
+    end
 
-    }
+    function proxy.spaceUsed()
+        return (select(2, filesystem.size(gpath)))
+    end
+
+    function proxy.open(path, mode)
+        return parent.open(lrepath(path), mode)
+    end
+
+    return filesystem.mask(proxy, readonly)
 end
 
 function filesystem.makeVirtualDirectory(path)
