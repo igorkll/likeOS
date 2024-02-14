@@ -597,6 +597,36 @@ end
 
 ------------------------------------ virtual control functions
 
+function filesystem.mask(tbl, readonly)
+    local function isReadOnly()
+        return not not (readonly or tbl.isReadOnly())
+    end
+
+    local proxy = {}
+
+    for k, v in pairs(tbl) do
+        proxy[k] = v
+    end
+
+    function proxy.isReadOnly()
+        return isReadOnly()
+    end
+
+    proxy.address = tbl.address or require("uuid").next()
+    proxy.type = "filesystem"
+    proxy.virtual = true
+    return proxy
+end
+
+function filesystem.dump(path)
+    return {
+        address = require("uuid").next(),
+        type = "filesystem",
+
+
+    }
+end
+
 function filesystem.makeVirtualDirectory(path)
     path = paths.absolute(path)
     if filesystem.exists(path) then
