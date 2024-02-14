@@ -671,17 +671,27 @@ function filesystem.dump(gpath, readonly, maxSize)
         end
     end
 
+    local function usedSize()
+        return (select(2, filesystem.size(gpath)))
+    end
+
+    local function checkSize(writeCount)
+        if maxSize then
+            return (usedSize() + (writeCount or 0)) < maxSize
+        else
+            return true
+        end
+    end
+
     proxy.close = parent.close
     proxy.read = parent.read
-
-    
 
     function proxy.isReadOnly()
         return not not (readonly or parent.isReadOnly())
     end
 
     function proxy.spaceUsed()
-        return (select(2, filesystem.size(gpath)))
+        return usedSize()
     end
 
     function proxy.spaceTotal()
@@ -689,6 +699,10 @@ function filesystem.dump(gpath, readonly, maxSize)
     end
 
     function proxy.open(path, mode)
+        mode = (mode or "r"):lower()
+        if mode:sub(1, 1) == "w" and not checkSize() then
+            return nil, "not enough space"
+        end
         return parent.open(lrepath(path), mode)
     end
 
