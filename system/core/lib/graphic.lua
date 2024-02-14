@@ -942,7 +942,7 @@ function graphic.findGpuAddress(screen, topOnly)
         bindCache = graphic.topBindCache
     end
 
-    if bindCache[screen] then
+    if bindCache[screen] and not graphic.gpuPrivateList[bindCache[screen]] then
         return bindCache[screen]
     end
 
