@@ -653,6 +653,7 @@ function filesystem.mask(tbl, readonly)
 end
 
 function filesystem.dump(gpath, readonly, maxSize)
+    local maxLabelSize = 24
     local parent = filesystem.get(gpath)
     local proxy = {}
     
@@ -670,12 +671,56 @@ function filesystem.dump(gpath, readonly, maxSize)
         end
     end
 
+    proxy.close = parent.close
+    proxy.read = parent.read
+
+    
+
+    function proxy.isReadOnly()
+        return not not (readonly or parent.isReadOnly())
+    end
+
     function proxy.spaceUsed()
         return (select(2, filesystem.size(gpath)))
     end
 
+    function proxy.spaceTotal()
+        return maxSize or parent.spaceTotal()
+    end
+
     function proxy.open(path, mode)
         return parent.open(lrepath(path), mode)
+    end
+
+    function proxy.isDirectory(path)
+        return parent.isDirectory(lrepath(path))
+    end
+
+    function proxy.rename(path, path2)
+        return parent.rename(lrepath(path), lrepath(path2))
+    end
+
+    function proxy.remove(path)
+        return parent.remove(lrepath(path))
+    end
+
+    function proxy.remove(path)
+        return parent.remove(lrepath(path))
+    end
+
+    function proxy.getLabel()
+        return tostring(filesystem.getAttribute(gpath, "label") or "")
+    end
+
+    function proxy.setLabel(label)
+        if label then
+            checkArg(1, label, "string")
+        else
+            label = ""
+        end
+        label = unicode.sub(label, 1, maxLabelSize)
+        filesystem.setAttribute(gpath, "label", label)
+        return label
     end
 
     return filesystem.mask(proxy, readonly)
