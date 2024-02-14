@@ -612,10 +612,42 @@ function filesystem.mask(tbl, readonly)
         return isReadOnly()
     end
 
-    proxy.address = tbl.address or require("uuid").next()
-    proxy.type = "filesystem"
-    proxy.virtual = true
-    return proxy
+    function proxy.open(path, mode)
+        mode = (mode or "r"):lower()
+        if isReadOnly() and mode:sub(1, 1) == "w" then
+            return nil, "filesystem is readonly"
+        end
+        return spcall(tbl.open, path, mode)
+    end
+
+    function proxy.remove(path)
+        if isReadOnly() then
+            return false
+        end
+        return spcall(tbl.remove, path)
+    end
+
+    function proxy.rename(path, path2)
+        if isReadOnly() then
+            return false
+        end
+        return spcall(tbl.rename, path, path2)
+    end
+
+    local proxy2 = {}
+    for name, func in pairs(proxy) do
+        proxy2[name] = setmetatable({}, {
+            __tostring = component.doc(filesystem.tmpaddress, name),
+            __call = function(_, ...)
+                return spcall(func, ...)
+            end
+        })
+    end
+
+    proxy2.address = tbl.address or require("uuid").next()
+    proxy2.type = "filesystem"
+    proxy2.virtual = true
+    return proxy2
 end
 
 function filesystem.dump(path)
