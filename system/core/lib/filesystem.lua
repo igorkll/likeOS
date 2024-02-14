@@ -745,6 +745,30 @@ function filesystem.dump(gpath, readonly, maxSize)
         return label
     end
 
+    function proxy.makeDirectory(path)
+        if not checkSize() then
+            return nil, "not enough space"
+        end
+
+        return parent.makeDirectory(lrepath(path))
+    end
+
+    function proxy.exists(path)
+        return parent.exists(lrepath(path))
+    end
+
+    function proxy.list(path)
+        return parent.list(lrepath(path))
+    end
+
+    function proxy.lastModified(path)
+        return parent.lastModified(lrepath(path))
+    end
+
+    function proxy.size(path)
+        return parent.size(lrepath(path))
+    end
+
     return filesystem.mask(proxy, readonly)
 end
 
