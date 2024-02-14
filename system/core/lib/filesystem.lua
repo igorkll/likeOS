@@ -637,7 +637,9 @@ function filesystem.mask(tbl, readonly)
     local proxy2 = {}
     for name, func in pairs(proxy) do
         proxy2[name] = setmetatable({}, {
-            __tostring = component.doc(filesystem.tmpaddress, name),
+            __tostring = function()
+                return component.doc(filesystem.tmpaddress, name)
+            end,
             __call = function(_, ...)
                 return spcall(func, ...)
             end
