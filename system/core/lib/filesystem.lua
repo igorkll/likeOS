@@ -685,6 +685,14 @@ function filesystem.dump(gpath, readonly, maxSize)
 
     proxy.close = parent.close
     proxy.read = parent.read
+    proxy.seek = parent.seek
+
+    function proxy.write(handle, value)
+        if not checkSize(#tostring(value)) then
+            return nil, "not enough space"
+        end
+        return parent.write(handle, value)
+    end
 
     function proxy.isReadOnly()
         return not not (readonly or parent.isReadOnly())
