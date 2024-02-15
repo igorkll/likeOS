@@ -1266,7 +1266,7 @@ end
 
 function graphic.isAvailable(screen)
     if not component.isConnected(screen) then return false end
-    return not not component.list("gpu")()
+    return not not graphic.findGpuAddress(screen)
 end
 
 function graphic.forceUpdate(screen)
