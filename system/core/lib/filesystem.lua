@@ -652,7 +652,7 @@ function filesystem.mask(tbl, readonly)
     return proxy2
 end
 
-function filesystem.dump(gpath, readonly, maxSize)
+function filesystem.dump(gpath, readonly, maxSize, readonlyLabel)
     local maxLabelSize = 24
     local parent = filesystem.get(gpath)
     local proxy = {}
@@ -731,10 +731,13 @@ function filesystem.dump(gpath, readonly, maxSize)
     end
 
     function proxy.getLabel()
-        return tostring(filesystem.getAttribute(gpath, "label") or "")
+        return readonlyLabel or tostring(filesystem.getAttribute(gpath, "label") or "")
     end
 
     function proxy.setLabel(label)
+        if readonlyLabel then
+            error("label is readonly", 2)
+        end
         if label then
             checkArg(1, label, "string")
         else
