@@ -1330,6 +1330,31 @@ function graphic.getDeviceTier(address)
     end
 end
 
+function graphic.saveGpuSettings(gpu)
+    if type(gpu) == "string" then
+        gpu = component.proxy(gpu)
+    end
+
+    local screen = gpu.getScreen()
+    if not screen then
+        return function () end
+    end
+
+    local palette = graphic.getPalette(screen)
+    local depth = gpu.getDepth()
+    local rx, ry = gpu.getResolution()
+    local buffer = gpu.getActiveBuffer and gpu.getActiveBuffer()
+
+    return function ()
+        graphic.setPalette(screen, palette)
+        gpu.setDepth(depth)
+        gpu.setResolution(rx, ry)
+        if buffer then
+            gpu.setActiveBuffer(buffer)
+        end
+    end
+end
+
 function graphic.screenshot(screen, x, y, sx, sy)
     local gpu = graphic.findGpu(screen)
     x = x or 1
