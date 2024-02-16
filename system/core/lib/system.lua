@@ -78,15 +78,21 @@ function system.getDeviceType()
 end
 
 function system.getCpuLevel()
-    local processor, isAPU = -1, false
+    local processor, isAPU, isCreative = -1, false, false
 
     for _, value in pairs(lastinfo.deviceinfo) do
         if value.clock and value.class == "processor" then
-            local apu34 = value.clock == "1000+1280/1280/160/2560/640/1280" or value.clock == "1500+2560/2560/320/5120/1280/2560"
+            local creativeApu = value.clock == "1500+2560/2560/320/5120/1280/2560"
+            local apu3 = value.clock == "1000+1280/1280/160/2560/640/1280"
             local apu2 = value.clock == "500+640/640/40/1280/320/640"
             
-            if value.clock == "1500" or apu34 then
-                isAPU = apu34
+            if creativeApu then
+                isCreative = true
+                isAPU = true
+                processor = 3
+                break
+            elseif value.clock == "1500" or apu3 then
+                isAPU = apu3
                 processor = 3
                 break
             elseif value.clock == "1000" or apu2 then
@@ -100,7 +106,7 @@ function system.getCpuLevel()
         end
     end
 
-    return processor, isAPU
+    return processor, isAPU, isCreative
 end
 
 function system.getCurrentComponentCount()
