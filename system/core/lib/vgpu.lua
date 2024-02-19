@@ -290,7 +290,7 @@ function vgpu.create(gpu, screen)
         x = floor(x)
         y = floor(y)
 
-        index = (x - 1) + ((y - 1) * rx)
+        index = x + ((y - 1) * rx)
         return chars[index], foregrounds[index], backgrounds[index]
     end
 
@@ -302,7 +302,7 @@ function vgpu.create(gpu, screen)
         if vertical then
             for i = 1, unicode_len(text) do
                 if y + (i - 1) > ry then break end
-                index = ((x - 1) * rx) + ((y + (i - 1)) - 1)
+                index = ((x - 1) * rx) + y + (i - 1)
                 backgrounds[index] = currentBack
                 foregrounds[index] = currentFore
                 chars[index] = unicode_sub(text, i, i)
@@ -310,7 +310,7 @@ function vgpu.create(gpu, screen)
         else
             for i = 1, unicode_len(text) do
                 if x + (i - 1) > rx then break end
-                index = ((x + (i - 1)) - 1) + ((y - 1) * rx)
+                index = x + (i - 1) + ((y - 1) * rx)
                 backgrounds[index] = currentBack
                 foregrounds[index] = currentFore
                 chars[index] = unicode_sub(text, i, i)
@@ -331,7 +331,7 @@ function vgpu.create(gpu, screen)
             if ix > rx then break end
             for iy = y, y + (sizeY - 1) do
                 if iy > ry then break end
-                index = (ix - 1) + ((iy - 1) * rx)
+                index = ix + ((iy - 1) * rx)
                 backgrounds[index] = currentBack
                 foregrounds[index] = currentFore
                 chars[index] = char
