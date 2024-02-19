@@ -170,7 +170,7 @@ function vgpu.create(gpu, screen)
     local depth = gpu.getDepth()
 
 
-    function obj.vbuf_getBuffers()
+    function obj.getBuffers()
         return chars, foregrounds, backgrounds
     end
 
