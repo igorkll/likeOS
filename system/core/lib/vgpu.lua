@@ -169,7 +169,7 @@ function vgpu.create(gpu, screen)
     local vpal = {}
     local depth = gpu.getDepth()
 
-    function obj.getBuffers()
+    function obj.getSoftwareBuffers()
         return chars, foregrounds, backgrounds
     end
 
