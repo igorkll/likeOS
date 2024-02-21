@@ -928,6 +928,18 @@ end
 
 ------------------------------------
 
+function graphic.unloadBuffer(screen)
+    local gpu = graphic.findGpu(screen)
+
+    graphic.bindCache[screen] = nil
+    graphic.topBindCache[screen] = nil
+    graphic.vgpus[screen] = nil
+
+    if graphic.screensBuffers[screen] then
+        gpu.freeBuffer(graphic.screensBuffers[screen])
+    end
+end
+
 function graphic.findGpuAddress(screen, topOnly)
     local deviceinfo = lastinfo.deviceinfo
     if not deviceinfo[screen] then
