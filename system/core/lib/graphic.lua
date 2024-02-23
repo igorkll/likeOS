@@ -940,6 +940,12 @@ function graphic.unloadBuffer(screen)
     end
 end
 
+function graphic.unloadBuffers()
+    for address in component.list("screen", true) do
+        graphic.unloadBuffer(address)
+    end
+end
+
 function graphic.findGpuAddress(screen, topOnly)
     local deviceinfo = lastinfo.deviceinfo
     if not deviceinfo[screen] then
