@@ -1,4 +1,5 @@
 local unicode = require("unicode")
+local text = require("text")
 local parser = {}
 
 function parser.split(tool, str, seps) --дробит строку по разделителям(сохраняяя пустые строки)
@@ -34,6 +35,13 @@ end
 function parser.change(tool, str, list)
     for from, to in pairs(list) do
         str = table.concat(parser.split(tool, str, from), to)
+    end
+    return str
+end
+
+function parser.fastChange(str, list)
+    for from, to in pairs(list) do
+        str = str:gsub(text.escapePattern(from), text.escapePattern(to))
     end
     return str
 end
