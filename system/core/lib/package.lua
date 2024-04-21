@@ -212,6 +212,19 @@ function package.unload(name, force)
     end
 end
 
+local attachMeta = {__index = function(lib, key)
+    local fs = require("filesystem")
+    for _, path in ipairs(fs.list(lib.functionFolder, true)) do
+        
+    end
+end}
+function package.attackFunctionFolder(lib, path)
+    lib.functionFolder = require("system").getResourcePath(path)
+    lib.functionCache = {}
+    require("cache").attachUnloader(lib.functionCache)
+    setmetatable(lib, attachMeta)
+end
+
 ------------------------------------
 
 return package

@@ -10,23 +10,6 @@ local paths = require("paths")
 local unicode = require("unicode")
 local system = {unloadable = true}
 
-local function cacheMode(tbl, state)
-    local mt = getmetatable(tbl)
-    if mt then
-        if state then
-            mt.__mode = 'v'
-        else
-            mt.__mode = nil
-        end
-    else
-        mt = {}
-        if state then
-            mt.__mode = 'v'
-        end
-        setmetatable(tbl, mt)
-    end
-end
-
 -------------------------------------------------
 
 function system.stub()
@@ -182,16 +165,5 @@ end
 function system.getCharge()
     return math.clamp(math.round(math.map(computer.energy(), 0, computer.maxEnergy(), 0, 100)), 0, 100)
 end
-
-local currentUnloadState
-function system.setUnloadState(state)
-    checkArg(1, state, "boolean")
-    if currentUnloadState == state then return end
-    currentUnloadState = state
-
-    cacheMode(package.libStubsCache, state)
-    cacheMode(package.cache, state)
-end
-system.setUnloadState(false)
 
 return system

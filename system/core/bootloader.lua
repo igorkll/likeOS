@@ -197,28 +197,13 @@ function bootloader.bootstrap()
     _G.component = nil
     _G.unicode = nil
     _G.natives = nil
-    package.register("paths",      "/system/core/lib/paths.lua")
+    package.register("paths", "/system/core/lib/paths.lua")
     local filesystem = package.register("filesystem", "/system/core/lib/filesystem.lua")
     require("vcomponent", true) --подключения библиотеки виртуальных компонентов
     require("hook", true) --подключения библиотеки хуков
     local event = require("event", true)
     require("lastinfo", true)
-
-    --настройка автовыгрузки
-    local oldFree
-    bootloader.autoUnloadTimer = event.timer(2, function()
-        --check RAM
-        local free = computer.freeMemory()
-        if not oldFree or free > oldFree then --проверка сборшика мусора
-            if free < computer.totalMemory() / 5 then
-                require("system").setUnloadState(true)
-                require("cache").clearCache()
-            else
-                require("system").setUnloadState(false)
-            end
-        end
-        oldFree = free
-    end, math.huge)
+    require("cache", true)
 
     --проверка целосности системы (юнит тесты)
     bootloader.unittests("/system/core/unittests")
