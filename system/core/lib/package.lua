@@ -213,12 +213,21 @@ function package.unload(name, force)
 end
 
 local attachMeta = {__index = function(lib, key)
+    if lib.functionCache[key] then
+        return lib.functionCache[key]
+    end
+
     local fs = require("filesystem")
-    for _, path in ipairs(fs.list(lib.functionFolder, true)) do
-        
+    local paths = require("paths")
+
+    local path = paths.concat(lib.functionFolder, key .. ".lua")
+    if fs.exists(path) then
+        local func = assert(loadfile(path, nil, libenv))
+        lib.functionCache[key] = func
+        return func
     end
 end}
-function package.attackFunctionFolder(lib, path)
+function package.attackFunctionFolder(lib, path) --позваляет сохранить малоиспользуемые функции библиотеки на HDD отдельным файлом чтобы загружать ее по необходимости и экономить память
     lib.functionFolder = require("system").getResourcePath(path)
     lib.functionCache = {}
     require("cache").attachUnloader(lib.functionCache)
