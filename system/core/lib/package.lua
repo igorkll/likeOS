@@ -5,6 +5,7 @@ local unicode = unicode
 
 ------------------------------------
 
+local libenv = bootloader.createEnv()
 local loadingNow = {}
 local package = {
     paths = {"/data/lib", "/vendor/lib", "/system/lib", "/system/core/lib"}, --позиция по мере снижения приоритета(первый элемент это самый высокий приоритет)
@@ -41,7 +42,7 @@ local function raw_require(name)
         end
 
         loadingNow[name] = true
-        local lib = assert(loadfile(finded, nil, bootloader.createEnv()))()
+        local lib = assert(loadfile(finded, nil, libenv))()
         loadingNow[name] = nil
 
         if type(lib) ~= "table" or lib.unloadable then
