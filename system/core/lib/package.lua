@@ -227,7 +227,7 @@ local attachMeta = {__index = function(lib, key)
         return func
     end
 end}
-function package.attackFunctionFolder(lib, path) --позваляет сохранить малоиспользуемые функции библиотеки на HDD отдельным файлом чтобы загружать ее по необходимости и экономить память
+function package.attachFunctionFolder(lib, path) --позваляет сохранить малоиспользуемые функции библиотеки на HDD отдельным файлом чтобы загружать ее по необходимости и экономить память
     lib.functionFolder = require("system").getResourcePath(path)
     lib.functionCache = {}
     require("cache").attachUnloader(lib.functionCache)
