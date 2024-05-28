@@ -728,9 +728,8 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                     selectTo = unicode.len(buffer)
                     redraw()
                 elseif eventData[3] == 3 and eventData[4] == 46 then --ctrl+c
-                    if selectFrom then
+                    if selectFrom and not disableClipboard then
                         clipboardlib.set(eventData[5], unicode.sub(buffer .. lastBuffer, selectFrom, selectTo))
-                        redraw()
                     end
                 elseif eventData[3] == 24 and eventData[4] == 45 then --ctrl+x
                     if selectFrom then
