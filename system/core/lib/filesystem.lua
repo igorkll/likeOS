@@ -106,16 +106,19 @@ end
 function filesystem.umount(pathOrProxy)
     if type(pathOrProxy) == "string" then
         pathOrProxy = endSlash(paths.absolute(pathOrProxy))
-        for i, v in ipairs(mountList) do
+        local flag = false
+        for i = #mountList, 1, -1 do
+            local v = mountList[i]
             if v[2] == pathOrProxy then
                 table.remove(mountList, i)
-                return true
+                flag = true
             end
         end
-        return false
+        return flag
     else
         local flag = false
-        for i, v in ipairs(mountList) do
+        for i = #mountList, 1, -1 do
+            local v = mountList[i]
             if v[1] == pathOrProxy then
                 table.remove(mountList, i)
                 flag = true
