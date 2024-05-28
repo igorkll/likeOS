@@ -177,6 +177,10 @@ function vgpu.create(gpu, screen)
         updated = true
     end
 
+    function obj.applyForce()
+        forceUpdate = true
+    end
+
     function obj.setDepth(d)
         local out = gpu.setDepth(d)
         depth = d
