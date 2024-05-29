@@ -67,8 +67,17 @@ local bootargs
 if tmpfs.exists(bootloaderSettingsPath_bootargs) then
     bootargs = unserialize(assert(readFile(tmpfs, bootloaderSettingsPath_bootargs)))
 else
-    bootargs = {}
+    local params = {}
+    if tmpfs.exists("/bootloader/recovery") then
+        params.forceRecovery = readFile(tmpfs, "/bootloader/recovery")
+    end
+    if tmpfs.exists("/bootloader/noRecovery") then
+        params.noRecovery = true
+    end
+    bootargs = {params}
 end
+
+tmpfs.remove(bootloaderSettingsPath)
 
 --------------------------------------------
 

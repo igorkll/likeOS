@@ -2,6 +2,7 @@
 
 ------------------------------------base init
 
+local params = (...) or {}
 local component, computer, unicode = component, computer, unicode
 
 local pullSignal = computer.pullSignal
@@ -447,60 +448,55 @@ end
 
 ------------------------------------ recovery
 
-do
-    local forceRecovery = component.invoke(bootloader.tmpaddress, "exists", "/bootloader/recovery")
-    local noRecovery = component.invoke(bootloader.tmpaddress, "exists", "/bootloader/noRecovery")
+if not params.noRecovery and (params.forceRecovery or not getRegistry().disableRecovery) then
+    local gpu = component.proxy(component.list("gpu")() or "")
+    local defaultScreen = component.list("screen")()
+    if gpu and defaultScreen then
+        local recoveryScreen, playerNickname
+        if params.forceRecovery then
+            recoveryScreen = params.forceRecovery
+            playerNickname = ""
 
-    if not noRecovery and (forceRecovery or not getRegistry().disableRecovery) then
-        local gpu = component.proxy(component.list("gpu")() or "")
-        local defaultScreen = component.list("screen")()
-        if gpu and defaultScreen then
-            local recoveryScreen, playerNickname
-            if forceRecovery then
-                recoveryScreen = bootloader.readFile(component.proxy(bootloader.tmpaddress), "/bootloader/recovery")
-                playerNickname = ""
-
-                if #recoveryScreen == 0 then
-                    recoveryScreen = defaultScreen
-                end
-            else
-                bootloader.bootSplash("Press R to open recovery menu")
-                local startTime = computer.uptime()
-                while computer.uptime() - startTime <= 1 do
-                    local eventData = {computer.pullSignal(0.1)}
-                    if eventData[1] == "key_down" and eventData[4] == 19 then
-                        for address in component.list("screen") do
-                            local keyboards = component.invoke(address, "getKeyboards")
-                            for i, keyboard in ipairs(keyboards) do
-                                if keyboard == eventData[2] then
-                                    recoveryScreen = address
-                                    playerNickname = eventData[6]
-                                    goto exit
-                                end
+            if #recoveryScreen == 0 then
+                recoveryScreen = defaultScreen
+            end
+        else
+            bootloader.bootSplash("Press R to open recovery menu")
+            local startTime = computer.uptime()
+            while computer.uptime() - startTime <= 1 do
+                local eventData = {computer.pullSignal(0.1)}
+                if eventData[1] == "key_down" and eventData[4] == 19 then
+                    for address in component.list("screen") do
+                        local keyboards = component.invoke(address, "getKeyboards")
+                        for i, keyboard in ipairs(keyboards) do
+                            if keyboard == eventData[2] then
+                                recoveryScreen = address
+                                playerNickname = eventData[6]
+                                goto exit
                             end
                         end
                     end
                 end
-                ::exit::
             end
+            ::exit::
+        end
 
-            if recoveryScreen then
-                bootloader.bootSplash("RECOVERY MODE")
+        if recoveryScreen then
+            bootloader.bootSplash("RECOVERY MODE")
 
-                local recoveryPath = bootloader.find("recovery.lua")
-                if recoveryPath then
-                    if getRegistry().disableLogo then --если лого отключено, то экран не был инициализирован ранее, а значит его нада инициализировать сейчас
-                        bootloader.initScreen(gpu, recoveryScreen)
-                    end
-                    
-                    local env = bootloader.createEnv()
-                    env.bootloader = bootloader
-                    assert(xpcall(assert(bootloader.loadfile(recoveryPath, nil, env)), debug.traceback, recoveryScreen, playerNickname))
-                    computer.shutdown("fast")
-                else
-                    bootloader.bootSplash("failed to open recovery. press enter to continue")
-                    bootloader.waitEnter()
+            local recoveryPath = bootloader.find("recovery.lua")
+            if recoveryPath then
+                if getRegistry().disableLogo then --если лого отключено, то экран не был инициализирован ранее, а значит его нада инициализировать сейчас
+                    bootloader.initScreen(gpu, recoveryScreen)
                 end
+                
+                local env = bootloader.createEnv()
+                env.bootloader = bootloader
+                assert(xpcall(assert(bootloader.loadfile(recoveryPath, nil, env)), debug.traceback, recoveryScreen, playerNickname))
+                computer.shutdown("fast")
+            else
+                bootloader.bootSplash("failed to open recovery. press enter to continue")
+                bootloader.waitEnter()
             end
         end
     end
