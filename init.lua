@@ -70,8 +70,6 @@ else
     bootargs = {}
 end
 
-tmpfs.remove(bootloaderSettingsPath)
-
 --------------------------------------------
 
 if bootproxy.exists(bootfile) then

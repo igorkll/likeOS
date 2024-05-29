@@ -367,6 +367,17 @@ end
 
 local shutdown = computer.shutdown
 function computer.shutdown(mode)
+    if mode == "recovery" then
+        local graphic = package.get("graphic")
+        if graphic then
+            fs.writeFile("/tmp/bootloader/recovery", graphic.lastScreen or "")
+        else
+            fs.writeFile("/tmp/bootloader/recovery", "")
+        end
+    elseif mode == "fast" then
+        fs.writeFile("/tmp/bootloader/noRecovery", "")
+    end
+
     local logs = require("logs")
     for handler in pairs(shutdownHandlers) do
         logs.checkWithTag("shutdown handler error", pcall(handler))

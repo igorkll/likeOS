@@ -37,6 +37,8 @@ graphic.vgpus = {}
 graphic.bindCache = {}
 graphic.topBindCache = {}
 
+graphic.lastScreen = nil
+
 local function valueCheck(value)
     if value ~= value or value == math.huge or value == -math.huge then
         value = 0
@@ -55,6 +57,7 @@ local function set(self, x, y, background, foreground, text, vertical, pal)
     end
 
     graphic.updated[self.screen] = true
+    graphic.lastScreen = self.screen
 end
 
 local function get(self, x, y)
@@ -73,6 +76,7 @@ local function fill(self, x, y, sizeX, sizeY, background, foreground, char, pal)
     end
 
     graphic.updated[self.screen] = true
+    graphic.lastScreen = self.screen
 end
 
 local function copy(self, x, y, sizeX, sizeY, offsetX, offsetY)
@@ -82,6 +86,7 @@ local function copy(self, x, y, sizeX, sizeY, offsetX, offsetY)
     end
 
     graphic.updated[self.screen] = true
+    graphic.lastScreen = self.screen
 end
 
 local function clear(self, color, pal)
@@ -97,7 +102,6 @@ local function getCursor(self)
 end
 
 local function write(self, data, background, foreground, autoln, pal)
-    graphic.updated[self.screen] = true
     local gpu = graphic.findGpu(self.screen)
 
     if gpu then
@@ -135,6 +139,9 @@ local function write(self, data, background, foreground, autoln, pal)
 
         applyBuffer()
     end
+    
+    graphic.updated[self.screen] = true
+    graphic.lastScreen = self.screen
 end
 
 local function uploadEvent(self, eventData)
@@ -1317,6 +1324,8 @@ function graphic.update(screen)
             end
             graphic.updated[screen] = nil
         end
+
+        graphic.lastScreen = screen
     end
 end
 
@@ -1436,6 +1445,7 @@ function graphic.screenshot(screen, x, y, sx, sy)
         end
 
         graphic.updated[screen] = true
+        graphic.lastScreen = screen
     end
 end
 
