@@ -729,10 +729,6 @@ function filesystem.dump(gpath, readonly, maxSize, readonlyLabel)
         return parent.remove(lrepath(path))
     end
 
-    function proxy.remove(path)
-        return parent.remove(lrepath(path))
-    end
-
     function proxy.getLabel()
         return readonlyLabel or tostring(filesystem.getAttribute(gpath, "label") or "")
     end
