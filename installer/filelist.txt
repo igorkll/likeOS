@@ -35,7 +35,6 @@
 /system/core/lib/utils.lua
 /system/core/lib/uuid.lua
 /system/core/lib/vcomponent.lua
-/system/core/lib/vcursor.lua
 /system/core/lib/vgpu.lua
 /system/core/lib/archiver/init.lua
 /system/core/lib/archiver/formats/afpx.lua

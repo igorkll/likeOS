@@ -1,5 +1,8 @@
 local fs = require("filesystem")
 local paths = require("paths")
+local event = require("event")
+local package = require("package")
+local computer = require("computer")
 
 local runtimeCache = "/data/cache/runtime"
 fs.remove(runtimeCache)
@@ -91,6 +94,59 @@ function cache.hddCacheMt:__pairs()
     end
     return pairs(tbl)
 end
+
+-------------------------------------------------- unloader
+
+local function cacheMode(tbl, state)
+    local mt = getmetatable(tbl)
+    if mt then
+        if state then
+            mt.__mode = 'v'
+        else
+            mt.__mode = nil
+        end
+    else
+        mt = {}
+        if state then
+            mt.__mode = 'v'
+        end
+        setmetatable(tbl, mt)
+    end
+end
+
+local unloaderTables = {}
+
+local currentUnloadState = false
+local function setUnloadState(state)
+    if currentUnloadState == state then return end
+    currentUnloadState = state
+    for i, tbl in ipairs(unloaderTables) do
+        cacheMode(tbl, state)
+    end
+end
+
+local oldFree
+event.timer(2, function()
+    --check RAM
+    local free = computer.freeMemory()
+    if not oldFree or free > oldFree then --проверка сборшика мусора
+        if free < computer.totalMemory() / 5 then
+            setUnloadState(true)
+            cache.clearCache()
+        else
+            setUnloadState(false)
+        end
+    end
+    oldFree = free
+end, math.huge)
+
+function cache.attachUnloader(tbl)
+    cacheMode(tbl, currentUnloadState)
+    table.insert(unloaderTables, tbl)
+end
+
+cache.attachUnloader(package.libStubsCache)
+cache.attachUnloader(package.cache)
 
 --------------------------------------------------
 

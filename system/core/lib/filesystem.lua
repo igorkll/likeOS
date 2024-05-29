@@ -103,15 +103,29 @@ function filesystem.mount(proxy, path)
     return true
 end
 
-function filesystem.umount(path)
-    path = endSlash(paths.absolute(path))
-    for i, v in ipairs(mountList) do
-        if v[2] == path then
-            table.remove(mountList, i)
-            return true
+function filesystem.umount(pathOrProxy)
+    if type(pathOrProxy) == "string" then
+        pathOrProxy = endSlash(paths.absolute(pathOrProxy))
+        local flag = false
+        for i = #mountList, 1, -1 do
+            local v = mountList[i]
+            if v[2] == pathOrProxy then
+                table.remove(mountList, i)
+                flag = true
+            end
         end
+        return flag
+    else
+        local flag = false
+        for i = #mountList, 1, -1 do
+            local v = mountList[i]
+            if v[1] == pathOrProxy then
+                table.remove(mountList, i)
+                flag = true
+            end
+        end
+        return flag
     end
-    return false
 end
 
 function filesystem.mounts()
@@ -571,7 +585,198 @@ function filesystem.recursion(gpath)
     end
 end
 
+function filesystem.spaceUsed(pathOrProxy)
+    return filesystem.get(pathOrProxy, true).spaceUsed()
+end
+
+function filesystem.spaceTotal(pathOrProxy)
+    return filesystem.get(pathOrProxy, true).spaceTotal()
+end
+
+function filesystem.spaceFree(pathOrProxy)
+    local proxy = filesystem.get(pathOrProxy, true)
+    return proxy.spaceTotal() - proxy.spaceUsed()
+end
+
 ------------------------------------ virtual control functions
+
+function filesystem.mask(tbl, readonly)
+    local function isReadOnly()
+        return not not (readonly or tbl.isReadOnly())
+    end
+
+    local proxy = {}
+
+    for k, v in pairs(tbl) do
+        proxy[k] = v
+    end
+
+    function proxy.isReadOnly()
+        return isReadOnly()
+    end
+
+    function proxy.open(path, mode)
+        mode = (mode or "r"):lower()
+        if isReadOnly() and mode:sub(1, 1) == "w" then
+            return nil, "filesystem is readonly"
+        end
+        return spcall(tbl.open, path, mode)
+    end
+
+    function proxy.remove(path)
+        if isReadOnly() then
+            return false
+        end
+        return spcall(tbl.remove, path)
+    end
+
+    function proxy.rename(path, path2)
+        if isReadOnly() then
+            return false
+        end
+        return spcall(tbl.rename, path, path2)
+    end
+
+    local proxy2 = {}
+    for name, func in pairs(proxy) do
+        proxy2[name] = setmetatable({}, {
+            __tostring = function()
+                return component.doc(filesystem.tmpaddress, name)
+            end,
+            __call = function(_, ...)
+                return spcall(func, ...)
+            end
+        })
+    end
+
+    proxy2.address = tbl.address or require("uuid").next()
+    proxy2.type = "filesystem"
+    proxy2.virtual = true
+    return proxy2
+end
+
+function filesystem.dump(gpath, readonly, maxSize, readonlyLabel)
+    local maxLabelSize = 24
+    local parent = filesystem.get(gpath)
+    local proxy = {}
+    
+    local function repath(path)
+        return paths.sconcat(gpath, path) or gpath
+    end
+
+    local function lrepath(path)
+        local lpath = repath(path)
+        local lparent, lparentPath = filesystem.get(lpath)
+        if lparent ~= parent then
+            return gpath
+        else
+            return lparentPath
+        end
+    end
+
+    local function usedSize()
+        return (select(2, filesystem.size(gpath)))
+    end
+
+    local function checkSize(writeCount)
+        if maxSize then
+            return (usedSize() + (writeCount or 0)) < maxSize
+        else
+            return true
+        end
+    end
+
+    proxy.close = parent.close
+    proxy.read = parent.read
+    proxy.seek = parent.seek
+
+    function proxy.write(handle, value)
+        if not checkSize(#tostring(value)) then
+            return nil, "not enough space"
+        end
+        return parent.write(handle, value)
+    end
+
+    function proxy.isReadOnly()
+        return not not (readonly or parent.isReadOnly())
+    end
+
+    function proxy.spaceUsed()
+        return usedSize()
+    end
+
+    function proxy.spaceTotal()
+        return maxSize or parent.spaceTotal()
+    end
+
+    function proxy.open(path, mode)
+        mode = (mode or "r"):lower()
+        if mode:sub(1, 1) == "w" and not checkSize() then
+            return nil, "not enough space"
+        end
+        return parent.open(lrepath(path), mode)
+    end
+
+    function proxy.isDirectory(path)
+        return parent.isDirectory(lrepath(path))
+    end
+
+    function proxy.rename(path, path2)
+        return parent.rename(lrepath(path), lrepath(path2))
+    end
+
+    function proxy.remove(path)
+        return parent.remove(lrepath(path))
+    end
+
+    function proxy.remove(path)
+        return parent.remove(lrepath(path))
+    end
+
+    function proxy.getLabel()
+        return readonlyLabel or tostring(filesystem.getAttribute(gpath, "label") or "")
+    end
+
+    function proxy.setLabel(label)
+        if readonlyLabel then
+            error("label is readonly", 2)
+        end
+        if label then
+            checkArg(1, label, "string")
+        else
+            label = ""
+        end
+        label = unicode.sub(label, 1, maxLabelSize)
+        filesystem.setAttribute(gpath, "label", label)
+        return label
+    end
+
+    function proxy.makeDirectory(path)
+        if not checkSize() then
+            return nil, "not enough space"
+        end
+
+        return parent.makeDirectory(lrepath(path))
+    end
+
+    function proxy.exists(path)
+        return parent.exists(lrepath(path))
+    end
+
+    function proxy.list(path)
+        return parent.list(lrepath(path))
+    end
+
+    function proxy.lastModified(path)
+        return parent.lastModified(lrepath(path))
+    end
+
+    function proxy.size(path)
+        return parent.size(lrepath(path))
+    end
+
+    return filesystem.mask(proxy, readonly)
+end
 
 function filesystem.makeVirtualDirectory(path)
     path = paths.absolute(path)

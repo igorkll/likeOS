@@ -37,6 +37,8 @@ graphic.vgpus = {}
 graphic.bindCache = {}
 graphic.topBindCache = {}
 
+graphic.lastScreen = nil
+
 local function valueCheck(value)
     if value ~= value or value == math.huge or value == -math.huge then
         value = 0
@@ -55,6 +57,7 @@ local function set(self, x, y, background, foreground, text, vertical, pal)
     end
 
     graphic.updated[self.screen] = true
+    graphic.lastScreen = self.screen
 end
 
 local function get(self, x, y)
@@ -73,6 +76,7 @@ local function fill(self, x, y, sizeX, sizeY, background, foreground, char, pal)
     end
 
     graphic.updated[self.screen] = true
+    graphic.lastScreen = self.screen
 end
 
 local function copy(self, x, y, sizeX, sizeY, offsetX, offsetY)
@@ -82,6 +86,7 @@ local function copy(self, x, y, sizeX, sizeY, offsetX, offsetY)
     end
 
     graphic.updated[self.screen] = true
+    graphic.lastScreen = self.screen
 end
 
 local function clear(self, color, pal)
@@ -97,7 +102,6 @@ local function getCursor(self)
 end
 
 local function write(self, data, background, foreground, autoln, pal)
-    graphic.updated[self.screen] = true
     local gpu = graphic.findGpu(self.screen)
 
     if gpu then
@@ -135,6 +139,9 @@ local function write(self, data, background, foreground, autoln, pal)
 
         applyBuffer()
     end
+    
+    graphic.updated[self.screen] = true
+    graphic.lastScreen = self.screen
 end
 
 local function uploadEvent(self, eventData)
@@ -728,9 +735,8 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                     selectTo = unicode.len(buffer)
                     redraw()
                 elseif eventData[3] == 3 and eventData[4] == 46 then --ctrl+c
-                    if selectFrom then
+                    if selectFrom and not disableClipboard then
                         clipboardlib.set(eventData[5], unicode.sub(buffer .. lastBuffer, selectFrom, selectTo))
-                        redraw()
                     end
                 elseif eventData[3] == 24 and eventData[4] == 45 then --ctrl+x
                     if selectFrom then
@@ -928,6 +934,24 @@ end
 
 ------------------------------------
 
+function graphic.unloadBuffer(screen)
+    local gpu = graphic.findGpu(screen)
+
+    graphic.bindCache[screen] = nil
+    graphic.topBindCache[screen] = nil
+    graphic.vgpus[screen] = nil
+
+    if graphic.screensBuffers[screen] then
+        gpu.freeBuffer(graphic.screensBuffers[screen])
+    end
+end
+
+function graphic.unloadBuffers()
+    for address in component.list("screen", true) do
+        graphic.unloadBuffer(address)
+    end
+end
+
 function graphic.findGpuAddress(screen, topOnly)
     local deviceinfo = lastinfo.deviceinfo
     if not deviceinfo[screen] then
@@ -942,7 +966,7 @@ function graphic.findGpuAddress(screen, topOnly)
         bindCache = graphic.topBindCache
     end
 
-    if bindCache[screen] then
+    if bindCache[screen] and not graphic.gpuPrivateList[bindCache[screen]] then
         return bindCache[screen]
     end
 
@@ -1264,6 +1288,11 @@ end
 
 ------------------------------------
 
+function graphic.isAvailable(screen)
+    if not component.isConnected(screen) then return false end
+    return not not graphic.findGpuAddress(screen)
+end
+
 function graphic.forceUpdate(screen)
     if graphic.allowSoftwareBuffer or graphic.allowHardwareBuffer then
         if screen then
@@ -1295,6 +1324,8 @@ function graphic.update(screen)
             end
             graphic.updated[screen] = nil
         end
+
+        graphic.lastScreen = screen
     end
 end
 
@@ -1322,6 +1353,31 @@ function graphic.getDeviceTier(address)
         return 1
     else
         return -1
+    end
+end
+
+function graphic.saveGpuSettings(gpu)
+    if type(gpu) == "string" then
+        gpu = component.proxy(gpu)
+    end
+
+    local screen = gpu.getScreen()
+    if not screen then
+        return function () end
+    end
+
+    local palette = graphic.getPalette(screen)
+    local depth = gpu.getDepth()
+    local rx, ry = gpu.getResolution()
+    local buffer = gpu.getActiveBuffer and gpu.getActiveBuffer()
+
+    return function ()
+        graphic.setPalette(screen, palette)
+        gpu.setDepth(depth)
+        gpu.setResolution(rx, ry)
+        if buffer then
+            gpu.setActiveBuffer(buffer)
+        end
     end
 end
 
@@ -1389,6 +1445,7 @@ function graphic.screenshot(screen, x, y, sx, sy)
         end
 
         graphic.updated[screen] = true
+        graphic.lastScreen = screen
     end
 end
 

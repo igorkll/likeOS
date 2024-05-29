@@ -123,6 +123,16 @@ function table.len(tbl)
 end
 
 ------------------------------------------------ other
+
+function spcall(...)
+    local result = table.pack(pcall(...))
+    if not result[1] then
+        error(tostring(result[2]), 3)
+    else
+        return table.unpack(result, 2, result.n)
+    end
+end
+
 function xor(...)
     local state = false
     for _, flag in ipairs({...}) do

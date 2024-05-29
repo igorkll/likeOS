@@ -2,6 +2,7 @@
 
 ------------------------------------base init
 
+local params = (...) or {}
 local component, computer, unicode = component, computer, unicode
 
 local pullSignal = computer.pullSignal
@@ -197,28 +198,13 @@ function bootloader.bootstrap()
     _G.component = nil
     _G.unicode = nil
     _G.natives = nil
-    package.register("paths",      "/system/core/lib/paths.lua")
+    package.register("paths", "/system/core/lib/paths.lua")
     local filesystem = package.register("filesystem", "/system/core/lib/filesystem.lua")
     require("vcomponent", true) --подключения библиотеки виртуальных компонентов
     require("hook", true) --подключения библиотеки хуков
     local event = require("event", true)
     require("lastinfo", true)
-
-    --настройка автовыгрузки
-    local oldFree
-    bootloader.autoUnloadTimer = event.timer(2, function()
-        --check RAM
-        local free = computer.freeMemory()
-        if not oldFree or free > oldFree then --проверка сборшика мусора
-            if free < computer.totalMemory() / 5 then
-                require("system").setUnloadState(true)
-                require("cache").clearCache()
-            else
-                require("system").setUnloadState(false)
-            end
-        end
-        oldFree = free
-    end, math.huge)
+    require("cache", true)
 
     --проверка целосности системы (юнит тесты)
     bootloader.unittests("/system/core/unittests")
@@ -462,29 +448,38 @@ end
 
 ------------------------------------ recovery
 
-if not getRegistry().disableRecovery then
+if not params.noRecovery and (params.forceRecovery or not getRegistry().disableRecovery) then
     local gpu = component.proxy(component.list("gpu")() or "")
-    if gpu and component.list("screen")() then
-        bootloader.bootSplash("Press R to open recovery menu")
-
+    local defaultScreen = component.list("screen")()
+    if gpu and defaultScreen then
         local recoveryScreen, playerNickname
-        local startTime = computer.uptime()
-        while computer.uptime() - startTime <= 1 do
-            local eventData = {computer.pullSignal(0.1)}
-            if eventData[1] == "key_down" and eventData[4] == 19 then
-                for address in component.list("screen") do
-                    local keyboards = component.invoke(address, "getKeyboards")
-                    for i, keyboard in ipairs(keyboards) do
-                        if keyboard == eventData[2] then
-                            recoveryScreen = address
-                            playerNickname = eventData[6]
-                            goto exit
+        if params.forceRecovery then
+            recoveryScreen = params.forceRecovery
+            playerNickname = ""
+
+            if #recoveryScreen == 0 then
+                recoveryScreen = defaultScreen
+            end
+        else
+            bootloader.bootSplash("Press R to open recovery menu")
+            local startTime = computer.uptime()
+            while computer.uptime() - startTime <= 1 do
+                local eventData = {computer.pullSignal(0.1)}
+                if eventData[1] == "key_down" and eventData[4] == 19 then
+                    for address in component.list("screen") do
+                        local keyboards = component.invoke(address, "getKeyboards")
+                        for i, keyboard in ipairs(keyboards) do
+                            if keyboard == eventData[2] then
+                                recoveryScreen = address
+                                playerNickname = eventData[6]
+                                goto exit
+                            end
                         end
                     end
                 end
             end
+            ::exit::
         end
-        ::exit::
 
         if recoveryScreen then
             bootloader.bootSplash("RECOVERY MODE")

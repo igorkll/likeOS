@@ -149,25 +149,37 @@ function vgpu.create(gpu, screen)
     local foregrounds = {}
     local chars = {}
 
-    local allBackground = 0
-    local allForeground = 0xffffff
-    local allChar = " "
-
     local currentBack, currentBackPal = getBackground()
     local currentFore, currentForePal = getForeground()
     local origCurrentBack, origCurrentFore = currentBack, currentFore
 
     local rx, ry = getResolution()
-    local rsmax = (rx - 1) + ((ry - 1) * rx)
+    local rsmax = rx + ((ry - 1) * rx)
+
+    for i = 1, rsmax do
+        backgrounds[i] = 0
+        foregrounds[i] = 0xffffff
+        chars[i] = " "
+    end
 
     for key, value in pairs(gpu) do
         obj[key] = value
     end
 
-
-
     local vpal = {}
     local depth = gpu.getDepth()
+
+    function obj.getSoftwareBuffers()
+        return chars, foregrounds, backgrounds
+    end
+
+    function obj.updateFlag()
+        updated = true
+    end
+
+    function obj.applyForce()
+        forceUpdate = true
+    end
 
     function obj.setDepth(d)
         local out = gpu.setDepth(d)
@@ -260,9 +272,9 @@ function vgpu.create(gpu, screen)
         setResolution(x, y)
 
         rx, ry = x, y
-        rsmax = (rx - 1) + ((ry - 1) * rx)
+        rsmax = rx + ((ry - 1) * rx)
         
-        for i = 0, rsmax do
+        for i = 1, rsmax do
             if not backgrounds[i] then
                 backgrounds[i] = 0
                 foregrounds[i] = 0xffffff
@@ -285,8 +297,8 @@ function vgpu.create(gpu, screen)
         x = floor(x)
         y = floor(y)
 
-        index = (x - 1) + ((y - 1) * rx)
-        return chars[index] or allChar, foregrounds[index] or allForeground, backgrounds[index] or allBackground
+        index = x + ((y - 1) * rx)
+        return chars[index], foregrounds[index], backgrounds[index]
     end
 
     function obj.set(x, y, text, vertical)
@@ -297,7 +309,7 @@ function vgpu.create(gpu, screen)
         if vertical then
             for i = 1, unicode_len(text) do
                 if y + (i - 1) > ry then break end
-                index = ((x - 1) * rx) + ((y + (i - 1)) - 1)
+                index = ((x - 1) * rx) + y + (i - 1)
                 backgrounds[index] = currentBack
                 foregrounds[index] = currentFore
                 chars[index] = unicode_sub(text, i, i)
@@ -305,7 +317,7 @@ function vgpu.create(gpu, screen)
         else
             for i = 1, unicode_len(text) do
                 if x + (i - 1) > rx then break end
-                index = ((x + (i - 1)) - 1) + ((y - 1) * rx)
+                index = x + (i - 1) + ((y - 1) * rx)
                 backgrounds[index] = currentBack
                 foregrounds[index] = currentFore
                 chars[index] = unicode_sub(text, i, i)
@@ -322,27 +334,16 @@ function vgpu.create(gpu, screen)
         sizeX = floor(sizeX)
         sizeY = floor(sizeY)
 
-        if x == 1 and y == 1 and sizeX == rx and sizeY == ry then
-            allBackground = currentBack
-            allForeground = currentFore
-            allChar = char
-
-            backgrounds = {}
-            foregrounds = {}
-            chars = {}
-        else
-            for ix = x, x + (sizeX - 1) do
-                if ix > rx then break end
-                for iy = y, y + (sizeY - 1) do
-                    if iy > ry then break end
-                    index = (ix - 1) + ((iy - 1) * rx)
-                    backgrounds[index] = currentBack
-                    foregrounds[index] = currentFore
-                    chars[index] = char
-                end
+        for ix = x, x + (sizeX - 1) do
+            if ix > rx then break end
+            for iy = y, y + (sizeY - 1) do
+                if iy > ry then break end
+                index = ix + ((iy - 1) * rx)
+                backgrounds[index] = currentBack
+                foregrounds[index] = currentFore
+                chars[index] = char
             end
         end
-        
 
         updated = true
     end
@@ -371,12 +372,12 @@ function vgpu.create(gpu, screen)
         --local newBP, newFP = {}, {}
         for ix = x, x + (sx - 1) do 
             for iy = y, y + (sy - 1) do
-                index = (ix - 1) + ((iy - 1) * rx)
-                newindex = ((ix + ox) - 1) + (((iy + oy) - 1) * rx)
+                index = ix + ((iy - 1) * rx)
+                newindex = ix + ox + (((iy + oy) - 1) * rx)
 
-                newB[newindex] = backgrounds[index] or allBackground
-                newF[newindex] = foregrounds[index] or allForeground
-                newC[newindex] = chars[index] or allChar
+                newB[newindex] = backgrounds[index]
+                newF[newindex] = foregrounds[index]
+                newC[newindex] = chars[index]
             end
         end
 
@@ -399,31 +400,31 @@ function vgpu.create(gpu, screen)
             init()
 
             local index, buff, buffI, back, fore
-            local i = 0
+            local i = 1
             local pixels = {}
             local chr
             while i <= rsmax do
-                if forceUpdate or (backgrounds[i] or allBackground) ~= currentBackgrounds[i] or
-                    (foregrounds[i] or allForeground) ~= currentForegrounds[i] or
-                    (chars[i] or allChar) ~= currentChars[i] or
-                    (i + 1) % rx == 0 then
+                if forceUpdate or backgrounds[i] ~= currentBackgrounds[i] or
+                    foregrounds[i] ~= currentForegrounds[i] or
+                    chars[i] ~= currentChars[i] or
+                    i % rx == 0 then
                     
-                    back = backgrounds[i] or allBackground
-                    fore = foregrounds[i] or allForeground
+                    back = backgrounds[i]
+                    fore = foregrounds[i]
 
                     buff = {}
                     buffI = 1
                     index = i
                     while true do
-                        chr = chars[i] or allChar
+                        chr = chars[i]
                         
                         buff[buffI] = chr
                         buffI = buffI + 1
-                        if (i + 1) % rx ~= 0 and
-                        back == (backgrounds[i + 1] or allBackground) and
-                        ((chars[i + 1] or allChar) == " " or fore == (foregrounds[i + 1] or allForeground)) then
-                            currentBackgrounds[i] = backgrounds[i] or allBackground
-                            currentForegrounds[i] = foregrounds[i] or allForeground
+                        if i % rx ~= 0 and
+                        back == backgrounds[i + 1] and
+                        (chars[i + 1] == " " or fore == foregrounds[i + 1]) then
+                            currentBackgrounds[i] = backgrounds[i]
+                            currentForegrounds[i] = foregrounds[i]
                             currentChars[i] = chr
                             i = i + 1
                         else
@@ -431,26 +432,14 @@ function vgpu.create(gpu, screen)
                         end
                     end
 
-                    --[[
-                    if back ~= oldBg then
-                        setBackground(back)
-                        oldBg = back
-                    end
-                    if fore ~= oldFg then
-                        setForeground(fore)
-                        oldFg = fore
-                    end
-                    set((index % rx) + 1, (index // rx) + 1, concat(buff))
-                    ]]
-
                     pixels[back] = pixels[back] or {}
                     pixels[back][fore] = pixels[back][fore] or {}
-                    pixels[back][fore][index] = concat(buff)
+                    pixels[back][fore][index - 1] = concat(buff)
                 end
 
-                currentBackgrounds[i] = backgrounds[i] or allBackground
-                currentForegrounds[i] = foregrounds[i] or allForeground
-                currentChars[i] = chars[i] or allChar
+                currentBackgrounds[i] = backgrounds[i]
+                currentForegrounds[i] = foregrounds[i]
+                currentChars[i] = chars[i]
                 i = i + 1
             end
 

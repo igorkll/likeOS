@@ -5,6 +5,7 @@ local unicode = unicode
 
 ------------------------------------
 
+local libenv = bootloader.createEnv()
 local loadingNow = {}
 local package = {
     paths = {"/data/lib", "/vendor/lib", "/system/lib", "/system/core/lib"}, --позиция по мере снижения приоритета(первый элемент это самый высокий приоритет)
@@ -29,7 +30,6 @@ end
 ------------------------------------ caches
 
 package.cache = {}
-package.diskFunctionsCache = {}
 package.libStubsCache = {}
 
 ------------------------------------
@@ -42,7 +42,7 @@ local function raw_require(name)
         end
 
         loadingNow[name] = true
-        local lib = assert(loadfile(finded, nil, bootloader.createEnv()))()
+        local lib = assert(loadfile(finded, nil, libenv))()
         loadingNow[name] = nil
 
         if type(lib) ~= "table" or lib.unloadable then
@@ -212,19 +212,26 @@ function package.unload(name, force)
     end
 end
 
-------------------------------------
-
-function package.rawDiskFunction(lib, path)
-    path = package.invoke("system", "getResourcePath", path)
-    return function (...)
-        local code = package.diskFunctionsCache[path] or assert(loadfile(path, nil, _G))
-        package.diskFunctionsCache[path] = code
-        return code(lib, ...)
+local attachMeta = {__index = function(lib, key)
+    if lib.functionCache[key] then
+        return lib.functionCache[key]
     end
-end
 
-function package.diskFunction(lib, path)
-    lib[paths.name(path)] = package.rawDiskFunction(lib, path)
+    local fs = require("filesystem")
+    local paths = require("paths")
+
+    local path = paths.concat(lib.functionFolder, key .. ".lua")
+    if fs.exists(path) then
+        local func = assert(loadfile(path, nil, libenv))
+        lib.functionCache[key] = func
+        return func
+    end
+end}
+function package.attachFunctionFolder(lib, path) --позваляет сохранить малоиспользуемые функции библиотеки на HDD отдельным файлом чтобы загружать ее по необходимости и экономить память
+    lib.functionFolder = require("system").getResourcePath(path)
+    lib.functionCache = {}
+    require("cache").attachUnloader(lib.functionCache)
+    setmetatable(lib, attachMeta)
 end
 
 ------------------------------------
