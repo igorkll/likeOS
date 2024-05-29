@@ -32,21 +32,9 @@ local function unserialize(str)
     end
 end
 
---------------------------------------------
-
-local bootfile = "/system/core/bootloader.lua"
-local bootproxy = bootfs
-local bootargs = {}
-
---------------------------------------------
-
-local bootloaderSettingsPath = "/bootloader"
-local bootloaderSettingsPath_bootfile = bootloaderSettingsPath .. "/bootfile"
-local bootloaderSettingsPath_bootaddr = bootloaderSettingsPath .. "/bootaddr"
-local bootloaderSettingsPath_bootargs = bootloaderSettingsPath .. "/bootargs"
-
 -------------------------------------------- launch the bootmanager (if any)
 
+local bootloaderSettingsPath = "/bootloader"
 local bootmanagerfile = "/bootmanager/main.lua"
 if bootfs.exists(bootmanagerfile) and not tmpfs.exists(bootloaderSettingsPath .. "/nomgr") then
     assert(loadfile(bootfs, bootmanagerfile))()
@@ -54,20 +42,32 @@ end
 
 --------------------------------------------
 
+local bootloaderSettingsPath_bootfile = bootloaderSettingsPath .. "/bootfile"
+local bootfile
 if tmpfs.exists(bootloaderSettingsPath_bootfile) then
     bootfile = assert(readFile(tmpfs, bootloaderSettingsPath_bootfile))
+else
+    bootfile = "/system/core/bootloader.lua"
 end
 
+local bootloaderSettingsPath_bootaddr = bootloaderSettingsPath .. "/bootaddr"
+local bootproxy
 if tmpfs.exists(bootloaderSettingsPath_bootaddr) then
     local bootaddr = assert(readFile(tmpfs, bootloaderSettingsPath_bootaddr))
     computer.getBootAddress = function()
         return bootaddr
     end
     bootproxy = assert(component.proxy(bootaddr))
+else
+    bootproxy = bootfs
 end
 
+local bootloaderSettingsPath_bootargs = bootloaderSettingsPath .. "/bootargs"
+local bootargs
 if tmpfs.exists(bootloaderSettingsPath_bootargs) then
     bootargs = unserialize(assert(readFile(tmpfs, bootloaderSettingsPath_bootargs)))
+else
+    bootargs = {}
 end
 
 tmpfs.remove(bootloaderSettingsPath)
