@@ -23,9 +23,6 @@ end
 local afpx = {}
 
 function afpx.pack(dir, outputpath)
-    dir = paths.canonical(dir)
-    outputpath = paths.canonical(outputpath)
-
     local files = {}
     local function process()
         local outputfile = assert(fs.open(outputpath, "wb"))
@@ -77,9 +74,6 @@ function afpx.pack(dir, outputpath)
 end
 
 function afpx.unpack(inputpath, dir)
-    inputpath = paths.canonical(inputpath)
-    dir = paths.canonical(dir)
-
     local files = {}
     local function process()
         local inputfile = assert(fs.open(inputpath, "rb"))
@@ -99,7 +93,7 @@ function afpx.unpack(inputpath, dir)
             while true do
                 local path = read()
                 if path == "" then break end
-                if path:find("%.%.") then error("the archive is broken", 2) end
+                if path:find("%.%.") then error("this archive is broken", 2) end
                 local filesize = tonumber(read())
 
                 local path = paths.concat(dir, path)

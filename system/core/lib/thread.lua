@@ -1,7 +1,33 @@
 local system = require("system")
+local computer = require("computer")
+local event = require("event")
 local thread = {}
 thread.threads = {}
 thread.mainthread = coroutine.running()
+
+function thread.decode(th)
+    if th:status() ~= "dead" then
+        error("thread.decode only works with dead thread", 2)
+    end
+
+    local out = th.out or {true}
+    if out[1] then
+        return table.unpack(out)
+    else
+        return nil, (tostring(out[2]) or "unknown error") .. "\n" .. (tostring(out[3]) or "")
+    end
+end
+
+function thread.stub(func, ...)
+    local th = thread.create(func, ...)
+    th:resume()
+    
+    while th:status() ~= "dead" do
+        event.yield()
+    end
+
+    return thread.decode(th)
+end
 
 function thread.xpcall(co, ...)
     local output = {system.checkExitinfo(coroutine.resume(co, ...))}
@@ -18,9 +44,7 @@ function thread.current()
         if not parsetbl then parsetbl = tbl end
         for i = #parsetbl, 1, -1 do
             local v = parsetbl[i]
-            if not v.thread then
-                table.remove(parsetbl, i)
-            else
+            if v.thread then
                 if v.thread == currentT then
                     return v
                 else
@@ -35,9 +59,32 @@ function thread.current()
     return find(thread.threads)
 end
 
+function thread.all()
+    local list = {}
+    
+    local function find(tbl)
+        local parsetbl = tbl.childs
+        if not parsetbl then parsetbl = tbl end
+        for i = #parsetbl, 1, -1 do
+            local v = parsetbl[i]
+            if v.thread then
+                table.insert(list, v)
+
+                local obj = find(v)
+                if obj then
+                    return obj
+                end
+            end
+        end
+    end
+    find(thread.threads)
+
+    return list
+end
+
 function thread.attachThread(t, obj)
     if obj then
-        t.parentData = obj.parentData
+        t.parentData = table.deepclone(obj.parentData)
         t.parent = obj
         if obj.childs then
             table.insert(obj.childs, t)
@@ -62,6 +109,7 @@ local function create(func, ...)
         resume = resume,
         suspend = suspend,
         status = status,
+        decode = thread.decode,
         parentData = {},
 
         func = func,
@@ -87,11 +135,55 @@ function thread.createTo(func, connectTo, ...)
     return obj
 end
 
+function thread.listen(eventType, func)
+    return event.listen(eventType, func, thread.current())
+end
+
+function thread.timer(time, func, times)
+    return event.timer(time, func, times, thread.current())
+end
+
+local function wait(forAny, threads, timeout)
+    local startTime = computer.uptime()
+    while true do
+        local deadCount = 0
+        for _, th in ipairs(threads) do
+            if th:status() == "dead" then
+                if forAny then
+                    break
+                end
+                deadCount = deadCount + 1
+            end
+        end
+
+        if deadCount >= #threads or (timeout and computer.uptime() - startTime > timeout) then
+            break
+        end
+
+        event.yield()
+    end
+
+    local results = {}
+    for _, th in ipairs(threads) do
+        th:kill()
+        table.insert(results, {th:decode()})
+    end
+    return results
+end
+
+function thread.waitForAll(threads, timeout)
+    return wait(false, threads, timeout)
+end
+
+function thread.waitForAny(threads, timeout)
+    return wait(true, threads, timeout)
+end
+
 ------------------------------------thread functions
 
 function raw_kill(t) --не стоит убивать паток через raw_kill
-    t.thread = nil
     t.dead = true
+    t.enable = false
 end
 
 function kill(t) --вы сможете переопределить это в своем потоке, наример чтобы закрыть таймеры
@@ -107,10 +199,14 @@ function suspend(t)
 end
 
 function status(t)
-    if not t.thread or coroutine.status(t.thread) == "dead" then return "dead" end
+    if t.dead or not t.thread or coroutine.status(t.thread) == "dead" then
+        t:kill()
+        return "dead"
+    end
     if t.parent then
         local status = t.parent:status()
         if status == "dead" then
+            t:kill()
             return "dead"
         elseif status == "suspended" then
             return "suspended"

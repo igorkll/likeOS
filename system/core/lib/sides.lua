@@ -64,7 +64,5 @@ end
 
 setmetatable(sides, metatable)
 
--------------------------------------------------------------------------------
-
 sides.unloadable = true
 return sides

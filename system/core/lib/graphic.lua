@@ -6,6 +6,7 @@ local package = require("package")
 local colors = require("colors")
 local cache = require("cache")
 local lastinfo = require("lastinfo")
+local clipboardlib = require("clipboard")
 
 local isSyntaxInstalled = package.isInstalled("syntax")
 local isVGpuInstalled = package.isInstalled("vgpu")
@@ -27,10 +28,16 @@ graphic.hideChar = "*"
 graphic.cursorColor = nil
 graphic.selectColor = nil
 graphic.selectColorFore = nil
+graphic.defaultInputForeground = nil
+graphic.defaultInputBackground = nil
+graphic.fakePalette = nil
 
 graphic.gpuPrivateList = {} --для приватизации видеокарт, дабы избежать "кражи" другими процессами, добовляйте так graphic.gpuPrivateList[gpuAddress] = true
 graphic.vgpus = {}
 graphic.bindCache = {}
+graphic.topBindCache = {}
+
+graphic.lastScreen = nil
 
 local function valueCheck(value)
     if value ~= value or value == math.huge or value == -math.huge then
@@ -41,16 +48,16 @@ end
 
 ------------------------------------class window
 
-local function set(self, x, y, background, foreground, text)
+local function set(self, x, y, background, foreground, text, vertical, pal)
     local gpu = graphic.findGpu(self.screen)
     if gpu then
-        gpu.setBackground(background, self.isPal)
-        gpu.setForeground(foreground, self.isPal)
-        gpu.set(valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), text)
-        --graphic._set(gpu, valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), background, self.isPal, foreground, self.isPal, text)
+        gpu.setBackground(background, xor(self.isPal, pal))
+        gpu.setForeground(foreground, xor(self.isPal, pal))
+        gpu.set(valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), text, vertical)
     end
 
-    graphic.update(self.screen)
+    graphic.updated[self.screen] = true
+    graphic.lastScreen = self.screen
 end
 
 local function get(self, x, y)
@@ -60,21 +67,16 @@ local function get(self, x, y)
     end
 end
 
-local function fill(self, x, y, sizeX, sizeY, background, foreground, char)
+local function fill(self, x, y, sizeX, sizeY, background, foreground, char, pal)
     local gpu = graphic.findGpu(self.screen)
     if gpu then
-        gpu.setBackground(background, self.isPal)
-        gpu.setForeground(foreground, self.isPal)
+        gpu.setBackground(background, xor(self.isPal, pal))
+        gpu.setForeground(foreground, xor(self.isPal, pal))
         gpu.fill(valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), valueCheck(sizeX), valueCheck(sizeY), char)
-        --[[
-        graphic._fill(gpu,
-        valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)),
-        valueCheck(sizeX), valueCheck(sizeY),
-        background, self.isPal, foreground, self.isPal, char)
-        ]]
     end
 
-    graphic.update(self.screen)
+    graphic.updated[self.screen] = true
+    graphic.lastScreen = self.screen
 end
 
 local function copy(self, x, y, sizeX, sizeY, offsetX, offsetY)
@@ -83,11 +85,12 @@ local function copy(self, x, y, sizeX, sizeY, offsetX, offsetY)
         gpu.copy(valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), valueCheck(sizeX), valueCheck(sizeY), valueCheck(offsetX), valueCheck(offsetY))
     end
 
-    graphic.update(self.screen)
+    graphic.updated[self.screen] = true
+    graphic.lastScreen = self.screen
 end
 
-local function clear(self, color)
-    self:fill(1, 1, self.sizeX, self.sizeY, color, 0, " ")
+local function clear(self, color, pal)
+    self:fill(1, 1, self.sizeX, self.sizeY, color, color, " ", pal)
 end
 
 local function setCursor(self, x, y)
@@ -98,8 +101,7 @@ local function getCursor(self)
     return self.cursorX, self.cursorY
 end
 
-local function write(self, data, background, foreground, autoln)
-    graphic.update(self.screen)
+local function write(self, data, background, foreground, autoln, pal)
     local gpu = graphic.findGpu(self.screen)
 
     if gpu then
@@ -111,8 +113,9 @@ local function write(self, data, background, foreground, autoln)
             setX, setY = self.cursorX, self.cursorY
         end
 
-        gpu.setBackground(background or (self.isPal and colors.black or 0), self.isPal)
-        gpu.setForeground(foreground or (self.isPal and colors.white or 0xFFFFFF), self.isPal)
+        local cpal = xor(self.isPal, pal)
+        gpu.setBackground(background or (cpal and colors.black or 0), cpal)
+        gpu.setForeground(foreground or (cpal and colors.white or 0xFFFFFF), cpal)
 
         for i = 1, unicode.len(data) do
             local char = unicode.sub(data, i, i)
@@ -136,6 +139,9 @@ local function write(self, data, background, foreground, autoln)
 
         applyBuffer()
     end
+    
+    graphic.updated[self.screen] = true
+    graphic.lastScreen = self.screen
 end
 
 local function uploadEvent(self, eventData)
@@ -146,21 +152,26 @@ local function uploadEvent(self, eventData)
             local oldSelected = self.selected
             local rePosX = (eventData[3] - self.x) + 1
             local rePosY = (eventData[4] - self.y) + 1
+            local crePosX = math.ceil(rePosX)
+            local crePosY = math.ceil(rePosY)
             self.selected = false
-            if rePosX >= 1 and rePosY >= 1
-            and rePosX <= self.sizeX and rePosY <= self.sizeY then
+
+            local inside = crePosX >= 1 and crePosY >= 1 and crePosX <= self.sizeX and crePosY <= self.sizeY
+            if inside or self.outsideEvents then
                 self.selected = true
                 newEventData = {eventData[1], eventData[2], rePosX, rePosY, eventData[5], eventData[6]}
             end
+
             if eventData[1] == "drop" then
                 self.selected = oldSelected
             end
         elseif eventData[1] == "key_down" or eventData[1] == "key_up" or eventData[1] == "clipboard" then
-            for i, v in ipairs(lastinfo.keyboards[self.screen]) do
-                if eventData[2] == v then
-                    newEventData = eventData
-                    break
-                end
+            if table.exists(lastinfo.keyboards[self.screen], eventData[2]) then 
+                newEventData = eventData
+            end
+        elseif eventData[1] == "softwareInsert" then --для подключения виртуальных клавиатур
+            if eventData[2] == self.screen then
+                newEventData = eventData
             end
         end
     end
@@ -177,7 +188,11 @@ local function toRealPos(self, x, y)
     return self.x + (x - 1), self.y + (y - 1)
 end
 
-local function read(self, x, y, sizeX, background, foreground, preStr, hidden, buffer, clickCheck, syntax)
+local function toFakePos(self, x, y)
+    return x - (self.x - 1), y - (self.y - 1)
+end
+
+local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hidden, buffer, clickCheck, syntax)
     local createdX
     if preStr then
         createdX = x
@@ -187,6 +202,7 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
 
     local sizeY = 1
     local isMultiline = sizeY ~= 1 --пока что не работает
+    local whitelist
 
     local maxX, maxY = self.x + (x - 1) + (sizeX - 1), self.y + (y - 1) + (sizeY - 1)
     
@@ -202,6 +218,18 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
     local gpu = graphic.findGpu(self.screen)
     local depth = gpu.getDepth()
 
+    if depth == 1 then
+        syntax = nil
+    end
+
+    local function getPalColor(pal)
+        if graphic.fakePalette then
+            return graphic.fakePalette[pal] or 0
+        else
+            return gpu.getPaletteColor(pal)
+        end
+    end
+
     local function findColor(rgb, pal, bw)
         if self.isPal and depth > 1 then
             return pal
@@ -209,15 +237,15 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
             if depth == 8 then
                 return rgb
             elseif depth == 4 then
-                return gpu.getPaletteColor(pal)
+                return getPalColor(pal)
             else
                 return bw
             end
         end
     end
 
-    background = background or findColor(0x000000, colors.black, 0x000000)
-    foreground = foreground or findColor(0xffffff, colors.white, 0xffffff)
+    background = background or graphic.defaultInputBackground or findColor(0x000000, colors.black, 0x000000)
+    foreground = foreground or graphic.defaultInputForeground or findColor(0xffffff, colors.white, 0xffffff)
     local cursorColor     = graphic.cursorColor     or findColor(0x00ff00, colors.lightgreen, foreground)
     local selectColor     = graphic.selectColor     or findColor(0x0000ff, colors.blue,       foreground)
     local selectColorFore = graphic.selectColorFore
@@ -232,7 +260,7 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
             if depth == 8 then
                 selectColor = 0x0000ff
             elseif depth == 4 then
-                selectColor = gpu.getPaletteColor(colors.blue)
+                selectColor = getPalColor(colors.blue)
             else
                 selectColor = 0xffffff
                 selectColorFore = 0x000000
@@ -240,11 +268,16 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
         end
     end
 
+    local title, titleColor
+
     local selectFrom
     local selectTo
 
     local offsetX = 0
     local offsetY = 0
+
+    local lockState = false
+    local drawLock = false
 
     local function getBackCol(i)
         if selectFrom then
@@ -256,7 +289,7 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
 
     local function getForeCol(i, def, pal)
         if pal then
-            def = gpu.getPaletteColor(def)
+            def = getPalColor(def)
         end
         if selectFrom and selectColorFore then
             return (i >= selectFrom and i <= selectTo) and selectColorFore or def
@@ -266,12 +299,15 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
     end
     
     local function redraw()
-        local gpu = graphic.findGpu(self.screen)
+        if drawLock then
+            return drawLock
+        end
 
+        local gpu = graphic.findGpu(self.screen)
         if gpu then
             local cursorPos
             local str = buffer
-            if allowUse then
+            if allowUse and not lockState then
                 --str = str .. "\0"
                 cursorPos = unicode.len(str) + 1
                 local nCursorPos = cursorPos + offsetX
@@ -333,6 +369,10 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
                 if not pcall(table.insert, chars, cursorPos, cursorChar) then
                     table.insert(chars, cursorChar)
                 end
+            elseif #chars == 0 and title and titleColor then
+                for i = 1, unicode.len(title) do
+                    table.insert(chars, {unicode.sub(title, i, i), getForeCol(i, titleColor), getBackCol(i)})
+                end
             end
 
             -- draw
@@ -347,7 +387,8 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
             --graphic._fill(gpu, xpos, ypos, sizeX, sizeY, background, self.isPal, foreground, self.isPal, " ")
             if createdX then
                 --graphic._set(gpu, createdX, y, background, self.isPal, foreground, self.isPal, preStr)
-                gpu.set(createdX, y, preStr)
+                local lx, ly = self:toRealPos(createdX, y)
+                gpu.set(lx, ly, preStr)
             end
 
             --[[
@@ -472,9 +513,8 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
             end
         end
 
-        graphic.update(self.screen)
+        graphic.updated[self.screen] = true
     end
-    redraw()
 
     local function isEmpty(str)
         for i = 1, unicode.len(str) do
@@ -527,18 +567,22 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
         end
     end
 
+    local function wlCheck(chr)
+        return not whitelist or whitelist[chr]
+    end
+
     local function add(inputStr)
         historyIndex = nil
         removeSelectedContent()
         for i = 1, unicode.len(inputStr) do
             local chr = unicode.sub(inputStr, i, i)
             if chr == "\n" then
-                if isMultiline then
+                if isMultiline and wlCheck(chr) then
                     buffer = buffer .. chr
                 else
                     return buffer
                 end
-            elseif not unicode.isWide(chr) then
+            elseif not unicode.isWide(chr) and wlCheck(chr) then
                 buffer = buffer .. chr
             end
         end
@@ -546,8 +590,8 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
         redraw()
     end
 
-    local function clipboard(inputStr)
-        if not disableClipboard and inputStr then
+    local function clipboard(inputStr, force)
+        if (not disableClipboard or force) and inputStr then
             local out = add(inputStr)
             if out then
                 removeSelect()
@@ -562,9 +606,15 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
         redraw()
     end
 
-    return {uploadEvent = function(eventData) --по идеи сюда нужно закидывать эвенты которые прошли через window:uploadEvent
+    return {setLock = function(lock)
+        lockState = lock
+    end, getLock = function()
+        return not not lockState
+    end, uploadEvent = function(eventData) --по идеи сюда нужно закидывать эвенты которые прошли через window:uploadEvent
         --вызывайте функцию и передавайте туда эвенты которые сами читаете, 
         --если функция чтото вернет, это результат, если он TRUE(не false) значет было нажато ctrl+w
+
+        if lockState then return end
 
         if not eventData.windowEventData then --если это не эвент окна то делаем его таковым(потому что я криворукий и забываю об этом постоянно)
             eventData = self:uploadEvent(eventData)
@@ -685,17 +735,16 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
                     selectTo = unicode.len(buffer)
                     redraw()
                 elseif eventData[3] == 3 and eventData[4] == 46 then --ctrl+c
-                    if selectFrom then
-                        cache.copiedText = unicode.sub(buffer .. lastBuffer, selectFrom, selectTo)
-                        redraw()
+                    if selectFrom and not disableClipboard then
+                        clipboardlib.set(eventData[5], unicode.sub(buffer .. lastBuffer, selectFrom, selectTo))
                     end
                 elseif eventData[3] == 24 and eventData[4] == 45 then --ctrl+x
                     if selectFrom then
-                        cache.copiedText = removeSelectedContent()
+                        clipboardlib.set(eventData[5], removeSelectedContent())
                         redraw()
                     end
                 elseif eventData[3] == 22 and eventData[4] == 47 then --вставка с системного clipboard
-                    local str = clipboard(cache.copiedText)
+                    local str = clipboard(clipboardlib.get(eventData[5]))
                     if str then outFromRead() return str end
                 elseif eventData[4] == 211 then  --del
                     historyIndex = nil
@@ -713,12 +762,15 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
                 elseif eventData[3] > 0 then --any char
                     historyIndex = nil
                     local char = unicode.char(eventData[3])
-                    if not unicode.isWide(char) then
+                    if not unicode.isWide(char) and wlCheck(char) then
                         add(char)
                     end
                 end
             elseif eventData[1] == "clipboard" then --вставка с реального clipboard
                 local str = clipboard(eventData[3])
+                if str then outFromRead() return str end
+            elseif eventData[1] == "softwareInsert" then --для подключения виртуальных клавиатур
+                local str = clipboard(eventData[3], true)
                 if str then outFromRead() return str end
             end
         end
@@ -746,21 +798,35 @@ local function read(self, x, y, sizeX, background, foreground, preStr, hidden, b
         disableClipboard = not allow
     end, setMaxStringLen = function (max)
         maxDataSize = max
+    end, setTitle = function (t, tc)
+        title, titleColor = t, tc
+    end, setWhitelist = function(list)
+        whitelist = list
+    end, setDrawLock = function(state)
+        drawLock = state
     end}
+end
+
+local function read(...)
+    local reader = readNoDraw(...)
+    reader.redraw()
+    return reader
 end
 
 function graphic.createWindow(screen, x, y, sizeX, sizeY, selected, isPal)
     local obj = {
         screen = screen,
-        x = x,
-        y = y,
+        x = x or 1,
+        y = y or 1,
         sizeX = sizeX,
         sizeY = sizeY,
         cursorX = 1,
         cursorY = 1,
 
+        readNoDraw = readNoDraw,
         read = read,
         toRealPos = toRealPos,
+        toFakePos = toFakePos,
         set = set,
         get = get,
         fill = fill,
@@ -772,6 +838,12 @@ function graphic.createWindow(screen, x, y, sizeX, sizeY, selected, isPal)
         setCursor = setCursor,
         isPal = isPal or false,
     }
+
+    if not sizeX or not sizeY then
+        local rx, ry = graphic.getResolution(screen)
+        obj.sizeX = sizeX or rx
+        obj.sizeY = sizeY or ry
+    end
 
     if selected ~= nil then
         obj.selected = selected
@@ -791,160 +863,143 @@ function graphic.createWindow(screen, x, y, sizeX, sizeY, selected, isPal)
     return obj
 end
 
-------------------------------------
+------------------------------------ window methods
 
-local gradients = {"░", "▒", "▓"}
-function graphic._formatColor(gpu, back, backPal, fore, forePal, text, noPalIndex)
-    local depth = gpu.getDepth()
-    if not graphic.colorAutoFormat or depth > 1 then
-        return back, backPal, fore, forePal, text
-    end
+graphic.defaultWindows = {}
 
-    local function getGradient(col, pal)
-        if pal and col >= 0 and col <= 15 then
-            col = gpu.getPaletteColor(col)
-        end
-        
-        local r, g, b = colors.unBlend(col)
-        local step = math.round(255 / #gradients)
-        local val = ((r + g + b) / 3)
-        local index = 1
-        for i = 0, 255, step do
-            if i > val then
-                return gradients[math.min(index - 1, #gradients)]
-            end
-            index = index + 1
-        end
-        return gradients[#gradients]
-        --return gradients[math.round(((r + g + b) / 3 / 255) * (#gradients - 1)) + 1]
-        --[[
-        local point = math.round(255 / #gradients)
-        if val <= point then
-            return gradients[1]
-        elseif val <= (point * 2) then
-            return gradients[2]
-        else
-            return gradients[3]
-        end
-        ]]
-    end
-
-    local function formatCol(col, pal)
-        if depth == 1 then
-            if pal and col >= 0 and col <= 15 then
-                col = gpu.getPaletteColor(col)
-            end
-
-            if col == 0x000000 then
-                return 0x000000
-            elseif col == 0xffffff then
-                return 0xffffff
-            end
-        else
-            return col, pal
-        end
-    end
-
-    local oldEquals = back == fore
-    local newBack, newBackPal = formatCol(back, backPal)
-    local newFore, newForePal = formatCol(fore, forePal)
-    local gradient, gradientEmpty = nil, true
-
-    if not newBack then
-        newBack = 0x000000
-        gradient = getGradient(back, backPal)
-        local buff = {}
-        local buffI = 1
-        for i = 1, unicode.len(text) do
-            local char = unicode.sub(text, i, i)
-            if char == " " then
-                buff[buffI] = gradient
-            else
-                buff[buffI] = char
-                gradientEmpty = false
-            end
-            buffI = buffI + 1
-        end
-        text = table.concat(buff)
-    end
-
-    if not newFore then
-        newFore = 0xffffff
-    end
-
-    if depth == 1 then
-        if not oldEquals and newBack == newFore then
-            if gradient and gradientEmpty then
-                newBack = 0x000000
-                newFore = 0xffffff
-            else
-                if newFore == 0 then
-                    newBack = 0xffffff
-                else
-                    newFore = 0
-                end
-            end
-        end
-    elseif noPalIndex then
-        if newBackPal then
-            if newBack >= 0 and newBack <= 15 then
-                newBack = gpu.getPaletteColor(newBack)
-            end
-            newBackPal = false
-        end
-
-        if newForePal then
-            if newFore >= 0 and newFore <= 15 then
-                newFore = gpu.getPaletteColor(newFore)
-            end
-            newForePal = false
-        end
-    end
-
-    return newBack, newBackPal, newFore, newForePal, text
+local function window(screen)
+    local rx, ry = graphic.getResolution(screen)
+    graphic.defaultWindows[screen] = graphic.defaultWindows[screen] or graphic.createWindow(screen, 1, 1, rx, ry)
+    local window = graphic.defaultWindows[screen]
+    window.sizeX = rx
+    window.sizeY = ry
+    return graphic.defaultWindows[screen]
 end
 
---[[
-function graphic._set(gpu, x, y, back, backPal, fore, forePal, text)
-    back, backPal, fore, forePal, text = graphic._formatColor(gpu, back, backPal, fore, forePal, text)
-    gpu.setBackground(back, backPal)
-    gpu.setForeground(fore, forePal)
-    gpu.set(x, y, text)
+function graphic.readNoDraw(screen, ...)
+    return window(screen):readNoDraw(...)
 end
 
-function graphic._fill(gpu, x, y, sx, sy, back, backPal, fore, forePal, char)
-    back, backPal, fore, forePal, char = graphic._formatColor(gpu, back, backPal, fore, forePal, char)
-    gpu.setBackground(back, backPal)
-    gpu.setForeground(fore, forePal)
-    gpu.fill(x, y, sx, sy, char)
+function graphic.read(screen, ...)
+    return window(screen):read(...)
 end
-]]
+
+function graphic.toRealPos(screen, ...)
+    return window(screen):toRealPos(...)
+end
+
+function graphic.toFakePos(screen, ...)
+    return window(screen):toFakePos(...)
+end
+
+function graphic.set(screen, ...)
+    return window(screen):set(...)
+end
+
+function graphic.get(screen, ...)
+    return window(screen):get(...)
+end
+
+function graphic.fill(screen, ...)
+    return window(screen):fill(...)
+end
+
+function graphic.copy(screen, ...)
+    return window(screen):copy(...)
+end
+
+function graphic.clear(screen, ...)
+    return window(screen):clear(...)
+end
+
+function graphic.readNoDraw(screen, ...)
+    return window(screen):readNoDraw(...)
+end
+
+function graphic.uploadEvent(screen, ...)
+    return window(screen):uploadEvent(...)
+end
+
+function graphic.write(screen, ...)
+    return window(screen):write(...)
+end
+
+function graphic.getCursor(screen, ...)
+    return window(screen):getCursor(...)
+end
+
+function graphic.setCursor(screen, ...)
+    return window(screen):setCursor(...)
+end
 
 ------------------------------------
 
-function graphic.findGpuAddress(screen)
-    if graphic.bindCache[screen] then return graphic.bindCache[screen] end
+function graphic.unloadBuffer(screen)
+    local gpu = graphic.findGpu(screen)
 
+    graphic.bindCache[screen] = nil
+    graphic.topBindCache[screen] = nil
+    graphic.vgpus[screen] = nil
+
+    if graphic.screensBuffers[screen] then
+        gpu.freeBuffer(graphic.screensBuffers[screen])
+    end
+end
+
+function graphic.unloadBuffers()
+    for address in component.list("screen", true) do
+        graphic.unloadBuffer(address)
+    end
+end
+
+function graphic.findGpuAddress(screen, topOnly)
     local deviceinfo = lastinfo.deviceinfo
-    local screenLevel = tonumber(deviceinfo[screen].capacity) or 0
+    if not deviceinfo[screen] then
+        graphic.bindCache[screen] = nil
+        graphic.topBindCache[screen] = nil
+        graphic.vgpus[screen] = nil
+        return
+    end
 
-    local bestGpuLevel, gpuLevel, bestGpu = 0
+    local bindCache = graphic.bindCache
+    if topOnly then
+        bindCache = graphic.topBindCache
+    end
+
+    if bindCache[screen] and not graphic.gpuPrivateList[bindCache[screen]] then
+        return bindCache[screen]
+    end
+
+    local screenLevel = tonumber(deviceinfo[screen].capacity) or 0
+    local bestGpuLevel = -math.huge
+    local gpuLevel, bestGpu
     local function check(deep)
         for address in component.list("gpu") do
             local connectScr = component.invoke(address, "getScreen")
             local connectedAny = not not connectScr
             local connected = connectScr == screen
+
             if not graphic.gpuPrivateList[address] and (deep or connected) then
-                gpuLevel = tonumber(deviceinfo[address].capacity) or 0
-                if connectedAny and not connected then
-                    gpuLevel = gpuLevel - 10
-                elseif connected and gpuLevel == screenLevel then --уже подключенная видеокарта, казырный туз, но только если она того же уровня что и монитор!
-                    gpuLevel = gpuLevel + 30
-                elseif gpuLevel == screenLevel then
-                    gpuLevel = gpuLevel + 20
-                elseif gpuLevel > screenLevel then
-                    gpuLevel = gpuLevel + 10
+                gpuLevel = (tonumber(deviceinfo[address].capacity) or 0) / 1000
+
+                if not topOnly then
+                    if connectedAny and not connected then
+                        gpuLevel = gpuLevel - 1000
+                    else
+                        if connected and gpuLevel == screenLevel then
+                            gpuLevel = gpuLevel + 2000
+                        elseif connected then
+                            gpuLevel = gpuLevel + 1000
+                        end
+
+                        if gpuLevel == screenLevel then
+                            gpuLevel = gpuLevel + 20
+                        elseif gpuLevel > screenLevel then
+                            gpuLevel = gpuLevel + 10
+                        end
+                    end
                 end
+
                 if gpuLevel > bestGpuLevel then
                     bestGpuLevel = gpuLevel
                     bestGpu = address
@@ -952,54 +1007,87 @@ function graphic.findGpuAddress(screen)
             end
         end
     end
-    check()
+    
+    if not topOnly then
+        check()
+    end
     check(true)
 
-    graphic.bindCache[screen] = bestGpu
+    bindCache[screen] = bestGpu
     return bestGpu
 end
 
-function graphic.findGpu(screen)
-    local bestGpu = graphic.findGpuAddress(screen)
-    
-    if bestGpu then
-        local gpu = component.proxy(bestGpu)
+function graphic.findGpuProxy(screen, topOnly)
+    local addr = graphic.findGpuAddress(screen, topOnly)
+    if addr then
+        return component.proxy(addr)
+    end
+end
 
-        if isVGpuInstalled and not graphic.vgpus[screen] then
-            local vgpu = require("vgpu")
-            if graphic.allowSoftwareBuffer then
-                graphic.vgpus[screen] = vgpu.create(gpu, screen)
-            else
-                graphic.vgpus[screen] = vgpu.createStub(gpu)
-            end
+function graphic.initGpu(screen, gpuaddress)
+    local gpu = component.proxy(gpuaddress)
+
+    if gpu.getScreen() ~= screen then
+        gpu.bind(screen, false)
+    end
+
+    if isVGpuInstalled and not graphic.vgpus[screen] then
+        if graphic.allowSoftwareBuffer then
+            graphic.vgpus[screen] = require("vgpu").create(gpu, screen)
+        elseif gpu.getDepth() == 1 then
+            graphic.vgpus[screen] = require("vgpu").createStub(gpu)
         end
+    end
 
+    if gpu.setActiveBuffer then
+        if graphic.allowHardwareBuffer then
+            if not graphic.screensBuffers[screen] then
+                gpu.setActiveBuffer(0)
+                graphic.screensBuffers[screen] = gpu.allocateBuffer(gpu.getResolution())
+            end
+
+            if graphic.screensBuffers[screen] then
+                gpu.setActiveBuffer(graphic.screensBuffers[screen])
+            end
+        else
+            gpu.setActiveBuffer(0)
+            gpu.freeAllBuffers()
+        end
+    end
+
+    if graphic.vgpus[screen] then
+        return graphic.vgpus[screen]
+    else
+        return gpu
+    end
+end
+
+function graphic.findGpu(screen, topOnly)
+    local gpu = graphic.findGpuAddress(screen, topOnly)
+    if gpu then
+        return graphic.initGpu(screen, gpu)
+    end
+end
+
+function graphic.findNativeGpu(screen)
+    local gpu = graphic.findGpuProxy(screen)
+    if gpu then
         if gpu.getScreen() ~= screen then
             gpu.bind(screen, false)
         end
-
-        if gpu.setActiveBuffer then
-            if graphic.allowHardwareBuffer then
-                if not graphic.screensBuffers[screen] then
-                    gpu.setActiveBuffer(0)
-                    graphic.screensBuffers[screen] = gpu.allocateBuffer(gpu.getResolution())
-                end
-
-                if graphic.screensBuffers[screen] then
-                    gpu.setActiveBuffer(graphic.screensBuffers[screen])
-                end
-            else
-                gpu.setActiveBuffer(0)
-                gpu.freeAllBuffers()
-            end
-        end
-
-        if graphic.vgpus[screen] then
-            return graphic.vgpus[screen]
-        end
-
+        pcall(gpu.setActiveBuffer, 0)
         return gpu
     end
+end
+
+------------------------------------
+
+local function backBuffer(screen, ...)
+    local gpu = graphic.findGpu(screen)
+    if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
+        gpu.setActiveBuffer(graphic.screensBuffers[screen] or 0)
+    end
+    return ...
 end
 
 function graphic.getResolution(screen)
@@ -1008,22 +1096,22 @@ function graphic.getResolution(screen)
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.getResolution()
+        return backBuffer(screen, gpu.getResolution())
     end
 end
 
 function graphic.maxResolution(screen)
-    local gpu = graphic.findGpu(screen)
+    local gpu = graphic.findGpu(screen, true)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.maxResolution()
+        return backBuffer(screen, gpu.maxResolution())
     end
 end
 
 function graphic.setResolution(screen, x, y)
-    local gpu = graphic.findGpu(screen)
+    local gpu = graphic.findGpu(screen, true)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             local activeBuffer = gpu.getActiveBuffer()
@@ -1034,7 +1122,6 @@ function graphic.setResolution(screen, x, y)
                 for i = 0, 15 do
                     table.insert(palette, graphic.getPaletteColor(screen, i) or 0)
                 end
-                gpu.setActiveBuffer(activeBuffer) --graphic.getPaletteColor ставит нулевой буфер, и нада вернуть на место
             end
             
             local newBuffer = gpu.allocateBuffer(x, y)
@@ -1045,33 +1132,46 @@ function graphic.setResolution(screen, x, y)
                 gpu.freeBuffer(activeBuffer)
 
                 if palette then
-                    gpu.setActiveBuffer(newBuffer)
+                    gpu.setActiveBuffer(0)
                     for i, color in ipairs(palette) do
                         gpu.setPaletteColor(i - 1, color)
                     end
                     
-                    gpu.setActiveBuffer(0)
+                    gpu.setActiveBuffer(newBuffer)
                     for i, color in ipairs(palette) do
                         gpu.setPaletteColor(i - 1, color)
                     end
                 else
-                    gpu.setActiveBuffer(0)
+                    gpu.setActiveBuffer(newBuffer)
                 end
             else
+                gpu.setActiveBuffer(0)
                 graphic.screensBuffers[screen] = nil
             end
         end
-        return gpu.setResolution(x, y)
+
+        if graphic.screensBuffers[screen] then
+            gpu.setResolution(x, y)
+            gpu.setActiveBuffer(0)
+            return backBuffer(screen, gpu.setResolution(x, y))
+        else
+            return gpu.setResolution(x, y)
+        end
     end
+end
+
+function graphic.isValidResolution(screen, x, y)
+    local rx, ry = graphic.maxResolution(screen)
+    return not (x > rx or y > rx or (x * y) > (rx * ry))
 end
 
 function graphic.setPaletteColor(screen, i, v)
     local gpu = graphic.findGpu(screen)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
-            gpu.setActiveBuffer(graphic.screensBuffers[screen])
-            gpu.setPaletteColor(i, v)
             gpu.setActiveBuffer(0)
+            gpu.setPaletteColor(i, v)
+            gpu.setActiveBuffer(graphic.screensBuffers[screen] or 0)
         end
         return gpu.setPaletteColor(i, v)
     end
@@ -1083,7 +1183,53 @@ function graphic.getPaletteColor(screen, i)
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.getPaletteColor(i)
+        return backBuffer(screen, gpu.getPaletteColor(i))
+    end
+end
+
+function graphic.setPalette(screen, palette, fromZero)
+    local gpu = graphic.findGpu(screen)
+    if gpu then
+        local from = fromZero and 0 or 1
+        
+        local function set()
+            for i = from, from + 15 do
+                local index = i
+                if not fromZero then
+                    index = i - 1
+                end
+                
+                if gpu.getPaletteColor(index) ~= palette[i] then
+                    gpu.setPaletteColor(index, palette[i])
+                end
+            end
+        end
+
+        if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
+            gpu.setActiveBuffer(0)
+            set()
+            gpu.setActiveBuffer(graphic.screensBuffers[screen] or 0)
+        end
+        set()
+    end
+end
+
+function graphic.getPalette(screen, fromZero)
+    local gpu = graphic.findGpu(screen)
+    if gpu then
+        if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
+            gpu.setActiveBuffer(0)
+        end
+
+        local palette = {}
+        for i = 0, 15 do
+            if fromZero then
+                palette[i] = gpu.getPaletteColor(i)
+            else
+                palette[i + 1] = gpu.getPaletteColor(i)
+            end
+        end
+        return backBuffer(screen, palette)
     end
 end
 
@@ -1093,27 +1239,30 @@ function graphic.getDepth(screen)
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.getDepth()
+        return backBuffer(screen, gpu.getDepth())
     end
 end
 
 function graphic.setDepth(screen, v)
-    local gpu = graphic.findGpu(screen)
+    local gpu = graphic.findGpu(screen, true)
     if gpu then
+        graphic.vgpus[screen] = nil
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
+            gpu.setDepth(v)
+            gpu.setActiveBuffer(graphic.screensBuffers[screen] or 0)
         end
         return gpu.setDepth(v)
     end
 end
 
 function graphic.maxDepth(screen)
-    local gpu = graphic.findGpu(screen)
+    local gpu = graphic.findGpu(screen, true)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.maxDepth()
+        return backBuffer(screen, gpu.maxDepth())
     end
 end
 
@@ -1123,48 +1272,114 @@ function graphic.getViewport(screen)
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.getViewport()
+        return backBuffer(screen, gpu.getViewport())
     end
 end
 
 function graphic.setViewport(screen, x, y)
-    local gpu = graphic.findGpu(screen)
+    local gpu = graphic.findGpu(screen, true)
     if gpu then
         if gpu.setActiveBuffer and graphic.allowHardwareBuffer then
             gpu.setActiveBuffer(0)
         end
-        return gpu.setViewport(x, y)
+        return backBuffer(screen, gpu.setViewport(x, y))
     end
 end
 
-function graphic.forceUpdate()
+------------------------------------
+
+function graphic.isAvailable(screen)
+    if not component.isConnected(screen) then return false end
+    return not not graphic.findGpuAddress(screen)
+end
+
+function graphic.forceUpdate(screen)
     if graphic.allowSoftwareBuffer or graphic.allowHardwareBuffer then
-        for address, ctype in component.list("screen") do
-            local gpu = graphic.findGpu(address)
-            if gpu then
-                if graphic.allowSoftwareBuffer and gpu.update then --if this is vgpu
-                    gpu.update()
-                elseif gpu.bitblt and graphic.allowHardwareBuffer and graphic.updated[address] then
-                    gpu.bitblt()
-                    graphic.updated[address] = nil
-                end
+        if screen then
+            graphic.updateFlag(screen)
+            graphic.update(screen)
+        else
+            for lscreen, ctype in component.list("screen") do
+                graphic.updateFlag(lscreen)
+                graphic.update(lscreen)
             end
         end
     end
 end
 
 function graphic.update(screen)
+    if graphic.updated[screen] then
+        local gpuaddress = graphic.findGpuAddress(screen)
+        if gpuaddress then
+            if graphic.allowSoftwareBuffer then
+                local gpu = graphic.initGpu(screen, gpuaddress)
+                if gpu.update then --if this is vgpu
+                    gpu.update()
+                end
+            elseif graphic.allowHardwareBuffer then
+                local gpu = graphic.initGpu(screen, gpuaddress)
+                if gpu.bitblt then
+                    gpu.bitblt()
+                end
+            end
+            graphic.updated[screen] = nil
+        end
+
+        graphic.lastScreen = screen
+    end
+end
+
+function graphic.updateFlag(screen)
     graphic.updated[screen] = true
 end
 
-event.hyperTimer(graphic.forceUpdate)
-event.listen(nil, function(eventType, _, ctype)
+event.hyperListen(function(eventType, _, ctype)
     if (eventType == "component_added" or eventType == "component_removed") and (ctype == "screen" or ctype == "gpu") then
-        graphic.bindCache = {} --да, тупо создаю новую табличьку
+        graphic.bindCache = {}
+        graphic.topBindCache = {}
+        graphic.vgpus = {}
     end
 end)
 
 ------------------------------------
+
+function graphic.getDeviceTier(address)
+    local capacity = lastinfo.deviceinfo[address].capacity
+    if capacity == "8000" then
+        return 3
+    elseif capacity == "2000" then
+        return 2
+    elseif capacity == "800" then
+        return 1
+    else
+        return -1
+    end
+end
+
+function graphic.saveGpuSettings(gpu)
+    if type(gpu) == "string" then
+        gpu = component.proxy(gpu)
+    end
+
+    local screen = gpu.getScreen()
+    if not screen then
+        return function () end
+    end
+
+    local palette = graphic.getPalette(screen)
+    local depth = gpu.getDepth()
+    local rx, ry = gpu.getResolution()
+    local buffer = gpu.getActiveBuffer and gpu.getActiveBuffer()
+
+    return function ()
+        graphic.setPalette(screen, palette)
+        gpu.setDepth(depth)
+        gpu.setResolution(rx, ry)
+        if buffer then
+            gpu.setActiveBuffer(buffer)
+        end
+    end
+end
 
 function graphic.screenshot(screen, x, y, sx, sy)
     local gpu = graphic.findGpu(screen)
@@ -1229,7 +1444,8 @@ function graphic.screenshot(screen, x, y, sx, sy)
             gpu.set(oldX, oldY, buff)
         end
 
-        graphic.update(screen)
+        graphic.updated[screen] = true
+        graphic.lastScreen = screen
     end
 end
 

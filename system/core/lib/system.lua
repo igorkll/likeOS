@@ -7,15 +7,25 @@ local lastinfo = require("lastinfo")
 local component = require("component")
 local fs = require("filesystem")
 local paths = require("paths")
-local system = {}
+local unicode = require("unicode")
+local system = {unloadable = true}
 
 -------------------------------------------------
 
-function system.getSelfScriptPath()
-    local info
+function system.stub()
+end
 
+function system.getResourcePath(name)
+    if unicode.sub(name, 1, 1) == "/" then
+        return name
+    end
+    
+    return paths.concat(paths.path(system.getSelfScriptPath()), name)
+end
+
+function system.getSelfScriptPath()
     for runLevel = 0, math.huge do
-        info = debug.getinfo(runLevel)
+        local info = debug.getinfo(runLevel)
 
         if info then
             if info.what == "main" then
@@ -25,6 +35,14 @@ function system.getSelfScriptPath()
             error("Failed to get debug info for runlevel " .. runLevel)
         end
     end
+end
+
+function system.getCpuLoadLevel(waitTime)
+    waitTime = waitTime or 1
+    local clock1 = os.clock()
+    os.sleep(waitTime)
+    local clock2 = os.clock()
+    return math.clamp((clock2 - clock1) / waitTime, 0, 1)
 end
 
 function system.getDeviceType()
@@ -43,14 +61,25 @@ function system.getDeviceType()
 end
 
 function system.getCpuLevel()
-    local processor = -1
+    local processor, isAPU, isCreative = -1, false, false
 
     for _, value in pairs(lastinfo.deviceinfo) do
-        if value.class == "processor" then
-            if value.clock == "1500" or value.clock == "1000+1280/1280/160/2560/640/1280" or value.clock == "1500+2560/2560/320/5120/1280/2560" then
+        if value.clock and value.class == "processor" then
+            local creativeApu = value.clock == "1500+2560/2560/320/5120/1280/2560"
+            local apu3 = value.clock == "1000+1280/1280/160/2560/640/1280"
+            local apu2 = value.clock == "500+640/640/40/1280/320/640"
+            
+            if creativeApu then
+                isCreative = true
+                isAPU = true
                 processor = 3
                 break
-            elseif value.clock == "1000" or value.clock == "500+640/640/40/1280/320/640" then
+            elseif value.clock == "1500" or apu3 then
+                isAPU = apu3
+                processor = 3
+                break
+            elseif value.clock == "1000" or apu2 then
+                isAPU = apu2
                 processor = 2
                 break
             elseif value.clock == "500" then
@@ -60,7 +89,7 @@ function system.getCpuLevel()
         end
     end
 
-    return processor
+    return processor, isAPU, isCreative
 end
 
 function system.getCurrentComponentCount()
@@ -114,7 +143,7 @@ function system.isLikeOSDisk(address)
 
     local file = component.invoke(address, "open", "/init.lua", "rb")
     if file then
-        local data = invoke(address, "read", file, #signature)
+        local data = component.invoke(address, "read", file, #signature)
         component.invoke(address, "close", file)
         return signature == data
     end
@@ -134,52 +163,7 @@ function system.checkExitinfo(...)
 end
 
 function system.getCharge()
-    return math.clamp(math.ceil(math.map(computer.energy(), 0, computer.maxEnergy(), 0, 100) + 0.5), 0, 100)
+    return math.clamp(math.round(math.map(computer.energy(), 0, computer.maxEnergy(), 0, 100)), 0, 100)
 end
-
--------------------------------------------------
-
-local currentUnloadState
-function system.setUnloadState(state)
-    checkArg(1, state, "boolean")
-    if currentUnloadState == state then return end
-    currentUnloadState = state
-
-    if state then
-        setmetatable(package.cache, {__mode = 'v'})
-        local calls = package.get("calls")
-        if calls then
-            setmetatable(calls.cache, {__mode = 'v'})
-        end
-    else
-        setmetatable(package.cache, {})
-        local calls = package.get("calls")
-        if calls then
-            setmetatable(calls.cache, {})
-        end
-    end
-end
-system.setUnloadState(false)
-
-system.timerId = event.timer(3, function()
-    --check RAM
-    if computer.freeMemory() < computer.totalMemory() / 3 then
-        system.setUnloadState(true)
-        cache.clearCache()
-    else
-        system.setUnloadState(false)
-    end
-end, math.huge)
-
-event.hyperListen(function (eventType, componentUuid, componentType)
-    if fs.autoMount and componentType == "filesystem" then
-        local path = paths.concat("/mnt", componentUuid)
-        if eventType == "component_added" then
-            fs.mount(component.proxy(componentUuid), path)
-        elseif eventType == "component_removed" then
-            fs.umount(path)
-        end
-    end
-end)
 
 return system

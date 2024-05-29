@@ -18,33 +18,6 @@ function paths.segments(path)
     return parts
 end
 
-
-function paths.raw_canonical(path)
-    local result = table.concat(paths.segments(path), "/")
-    if unicode.sub(path, 1, 1) == "/" then
-        return "/" .. result
-    end
-    return result
-end
-
-function paths.raw_concat(...)
-    local set = table.pack(...)
-    for index, value in ipairs(set) do
-        checkArg(index, value, "string")
-    end
-    return paths.raw_canonical(table.concat(set, "/"))
-end
-
-function paths.raw_path(path)
-    local parts = paths.segments(path)
-    local result = table.concat(parts, "/", 1, #parts - 1) .. "/"
-    if unicode.sub(path, 1, 1) == "/" and unicode.sub(result, 1, 1) ~= "/" then
-        return paths.raw_canonical("/" .. result)
-    else
-        return paths.raw_canonical(result)
-    end
-end
-
 ------------------------------------
 
 function paths.xconcat(...) --работает как concat но пути начинаюшиеся со / НЕ обрабатываються как отновительные а откидывают путь в начало
@@ -73,7 +46,7 @@ function paths.sconcat(main, ...) --работает так же как concat �
     return false
 end
 
-function paths.concat(...)
+function paths.concat(...) --класический concat как в openOS
     local set = table.pack(...)
     for index, value in ipairs(set) do
         checkArg(index, value, "string")
@@ -83,18 +56,25 @@ end
 
 ------------------------------------
 
-function paths.canonical(path)
+function paths.absolute(path) --работает как canonical но обрабатывает baseDirectory
     local result = table.concat(paths.segments(path), "/")
     if unicode.sub(path, 1, 1) == "/" then
         return "/" .. result
     else
         if paths.baseDirectory then
-            return paths.raw_concat(paths.baseDirectory, path)
+            return paths.concat(paths.baseDirectory, path)
         else
             return result
         end
-        --return baseConcat(basePath(require("system").getSelfScriptPath()), path)
     end
+end
+
+function paths.canonical(path)
+    local result = table.concat(paths.segments(path), "/")
+    if unicode.sub(path, 1, 1) == "/" then
+        return "/" .. result
+    end
+    return result
 end
 
 function paths.equals(...)
@@ -130,26 +110,33 @@ end
 
 function paths.extension(path)
     local name = paths.name(path)
+    if not name then
+        return
+    end
 
 	local exp
     for i = 1, unicode.len(name) do
         local char = unicode.sub(name, i, i)
         if char == "." then
             if i ~= 1 then
-                exp = ""
+                exp = {}
             end
         elseif exp then
-            exp = exp .. char
+            table.insert(exp, char)
         end
     end
 
-    if exp and unicode.len(exp) > 0 then
-        return exp
+    if exp and #exp > 0 then
+        return table.concat(exp)
     end
 end
 
+function paths.changeExtension(path, exp)
+    return paths.hideExtension(path) .. (exp and ("." .. exp) or "")
+end
+
 function paths.hideExtension(path)
-    path = paths.raw_canonical(path)
+    path = paths.canonical(path)
 
     local exp = paths.extension(path)
     if exp then

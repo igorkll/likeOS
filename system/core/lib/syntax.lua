@@ -1,5 +1,6 @@
 local unicode = require("unicode")
 local colors = require("colors")
+local parser = require("parser")
 local syntax = {}
 syntax.keywords = {
     ["function"] = colors.magenta,
@@ -16,6 +17,7 @@ syntax.keywords = {
     ["while"] = colors.purple,
     ["for"] = colors.purple,
     ["if"] = colors.purple,
+    ["in"] = colors.purple,
     ["then"] = colors.purple,
     ["end"] = colors.purple,
     ["do"] = colors.purple
@@ -53,7 +55,7 @@ function syntax.parse(code)
     local obj = {}
     local gcomment = false
     local counter = 1
-    for posY, str in ipairs(split2(unicode, code, {"\n"})) do
+    for posY, str in ipairs(parser.split(unicode, code, {"\n"})) do
         local posX = 1
         local lcomment = false
         local lostr = false
@@ -97,9 +99,13 @@ function syntax.parse(code)
     return obj
 end
 
-function syntax.draw(x, y, obj, gpu)
+function syntax.draw(x, y, obj, gpu, palette)
     for index, value in ipairs(obj) do
-        gpu.setForeground(value[4], true)
+        if palette then
+            gpu.setForeground(palette[value[4]] or 0)
+        else
+            gpu.setForeground(value[4], true)
+        end
         gpu.set((x - 1) + value[1], (y - 1) + value[2], value[3])
     end
 end
