@@ -376,6 +376,8 @@ function computer.shutdown(mode)
         end
     elseif mode == "fast" then
         fs.writeFile("/tmp/bootloader/noRecovery", "")
+    elseif mode == "faster" then
+        mode = "fast"
     end
 
     local logs = require("logs")
