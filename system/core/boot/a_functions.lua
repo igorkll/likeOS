@@ -33,8 +33,8 @@ end
 
 
 ------------------------------------------------ table
-function table.clone(tbl)
-    local newtbl = {}
+function table.clone(tbl, newtbl)
+    newtbl = newtbl or {}
     for k, v in pairs(tbl) do
         newtbl[k] = v
     end
@@ -68,7 +68,7 @@ end
 function table.deepclone(tbl, newtbl)
     local cache = {}
     local function recurse(tbl, newtbl)
-        local newtbl = newtbl or {}
+        newtbl = newtbl or {}
 
         for k, v in pairs(tbl) do
             if type(v) == "table" then
