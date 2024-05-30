@@ -41,6 +41,12 @@ function table.clone(tbl, newtbl)
     return newtbl
 end
 
+function table.add(base, add)
+    for _, v in ipairs(add) do
+        table.insert(base, add)
+    end
+end
+
 function table.exists(tbl, val)
     for k, v in pairs(tbl) do
         if v == val then
