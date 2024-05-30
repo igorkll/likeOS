@@ -43,7 +43,7 @@ end
 
 function table.add(base, add)
     for _, v in ipairs(add) do
-        table.insert(base, add)
+        table.insert(base, v)
     end
 end
 
