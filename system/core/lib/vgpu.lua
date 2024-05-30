@@ -307,7 +307,13 @@ function vgpu.create(gpu, screen)
         y = floor(y)
 
         if vertical then
-            for i = 1, unicode_len(text) do
+            local s = 1
+            if y < 1 then
+                s = (0 - y) + 2
+            end
+            local m = s - 1
+            for i = s, unicode_len(text) do
+                i = i - m
                 if y + (i - 1) > ry then break end
                 index = ((x - 1) * rx) + y + (i - 1)
                 backgrounds[index] = currentBack
@@ -315,7 +321,13 @@ function vgpu.create(gpu, screen)
                 chars[index] = unicode_sub(text, i, i)
             end
         else
-            for i = 1, unicode_len(text) do
+            local s = 1
+            if x < 1 then
+                s = (0 - x) + 2
+            end
+            local m = s - 1
+            for i = s, unicode_len(text) do
+                i = i - m
                 if x + (i - 1) > rx then break end
                 index = x + (i - 1) + ((y - 1) * rx)
                 backgrounds[index] = currentBack
