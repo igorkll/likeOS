@@ -5,7 +5,7 @@ local natives = {}
 local function deepclone(tbl, newtbl)
     local cache = {}
     local function recurse(tbl, newtbl)
-        local newtbl = newtbl or {}
+        newtbl = newtbl or {}
 
         for k, v in pairs(tbl) do
             if type(v) == "table" then

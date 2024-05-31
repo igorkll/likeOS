@@ -726,15 +726,28 @@ function filesystem.dump(gpath, readonly, maxSize, readonlyLabel)
     end
 
     function proxy.remove(path)
-        return parent.remove(lrepath(path))
-    end
-
-    function proxy.remove(path)
-        return parent.remove(lrepath(path))
+        local newPath = lrepath(path)
+        if paths.equals(newPath, gpath) then
+            local state = true
+            for _, p in ipairs(filesystem.list(gpath, true)) do
+                if not filesystem.remove(p) then
+                    state = false
+                end
+            end
+            return state
+        else
+            return parent.remove(newPath)
+        end
     end
 
     function proxy.getLabel()
-        return readonlyLabel or tostring(filesystem.getAttribute(gpath, "label") or "")
+        local label
+        if type(readonlyLabel) == "string" then
+            label = readonlyLabel
+        else
+            label = tostring(filesystem.getAttribute(gpath, "label") or "")
+        end
+        return label
     end
 
     function proxy.setLabel(label)

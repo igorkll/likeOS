@@ -29,11 +29,15 @@ local function new(path, data)
         end
         local bl = {
             ["reg_rm_list"] = true,
-            ["reg_rm_all"] = true
+            ["reg_rm_all"] = true,
+            ["reg_adds"] = true
         }
         local function recurse(ltbl, native)
             for _, reg_rm in ipairs(ltbl.reg_rm_list or {}) do
                 native[reg_rm] = nil
+            end
+            for _, reg_add in ipairs(ltbl.reg_adds or {}) do
+                table.insert(native, reg_add)
             end
             if ltbl.reg_rm_all then
                 for key in pairs(native) do
