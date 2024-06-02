@@ -18,7 +18,7 @@ function logs.log(logdata, tag, path)
     fs.makeDirectory(paths.path(path))
 
     local file = assert(fs.open(path, "ab"))
-    assert(file.write(logs.timetag() .. (tag and (" \"" .. tag .. "\"") or "") .. ": " .. tostring(logdata or "unknown error") .. "\n"))
+    assert(file.write(logs.timetag() .. (tag and (": " .. tag) or "") .. ": " .. tostring(logdata or "unknown error") .. "\n"))
     file.close()
 end
 
@@ -29,7 +29,7 @@ function logs.logs(logsdata, tag, path)
     local timetag = logs.timetag()
     local file = assert(fs.open(path, "ab", true))
     for i, logdata in ipairs(logsdata) do
-        assert(file.write(timetag .. (tag and (" \"" .. tag .. "\"") or "") .. ": " .. tostring(logdata or "unknown error") .. "\n"))
+        assert(file.write(timetag .. (tag and (": " .. tag) or "") .. ": " .. tostring(logdata or "unknown error") .. "\n"))
     end
     file.close()
 end

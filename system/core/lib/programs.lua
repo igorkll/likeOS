@@ -62,5 +62,20 @@ function programs.execute(name, ...)
     end
 end
 
+function programs.xexecute(name, ...)
+    local code, err = programs.load(name)
+    if not code then return nil, err end
+    
+    local thread = package.get("thread")
+    if not thread then
+        return xpcall(code, debug.traceback, ...)
+    else
+        local t = thread.create(code, ...)
+        t:resume() --потому что по умолчанию поток спит
+        while t:status() ~= "dead" do event.yield() end
+        return thread.decode(t)
+    end
+end
+
 programs.unloadable = true
 return programs
