@@ -2,7 +2,12 @@ local fs = require("filesystem")
 local xorfs = {}
 
 function xorfs.toggleData(data, xorcode, offset)
-    
+    local xordata = {}
+    for i = 1, #data do
+        local lOffset = offset + (i - 1)
+        table.insert(xordata, data:byte(i) ~ ((xorcode:byte((lOffset + 1) % (#xorcode + 1)) + lOffset) % 256))
+    end
+    return table.concat(xordata)
 end
 
 function xorfs.toggleFile(path, xorcode)
@@ -24,11 +29,11 @@ function xorfs.toggleFile(path, xorcode)
     file.close()
 end
 
-function xorfs.xorcode(password)
+function xorfs.xorcode(datakey, password)
     local sha256 = require("sha256")
     local xorcode = {}
     for i = 1, 16 do
-        table.insert(xorcode, sha256.sha256bin(i .. password))
+        table.insert(xorcode, sha256.sha256bin(i .. datakey .. password))
     end
     return table.concat(xorcode)
 end
