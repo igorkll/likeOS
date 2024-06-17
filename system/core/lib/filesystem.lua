@@ -10,6 +10,7 @@ local filesystem = {}
 filesystem.bootaddress = bootloader.bootaddress
 filesystem.tmpaddress = bootloader.tmpaddress
 filesystem.baseFileDirectorySize = 512 --задаеться к конфиге мода(по умалчанию 512 байт)
+filesystem.xorfs = {}
 
 local srvList = {"/.data"}
 local mountList = {}
@@ -362,6 +363,12 @@ end
 
 function filesystem.open(path, mode, bufferSize)
     mode = mode or "rb"
+    local xorcode = filesystem.xorfs[paths.absolute(path)]
+    local xorfs
+    if xorcode then
+        xorfs = require("xorfs")
+    end
+    local fileOffset = 0
     local proxy, proxyPath = filesystem.get(path)
     local result, reason = proxy.open(proxyPath, mode)
     if result then
@@ -451,10 +458,20 @@ function filesystem.open(path, mode, bufferSize)
                     local data = proxy.read(result, math.huge)
                     buffer = buffer .. (data or "")
                 until not data
-                return buffer
+
+                if xorcode then
+                    return xorfs.toggleData(buffer, xorcode, fileOffset)
+                else
+                    return buffer
+                end
             end,
             readMax = function()
-                return proxy.read(result, math.huge)
+                local str = proxy.read(result, math.huge)
+                if xorcode then
+                    str = xorfs.toggleData(str, xorcode, fileOffset)
+                    fileOffset = fileOffset + #str
+                end
+                return str
             end
         }
         return handle
