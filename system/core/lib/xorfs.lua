@@ -11,7 +11,7 @@ function xorfs.toggleData(data, xorcode, offset)
 end
 
 function xorfs.toggleFile(path, xorcode)
-    local file = assert(fs.open(path, "rb"))
+    local file = assert(fs.open(path, "rb", nil, true))
     local xordata = {}
     local offset = 0
     while true do
@@ -24,7 +24,7 @@ function xorfs.toggleFile(path, xorcode)
             offset = offset + #chunk
         end
     end
-    file = assert(fs.open(path, "wb"))
+    file = assert(fs.open(path, "wb", nil, true))
     file.write(table.concat(xordata))
     file.close()
 end

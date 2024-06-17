@@ -361,9 +361,12 @@ function filesystem.rename(fromPath, toPath)
     end
 end
 
-function filesystem.open(path, mode, bufferSize)
+function filesystem.open(path, mode, bufferSize, noXor)
     mode = mode or "rb"
-    local xorcode = filesystem.xorfs[paths.absolute(path)]
+    local xorcode
+    if not noXor then
+        xorcode = filesystem.xorfs[paths.absolute(path)]
+    end
     local xorfs
     if xorcode then
         xorfs = require("xorfs")
