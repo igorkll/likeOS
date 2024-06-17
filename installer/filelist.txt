@@ -36,6 +36,7 @@
 /system/core/lib/uuid.lua
 /system/core/lib/vcomponent.lua
 /system/core/lib/vgpu.lua
+/system/core/lib/xorfs.lua
 /system/core/lib/archiver/init.lua
 /system/core/lib/archiver/formats/afpx.lua
 /system/core/lib/archiver/formats/tar.lua
