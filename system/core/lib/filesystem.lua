@@ -405,6 +405,7 @@ function filesystem.open(path, mode, bufferSize)
                     readsize = 1
                 end
 
+                local out
                 if bufferSize then
                     if not readBuffer then
                         readBuffer = proxy.read(result, bufferSize) or ""
@@ -414,13 +415,23 @@ function filesystem.open(path, mode, bufferSize)
                     readBuffer = tool.sub(readBuffer, readsize + 1, tool.len(readBuffer))
                     if tool.len(readBuffer) == 0 then readBuffer = nil end
                     if tool.len(str) > 0 then
-                        return str
+                        out = str
                     end
                 else
-                    return proxy.read(result, readsize)
+                    out = proxy.read(result, readsize)
                 end
+                if xorcode then
+                    out = xorfs.toggleData(out, xorcode, fileOffset)
+                    fileOffset = fileOffset + #out
+                end
+                return out
             end,
             write = function(writedata)
+                if xorcode then
+                    writedata = xorfs.toggleData(writedata, xorcode, fileOffset)
+                    fileOffset = fileOffset + #xorcode
+                end
+
                 if bufferSize then
                     writeBuffer = (writeBuffer or "") .. writedata
                     if tool.len(writeBuffer) > bufferSize then
@@ -437,6 +448,11 @@ function filesystem.open(path, mode, bufferSize)
             seek = function(whence, offset)
                 if whence then
                     readBuffer = nil
+                    if whence == "set" then
+                        fileOffset = offset
+                    elseif whence == "cur" then
+                        fileOffset = fileOffset + offset
+                    end
                     if bufferSize and writeBuffer then
                         proxy.write(result, writeBuffer)
                     end
