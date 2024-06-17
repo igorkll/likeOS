@@ -5,7 +5,7 @@ function xorfs.toggleData(data, xorcode, offset)
     local xordata = {}
     for i = 1, #data do
         local lOffset = offset + (i - 1)
-        table.insert(xordata, string.char(data:byte(i) ~ ((xorcode:byte((lOffset + 1) % (#xorcode + 1)) + lOffset) % 256)))
+        table.insert(xordata, string.char(data:byte(i) ~ ((xorcode:byte((lOffset % #xorcode) + 1) + lOffset) % 256)))
     end
     return table.concat(xordata)
 end
