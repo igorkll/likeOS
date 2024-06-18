@@ -75,6 +75,10 @@ local function recursionCloneAttribute(path, path2)
     forceMode = false
 end
 
+local function getXorCode(path)
+    return filesystem.xorfs[paths.absolute(path)]
+end
+
 ------------------------------------ mounting functions
 
 function filesystem.mount(proxy, path)
@@ -365,7 +369,7 @@ function filesystem.open(path, mode, bufferSize, noXor)
     mode = mode or "rb"
     local xorcode
     if not noXor then
-        xorcode = filesystem.xorfs[paths.absolute(path)]
+        xorcode = getXorCode(path)
     end
     local xorfs
     if xorcode then
@@ -502,6 +506,7 @@ function filesystem.copy(fromPath, toPath, fcheck)
     fromPath = paths.absolute(fromPath)
     toPath = paths.absolute(toPath)
     if paths.equals(fromPath, toPath) then return end
+
     local function copyRecursively(fromPath, toPath)
         if not fcheck or fcheck(fromPath, toPath) then
             if filesystem.isDirectory(fromPath) then
@@ -522,7 +527,7 @@ function filesystem.copy(fromPath, toPath, fcheck)
                     local toHandle, err = filesystem.open(toPath, "wb")
                     if toHandle then
                         while true do
-                            local chunk = fromHandle.read(math.huge)
+                            local chunk = fromHandle.readMax()
                             if chunk then
                                 if not toHandle.write(chunk) then
                                     return nil, "failed to write file"
