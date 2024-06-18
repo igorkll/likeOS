@@ -413,6 +413,14 @@ function filesystem.rename(fromPath, toPath)
 end
 
 function filesystem.open(path, mode, bufferSize, noXor)
+    if not filesystem.exists(path) then
+        if not mode and mode:sub(1, 1) == "r" then
+            return nil, "file \"" .. path .. "\" not found"
+        end
+    elseif filesystem.isDirectory(path) then
+        return nil, "\"" .. path .. "\" is directory"
+    end
+
     for hook in pairs(filesystem.openHooks) do
         local result = hook(path, mode, bufferSize, noXor)
         if result then
