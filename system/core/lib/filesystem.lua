@@ -167,6 +167,17 @@ function filesystem.mounts(priority)
                 list[i] = v
             end
         end
+        if paths.equals(priority, "/mnt") then
+            for i, v in ipairs(mountList) do
+                local proxy, path = v[1], v[2]
+                if paths.equals(path, "/mnt/root") or paths.equals(path, "/mnt/tmpfs") then
+                    list[path] = v
+                    list[proxy.address] = v
+                    list[proxy] = v
+                    list[i] = v
+                end
+            end
+        end
     end
     return list
 end

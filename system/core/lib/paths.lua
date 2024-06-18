@@ -77,11 +77,7 @@ function paths.canonical(path)
     return result
 end
 
-function paths.equals(...)
-    local pathsList = {...}
-    for key, path in pairs(pathsList) do
-        pathsList[key] = paths.canonical(path)
-    end
+local function rawEquals(pathsList)
     local mainPath = pathsList[1]
     for i = 2, #pathsList do
         if mainPath ~= pathsList[i] then
@@ -89,6 +85,23 @@ function paths.equals(...)
         end
     end
     return true
+end
+
+function paths.equals(...)
+    local pathsList = {...}
+    for i, path in ipairs(pathsList) do
+        pathsList[i] = paths.canonical(path)
+    end
+    return rawEquals(pathsList)
+end
+
+function paths.linkEquals(...)
+    local fs = require("filesystem")
+    local pathsList = {...}
+    for i, path in ipairs(pathsList) do
+        pathsList[i] = fs.mntPath(path)
+    end
+    return rawEquals(pathsList)
 end
 
 function paths.path(path)
