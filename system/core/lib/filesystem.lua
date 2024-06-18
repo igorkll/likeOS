@@ -142,7 +142,7 @@ function filesystem.umount(pathOrProxy)
     end
 end
 
-function filesystem.mounts()
+function filesystem.mounts(priority)
     local list = {}
     for i, v in ipairs(mountList) do
         local proxy, path = v[1], v[2]
@@ -151,14 +151,30 @@ function filesystem.mounts()
         list[proxy] = v
         list[i] = v
     end
+    if priority then
+        local text = require("text")
+        for i, v in ipairs(mountList) do
+            local proxy, path = v[1], v[2]
+            if text.startwith(unicode, path, endSlash(priority)) then
+                list[path] = v
+                list[proxy.address] = v
+                list[proxy] = v
+                list[i] = v
+            end
+        end
+    end
     return list
 end
 
 function filesystem.point(addressOrProxy)
-    local mounts = filesystem.mounts()
+    local mounts = filesystem.mounts("/mnt")
     if mounts[addressOrProxy] then
         return noEndSlash(mounts[addressOrProxy][2])
     end
+end
+
+function filesystem.mntPath(path) --tries to find the path to the disk in the mnt folder where other mount points will not interfere
+    return 
 end
 
 function filesystem.get(path, allowProxy)
