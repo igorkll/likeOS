@@ -95,9 +95,6 @@ end
 
 ------------------------------------ mounting functions
 
-filesystem.xorfsData = xorfsData
-filesystem.getXorCode = getXorCode
-
 function filesystem.mount(proxy, path)
     if type(proxy) == "string" then
         local lproxy, err = component.proxy(proxy)
@@ -389,7 +386,7 @@ function filesystem.rename(fromPath, toPath)
 
     recursionCloneAttribute(fromPath, toPath)
 
-    if fromProxy.address == toProxy.address then
+    if fromProxy.address == toProxy.address and getXorCode(fromPath) == getXorCode(toPath) then
         return ifSuccessful(function() recursionDeleteAttribute(fromPath) end, fromProxy.rename(fromProxyPath, toProxyPath))
     else
         local success, err = filesystem.copy(fromPath, toPath)
