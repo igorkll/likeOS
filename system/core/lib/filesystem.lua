@@ -96,6 +96,8 @@ end
 
 ------------------------------------ mounting functions
 
+filesystem.xorfsData = xorfsData
+
 function filesystem.mount(proxy, path)
     if type(proxy) == "string" then
         local lproxy, err = component.proxy(proxy)
@@ -412,6 +414,7 @@ function filesystem.rename(fromPath, toPath)
     end
 end
 
+local hookBusy = false
 function filesystem.open(path, mode, bufferSize, noXor, noHook)
     if not filesystem.exists(path) then
         if not mode and mode:sub(1, 1) == "r" then
