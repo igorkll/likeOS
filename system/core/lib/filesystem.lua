@@ -76,7 +76,16 @@ local function recursionCloneAttribute(path, path2)
 end
 
 local function getXorCode(path)
-    return filesystem.xorfs[paths.absolute(path)]
+    path = paths.absolute(path)
+    while true do
+        if filesystem.xorfs[path] then
+            return filesystem.xorfs[path]
+        end
+        if paths.equals(path, "/") then
+            return
+        end
+        path = paths.path(path)
+    end
 end
 
 ------------------------------------ mounting functions
