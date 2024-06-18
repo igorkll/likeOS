@@ -177,7 +177,7 @@ function filesystem.mntPath(path) --tries to find the path to the disk in the mn
     local proxy = filesystem.get(path)
     if not proxy then return end
     local mntPath = filesystem.point(proxy)
-    if not mntPath or not require("text").startwith(unicode, path, "/mnt/") then return end
+    if not mntPath or not require("text").startwith(unicode, mntPath, "/mnt/") then return end
     return paths.concat(mntPath, path)
 end
 
