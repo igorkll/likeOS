@@ -10,6 +10,7 @@ local filesystem = {}
 filesystem.bootaddress = bootloader.bootaddress
 filesystem.tmpaddress = bootloader.tmpaddress
 filesystem.baseFileDirectorySize = 512 --задаеться к конфиге мода(по умалчанию 512 байт)
+filesystem.openHooks = {}
 
 local srvList = {"/.data"}
 local mountList = {}
@@ -225,10 +226,6 @@ end
 
 ------------------------------------ main functions
 
-function filesystem.regXor(path, xorcode)
-    xorfsData[filesystem.mntPath(path)] = xorcode
-end
-
 function filesystem.exists(path)
     path = paths.absolute(path)
     if virtualDirectories[path] or paths.equals(path, "/") then
@@ -405,6 +402,13 @@ function filesystem.rename(fromPath, toPath)
 end
 
 function filesystem.open(path, mode, bufferSize, noXor)
+    for hook in pairs(filesystem.openHooks) do
+        local result = hook(path, mode, bufferSize, noXor)
+        if result then
+            return result
+        end
+    end
+
     mode = mode or "rb"
     local xorcode
     if not noXor then
@@ -1022,6 +1026,12 @@ function filesystem.setAttribute(path, key, value)
     local data = filesystem.getAttributes(path)
     data[key] = value
     return filesystem.setAttributes(path, data)
+end
+
+------------------------------------ service
+
+function filesystem.regXor(path, xorcode)
+    xorfsData[filesystem.mntPath(path)] = xorcode
 end
 
 ------------------------------------ init
