@@ -174,10 +174,12 @@ function filesystem.point(addressOrProxy)
 end
 
 function filesystem.mntPath(path) --tries to find the path to the disk in the mnt folder where other mount points will not interfere
+    local text = require("text")
+    if text.startwith(unicode, path, "/mnt/") then return path end
     local proxy = filesystem.get(path)
     if not proxy then return end
     local mntPath = filesystem.point(proxy)
-    if not mntPath or not require("text").startwith(unicode, mntPath, "/mnt/") then return end
+    if not mntPath or not text.startwith(unicode, mntPath, "/mnt/") then return end
     return paths.concat(mntPath, path)
 end
 
