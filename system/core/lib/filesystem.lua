@@ -10,12 +10,12 @@ local filesystem = {}
 filesystem.bootaddress = bootloader.bootaddress
 filesystem.tmpaddress = bootloader.tmpaddress
 filesystem.baseFileDirectorySize = 512 --задаеться к конфиге мода(по умалчанию 512 байт)
-filesystem.xorfs = {}
 
 local srvList = {"/.data"}
 local mountList = {}
 local virtualDirectories = {}
 local forceMode = false
+local xorfsData = {}
 
 local function startSlash(path)
     if unicode.sub(path, 1, 1) ~= "/" then
@@ -75,20 +75,28 @@ local function recursionCloneAttribute(path, path2)
     forceMode = false
 end
 
+local function startwith(str, startCheck)
+    return unicode.sub(str, 1, unicode.len(startCheck)) == startCheck
+end
+
 local function getXorCode(path)
-    path = paths.absolute(path)
+    path = filesystem.mntPath(path)
+    if not path then return end
     while true do
-        if filesystem.xorfs[path] then
-            return filesystem.xorfs[path]
-        end
-        if paths.equals(path, "/") then
-            return
+        if xorfsData[path] then
+            return xorfsData[path]
         end
         path = paths.path(path)
+        if path == "/mnt" then
+            return
+        end
     end
 end
 
 ------------------------------------ mounting functions
+
+filesystem.xorfsData = xorfsData
+filesystem.getXorCode = getXorCode
 
 function filesystem.mount(proxy, path)
     if type(proxy) == "string" then
@@ -152,10 +160,9 @@ function filesystem.mounts(priority)
         list[i] = v
     end
     if priority then
-        local text = require("text")
         for i, v in ipairs(mountList) do
             local proxy, path = v[1], v[2]
-            if text.startwith(unicode, path, endSlash(priority)) then
+            if startwith(path, endSlash(priority)) then
                 list[path] = v
                 list[proxy.address] = v
                 list[proxy] = v
@@ -174,12 +181,12 @@ function filesystem.point(addressOrProxy)
 end
 
 function filesystem.mntPath(path) --tries to find the path to the disk in the mnt folder where other mount points will not interfere
-    local text = require("text")
-    if text.startwith(unicode, path, "/mnt/") then return path end
+    path = paths.absolute(path)
+    if startwith(path, "/mnt/") then return path end
     local proxy = filesystem.get(path)
     if not proxy then return end
     local mntPath = filesystem.point(proxy)
-    if not mntPath or not text.startwith(unicode, mntPath, "/mnt/") then return end
+    if not mntPath or not startwith(mntPath, "/mnt/") then return end
     return paths.concat(mntPath, path)
 end
 
@@ -220,6 +227,10 @@ function filesystem.get(path, allowProxy)
 end
 
 ------------------------------------ main functions
+
+function filesystem.regXor(path, xorcode)
+    xorfsData[filesystem.mntPath(path)] = xorcode
+end
 
 function filesystem.exists(path)
     path = paths.absolute(path)
