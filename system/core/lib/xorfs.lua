@@ -33,7 +33,7 @@ function xorfs.xorcode(datakey, password)
     local sha256 = require("sha256")
     local xorcode = {}
     for i = 1, 16 do
-        table.insert(xorcode, sha256.sha256bin(i .. datakey .. password))
+        table.insert(xorcode, sha256.sha256bin(i .. "\0" .. datakey .. "\0" .. password))
     end
     return table.concat(xorcode)
 end
