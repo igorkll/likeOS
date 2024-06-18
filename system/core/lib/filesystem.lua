@@ -427,9 +427,10 @@ function filesystem.open(path, mode, bufferSize, noXor, noHook)
     if not noHook and not hookBusy then
         hookBusy = true
         for hook in pairs(filesystem.openHooks) do
-            local result = hook(path, mode, bufferSize, noXor)
+            local result = hook(path, mode, bufferSize, noXor, noHook)
             if result then
-                return result
+                hookBusy = false
+                return table.unpack(result)
             end
         end
         hookBusy = false
