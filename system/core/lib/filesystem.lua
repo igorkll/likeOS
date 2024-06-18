@@ -424,13 +424,15 @@ function filesystem.open(path, mode, bufferSize, noXor, noHook)
         return nil, "\"" .. path .. "\" is directory"
     end
 
-    if not noHook then
+    if not noHook and not hookBusy then
+        hookBusy = true
         for hook in pairs(filesystem.openHooks) do
             local result = hook(path, mode, bufferSize, noXor)
             if result then
                 return result
             end
         end
+        hookBusy = false
     end
 
     mode = mode or "rb"
