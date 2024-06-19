@@ -294,12 +294,11 @@ function vgpu.create(gpu, screen)
         end
     end
 
-    local index
     function obj.get(x, y)
         x = floor(x)
         y = floor(y)
 
-        index = x + ((y - 1) * rx)
+        local index = x + ((y - 1) * rx)
         return chars[index], foregrounds[index], backgrounds[index]
     end
 
@@ -308,6 +307,7 @@ function vgpu.create(gpu, screen)
         x = floor(x)
         y = floor(y)
 
+        local index
         if vertical then
             local s = 1
             if y < 1 then
@@ -341,6 +341,7 @@ function vgpu.create(gpu, screen)
         if index > updatedBufferTo then updatedBufferTo = index end
         index = x + ((y - 1) * rx)
         if index < updatedBufferFrom then updatedBufferFrom = index end
+        updated = true
     end
 
     function obj.fill(x, y, sizeX, sizeY, char)
@@ -364,6 +365,7 @@ function vgpu.create(gpu, screen)
         if index > updatedBufferTo then updatedBufferTo = index end
         index = x + ((y - 1) * rx)
         if index < updatedBufferFrom then updatedBufferFrom = index end
+        updated = true
     end
 
     function obj.copy(x, y, sx, sy, ox, oy)
@@ -375,7 +377,7 @@ function vgpu.create(gpu, screen)
         oy = floor(oy)
 
         --обновляем картинку на экране
-        if updatedBufferFrom then
+        if updated then
             obj.update()
         else
             init()
@@ -413,7 +415,7 @@ function vgpu.create(gpu, screen)
 
     local oldBg, oldFg
     function obj.update()
-        if updatedBufferFrom or forceUpdate then
+        if updated or forceUpdate then
             init()
 
             if forceUpdate then
@@ -485,6 +487,7 @@ function vgpu.create(gpu, screen)
 
             updatedBufferFrom = math.huge
             updatedBufferTo = -math.huge
+            updated = false
             forceUpdate = false
         end
     end
