@@ -138,8 +138,10 @@ function vgpu.create(gpu, screen)
     end
     init()
 
-    local updated = false
+    local updatedBufferFrom = math.huge
+    local updatedBufferTo = -math.huge
     local forceUpdate = true
+    local updated = false
 
     local currentBackgrounds = {}
     local currentForegrounds = {}
@@ -336,7 +338,9 @@ function vgpu.create(gpu, screen)
             end
         end
 
-        updated = true
+        if index > updatedBufferTo then updatedBufferTo = index end
+        index = x + ((y - 1) * rx)
+        if index < updatedBufferFrom then updatedBufferFrom = index end
     end
 
     function obj.fill(x, y, sizeX, sizeY, char)
@@ -357,10 +361,11 @@ function vgpu.create(gpu, screen)
             end
         end
 
-        updated = true
+        if index > updatedBufferTo then updatedBufferTo = index end
+        index = x + ((y - 1) * rx)
+        if index < updatedBufferFrom then updatedBufferFrom = index end
     end
 
-    local newB, newF, newC, index, newindex
     function obj.copy(x, y, sx, sy, ox, oy)
         x = floor(x)
         y = floor(y)
@@ -370,7 +375,7 @@ function vgpu.create(gpu, screen)
         oy = floor(oy)
 
         --обновляем картинку на экране
-        if updated then
+        if updatedBufferFrom then
             obj.update()
         else
             init()
@@ -380,8 +385,8 @@ function vgpu.create(gpu, screen)
         copy(x, y, sx, sy, ox, oy)
 
         --капируем картинку в буфере
-        newB, newF, newC = {}, {}, {}
-        --local newBP, newFP = {}, {}
+        local newB, newF, newC = {}, {}, {}
+        local index, newindex
         for ix = x, x + (sx - 1) do 
             for iy = y, y + (sy - 1) do
                 index = ix + ((iy - 1) * rx)
@@ -408,14 +413,19 @@ function vgpu.create(gpu, screen)
 
     local oldBg, oldFg
     function obj.update()
-        if updated or forceUpdate then
+        if updatedBufferFrom or forceUpdate then
             init()
 
+            if forceUpdate then
+                updatedBufferFrom = 1
+                updatedBufferTo = rsmax
+            end
+
             local index, buff, buffI, back, fore
-            local i = 1
+            local i = updatedBufferFrom
             local pixels = {}
             local chr
-            while i <= rsmax do
+            while i <= updatedBufferTo do
                 if forceUpdate or backgrounds[i] ~= currentBackgrounds[i] or
                     foregrounds[i] ~= currentForegrounds[i] or
                     chars[i] ~= currentChars[i] or
@@ -473,7 +483,8 @@ function vgpu.create(gpu, screen)
                 end
             end
 
-            updated = false
+            updatedBufferFrom = math.huge
+            updatedBufferTo = -math.huge
             forceUpdate = false
         end
     end

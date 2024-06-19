@@ -96,8 +96,6 @@ end
 
 ------------------------------------ mounting functions
 
-filesystem.xorfsData = xorfsData
-
 function filesystem.mount(proxy, path)
     if type(proxy) == "string" then
         local lproxy, err = component.proxy(proxy)
