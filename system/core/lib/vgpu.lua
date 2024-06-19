@@ -11,8 +11,7 @@ local unicode_len = unicode.len
 local unicode_sub = unicode.sub
 
 local gradients = {"░", "▒", "▓"}
-local function formatColor(gpu, back, backPal, fore, forePal, text, noPalIndex)
-    local depth = gpu.getDepth()
+local function formatColor(gpu, back, backPal, fore, forePal, text, noPalIndex, depth)
     if not graphic.colorAutoFormat or depth > 1 then
         return back, backPal, fore, forePal, text
     end
@@ -303,7 +302,7 @@ function vgpu.create(gpu, screen)
     end
 
     function obj.set(x, y, text, vertical)
-        local currentBack, _, currentFore, _, text = formatColor(obj, currentBack, currentBackPal, currentFore, currentForePal, text, true)
+        local currentBack, _, currentFore, _, text = formatColor(obj, currentBack, currentBackPal, currentFore, currentForePal, text, true, depth)
         x = floor(x)
         y = floor(y)
 
@@ -338,19 +337,22 @@ function vgpu.create(gpu, screen)
             end
         end
 
-        if index > updatedBufferTo then updatedBufferTo = index end
-        index = x + ((y - 1) * rx)
-        if index < updatedBufferFrom then updatedBufferFrom = index end
-        updated = true
+        if index then
+            if index > updatedBufferTo then updatedBufferTo = index end
+            index = x + ((y - 1) * rx)
+            if index < updatedBufferFrom then updatedBufferFrom = index end
+            updated = true
+        end
     end
 
     function obj.fill(x, y, sizeX, sizeY, char)
-        local currentBack, _, currentFore, _, char = formatColor(obj, currentBack, currentBackPal, currentFore, currentForePal, char, true)
+        local currentBack, _, currentFore, _, char = formatColor(obj, currentBack, currentBackPal, currentFore, currentForePal, char, true, depth)
         x = floor(x)
         y = floor(y)
         sizeX = floor(sizeX)
         sizeY = floor(sizeY)
 
+        local index
         for ix = x, x + (sizeX - 1) do
             if ix > rx then break end
             for iy = y, y + (sizeY - 1) do
@@ -362,10 +364,12 @@ function vgpu.create(gpu, screen)
             end
         end
 
-        if index > updatedBufferTo then updatedBufferTo = index end
-        index = x + ((y - 1) * rx)
-        if index < updatedBufferFrom then updatedBufferFrom = index end
-        updated = true
+        if index then
+            if index > updatedBufferTo then updatedBufferTo = index end
+            index = x + ((y - 1) * rx)
+            if index < updatedBufferFrom then updatedBufferFrom = index end
+            updated = true
+        end
     end
 
     function obj.copy(x, y, sx, sy, ox, oy)
@@ -577,7 +581,7 @@ function vgpu.createStub(gpu)
     end
 
     function obj.set(x, y, text, vertical)
-        local newBack, newBackPal, newFore, newForePal, text = formatColor(obj, back, backPal, fore, forePal, text)
+        local newBack, newBackPal, newFore, newForePal, text = formatColor(obj, back, backPal, fore, forePal, text, nil, depth)
         newBack, newBackPal = formatPal(newBack, newBackPal)
         newFore, newForePal = formatPal(newFore, newForePal)
 
@@ -593,7 +597,7 @@ function vgpu.createStub(gpu)
     end
 
     function obj.fill(x, y, sx, sy, char)
-        local newBack, newBackPal, newFore, newForePal, char = formatColor(obj, back, backPal, fore, forePal, char)
+        local newBack, newBackPal, newFore, newForePal, char = formatColor(obj, back, backPal, fore, forePal, char, nil, depth)
         newBack, newBackPal = formatPal(newBack, newBackPal)
         newFore, newForePal = formatPal(newFore, newForePal)
 
