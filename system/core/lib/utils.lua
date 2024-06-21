@@ -1,3 +1,4 @@
+local component = require("component")
 local utils = {}
 
 function utils.check(func, ...)
@@ -7,6 +8,26 @@ function utils.check(func, ...)
     else
         return nil, result[2] or "unknown error"
     end
+end
+
+function utils.findModem(wireless)
+    if wireless then
+        for address in component.list("modem", true) do
+            if component.invoke(address, "isWireless") then
+                if component.invoke(address, "setStrength", math.huge) >= 400 then
+                    return
+                end
+            end
+        end
+    else
+        for address in component.list("modem", true) do
+            if not component.invoke(address, "isWireless") then
+                return address
+            end
+        end
+    end
+
+    return (component.list("modem", true))
 end
 
 function utils.openPort(modem, port)
