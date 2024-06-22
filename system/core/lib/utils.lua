@@ -15,7 +15,7 @@ function utils.findModem(wireless)
         for address in component.list("modem", true) do
             if component.invoke(address, "isWireless") then
                 if component.invoke(address, "setStrength", math.huge) >= 400 then
-                    return
+                    return address
                 end
             end
         end
@@ -27,7 +27,7 @@ function utils.findModem(wireless)
         end
     end
 
-    return (component.list("modem", true))
+    return (component.list("modem", true)())
 end
 
 function utils.openPort(modem, port)
