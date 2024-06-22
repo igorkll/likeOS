@@ -13,7 +13,7 @@ local pcall = pcall
 _G._COREVERSION = "likeOS-v1.8"
 _G._OSVERSION = _G._COREVERSION --это перезаписываеться в дистрибутивах
 
-local bootloader = {} --библиотека загрузчика
+local bootloader = params.unpackBootloader or {} --библиотека загрузчика
 bootloader.firstEeprom = component.list("eeprom")() --хранит адрес eeprom с которого произошла загрузка
 bootloader.tmpaddress = computer.tmpAddress()
 
@@ -482,7 +482,7 @@ if not params.noRecovery and (params.forceRecovery or not getRegistry().disableR
         end
 
         if recoveryScreen then
-            bootloader.bootSplash("RECOVERY MODE")
+            bootloader.bootSplash("RECOVERY MENU")
 
             local recoveryPath = bootloader.find("recovery.lua")
             if recoveryPath then
@@ -492,7 +492,7 @@ if not params.noRecovery and (params.forceRecovery or not getRegistry().disableR
                 
                 local env = bootloader.createEnv()
                 env.bootloader = bootloader
-                assert(xpcall(assert(bootloader.loadfile(recoveryPath, nil, env)), debug.traceback, recoveryScreen, playerNickname))
+                assert(xpcall(assert(bootloader.loadfile(recoveryPath, nil, env)), debug.traceback, recoveryScreen, playerNickname, params))
                 computer.shutdown("fast")
             else
                 bootloader.bootSplash("failed to open recovery. press enter to continue")

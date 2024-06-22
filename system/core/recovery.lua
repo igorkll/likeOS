@@ -3,7 +3,7 @@ local component = component
 local computer = computer
 local unicode = unicode
 
-local screen = ...
+local screen, _, params = ...
 local gpu = component.proxy(component.list("gpu")() or "")
 if not gpu then return end
 
@@ -446,6 +446,25 @@ end
 
 -------------------------------------------------------------- menu
 
+local function systemRecoveryScript()
+    local path = bootloader.find("recoveryScript.lua") --скрипт востановления системы, у каждой оськи на базе likeOS должен быть
+    if path then
+        local code, err = bootloader.loadfile(path, nil, createSandbox())
+        if code then
+            code()
+        else
+            info(err or "Unknown Syntax Error")
+        end
+    else
+        info("The System Does Not Provide A Script For Recovery")
+    end
+end
+
+if params.recoveryScript then
+    systemRecoveryScript()
+    return
+end
+
 menu(bootloader.coreversion .. " recovery",
     {
         "Run System Recovery Script",
@@ -459,19 +478,7 @@ menu(bootloader.coreversion .. " recovery",
         "Info",
     }, 
     {
-        function ()
-            local path = bootloader.find("recoveryScript.lua") --скрипт востановления системы, у каждой оськи на базе likeOS должен быть
-            if path then
-                local code, err = bootloader.loadfile(path, nil, createSandbox())
-                if code then
-                    code()
-                else
-                    info(err or "Unknown Syntax Error")
-                end
-            else
-                info("The System Does Not Provide A Script For Recovery")
-            end
-        end,
+        systemRecoveryScript,
         function (str)
             if yesno(str) then
                 local result = {bootloader.bootfs.remove("/data")}
