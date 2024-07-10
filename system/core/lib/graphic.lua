@@ -358,7 +358,13 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                     for i = 1, unicode.len(value[3]) do
                         local setTo = value[5] + (i - 1)
                         if not chars[setTo] then isBreak = true break end
-                        chars[setTo] = {unicode.sub(value[3], i, i), getForeCol(i, value[4], true), getBackCol(setTo)}
+                        local lfore, lforePal
+                        if value[4] == true then
+                            lfore, lforePal = foreground, self.isPal
+                        else
+                            lfore, lforePal = value[4], true
+                        end
+                        chars[setTo] = {unicode.sub(value[3], i, i), getForeCol(i, lfore, lforePal), getBackCol(setTo)}
                     end
                     if isBreak then break end
                 end

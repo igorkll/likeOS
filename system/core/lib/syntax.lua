@@ -82,7 +82,7 @@ function syntax.parse(code)
                 elseif lostr or lostr2 or isred then
                     lcolor = colors.orange
                 else
-                    lcolor = syntax.keywords[lstr] or colors.white
+                    lcolor = syntax.keywords[lstr] or true
                 end
                 
                 if lstr == "]]" then
@@ -99,9 +99,17 @@ function syntax.parse(code)
     return obj
 end
 
-function syntax.draw(x, y, obj, gpu, palette)
+function syntax.draw(x, y, obj, gpu, palette, defaultColor)
     for index, value in ipairs(obj) do
-        if palette then
+        if value[4] == true then
+            if defaultColor then
+                gpu.setForeground(defaultColor, true)
+            elseif palette then
+                gpu.setForeground(palette[colors.white] or 0)
+            else
+                gpu.setForeground(colors.white, true)
+            end
+        elseif palette then
             gpu.setForeground(palette[value[4]] or 0)
         else
             gpu.setForeground(value[4], true)
