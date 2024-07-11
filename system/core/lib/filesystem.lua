@@ -61,6 +61,7 @@ end
 local function recursionDeleteAttribute(path)
     for _, fullpath in filesystem.recursion(path) do
         filesystem.clearAttributes(fullpath)
+        xorfsData[fullpath] = nil
     end
 end
 
@@ -405,13 +406,7 @@ function filesystem.rename(fromPath, toPath)
             return nil, err
         end
         
-        local success, err = filesystem.remove(fromPath)
-        if not success then
-            return nil, err
-        end
-
-        recursionDeleteAttribute(fromPath)
-        return true
+        return filesystem.remove(fromPath)
     end
 end
 
