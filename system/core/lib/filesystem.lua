@@ -398,10 +398,11 @@ function filesystem.rename(fromPath, toPath)
     local fromProxy, fromProxyPath = filesystem.get(fromPath)
     local toProxy, toProxyPath = filesystem.get(toPath)
 
-    recursionCloneAttribute(fromPath, toPath)
-
     if fromProxy.address == toProxy.address and getXorCode(fromPath) == getXorCode(toPath) then
-        return ifSuccessful(function() recursionDeleteAttribute(fromPath) end, fromProxy.rename(fromProxyPath, toProxyPath))
+        return ifSuccessful(function()
+            recursionCloneAttribute(fromPath, toPath)
+            recursionDeleteAttribute(fromPath)
+        end, fromProxy.rename(fromProxyPath, toProxyPath))
     else
         local success, err = filesystem.copy(fromPath, toPath)
         if not success then
