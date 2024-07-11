@@ -32,7 +32,7 @@ local function unserialize(str)
     end
 end
 
--------------------------------------------- launch the bootmanager (if any)
+-------------------------------------------- launch the bootmanager (if it is installed)
 
 local bootloaderSettingsPath = "/bootloader"
 local bootmanagerfile = "/bootmanager/main.lua"
