@@ -625,7 +625,8 @@ function filesystem.copy(fromPath, toPath, fcheck)
         return true
     end
 
-    return ifSuccessful(function() recursionCloneAttribute(fromPath, toPath) end, copyRecursively(fromPath, toPath))
+    recursionCloneAttribute(fromPath, toPath)
+    return copyRecursively(fromPath, toPath)
 end
 
 ------------------------------------ additional functions
