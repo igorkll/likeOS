@@ -68,7 +68,9 @@ end
 local function recursionCloneAttribute(path, path2)
     forceMode = true
     for lpath, fullpath in filesystem.recursion(path) do
-        local ok, err = filesystem.setAttributes(paths.concat(path2, lpath), filesystem.getAttributes(fullpath), true)
+        local newPath = paths.concat(path2, lpath)
+        xorfsData[newPath] = xorfsData[fullpath]
+        local ok, err = filesystem.setAttributes(newPath, filesystem.getAttributes(fullpath), true)
         if not ok then
             forceMode = false
             return nil, err
