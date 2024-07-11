@@ -85,6 +85,9 @@ local function getXorCode(path)
     if not path then return end
     while true do
         if xorfsData[path] then
+            if type(xorfsData[path]) == "function" then
+                return xorfsData[path]()
+            end
             return xorfsData[path]
         end
         path = paths.path(path)
@@ -558,7 +561,7 @@ function filesystem.open(path, mode, bufferSize, noXor, noHook)
             end,
             readMax = function()
                 local str = proxy.read(result, math.huge)
-                if xorcode then
+                if str and xorcode then
                     str = xorfs.toggleData(str, xorcode, fileOffset)
                     fileOffset = fileOffset + #str
                 end
