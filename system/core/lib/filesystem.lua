@@ -548,16 +548,21 @@ function filesystem.open(path, mode, bufferSize, noXor, noHook)
             --don`t use with buffered mode!
             readAll = function()
                 local buffer = ""
-                repeat
-                    local data = proxy.read(result, math.huge)
-                    buffer = buffer .. (data or "")
-                until not data
-
                 if xorcode then
-                    return xorfs.toggleData(buffer, xorcode, fileOffset)
+                    repeat
+                        local data = proxy.read(result, math.huge)
+                        if data then
+                            buffer = buffer .. xorfs.toggleData(data, xorcode, fileOffset)
+                            fileOffset = fileOffset + #data
+                        end
+                    until not data
                 else
-                    return buffer
+                    repeat
+                        local data = proxy.read(result, math.huge)
+                        buffer = buffer .. (data or "")
+                    until not data
                 end
+                return buffer
             end,
             readMax = function()
                 local str = proxy.read(result, math.huge)
