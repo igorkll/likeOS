@@ -3,7 +3,7 @@ local text = require("text")
 local parser = {}
 
 function parser.split(tool, str, seps) --дробит строку по разделителям(сохраняяя пустые строки)
-    local parts = {""}
+    local parts = {{}}
 
     if type(seps) ~= "table" then
         seps = {seps}
@@ -16,7 +16,7 @@ function parser.split(tool, str, seps) --дробит строку по разд
             local isBreak
             for i, sep in ipairs(seps) do
                 if tool.sub(str, index, index + (tool.len(sep) - 1)) == sep then
-                    table.insert(parts, "")
+                    table.insert(parts, {})
                     index = index + tool.len(sep)
                     isBreak = true
                     break
@@ -25,8 +25,12 @@ function parser.split(tool, str, seps) --дробит строку по разд
             if not isBreak then break end
         end
 
-        parts[#parts] = parts[#parts] .. tool.sub(str, index, index)
+        table.insert(parts[#parts], tool.sub(str, index, index))
         index = index + 1
+    end
+
+    for i, v in ipairs(parts) do
+        parts[i] = table.concat(v)
     end
 
     return parts
