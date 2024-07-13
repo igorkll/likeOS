@@ -316,7 +316,7 @@ function vgpu.create(gpu, screen)
             for i = s, unicode_len(text) do
                 i = i - m
                 if y + (i - 1) > ry then break end
-                index = ((x - 1) * rx) + y + (i - 1)
+                index = x + (((y - 1) + (i - 1)) * rx)
                 backgrounds[index] = currentBack
                 foregrounds[index] = currentFore
                 chars[index] = unicode_sub(text, i, i)
