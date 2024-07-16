@@ -77,7 +77,7 @@ function event.sleep(waitTime)
 
     local startTime = computer.uptime()
     repeat
-        computer.pullSignal(waitTime - (computer.uptime() - startTime))
+        computer.pullSignal(math.max(waitTime - (computer.uptime() - startTime), 0))
     until computer.uptime() - startTime >= waitTime
 end
 
