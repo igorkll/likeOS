@@ -417,7 +417,6 @@ function vgpu.create(gpu, screen)
 
     --------------------------------
 
-    local oldBg, oldFg
     function obj.update()
         if updated or forceUpdate then
             init()
@@ -427,7 +426,7 @@ function vgpu.create(gpu, screen)
                 updatedBufferTo = rsmax
             end
 
-            local index, buff, buffI, back, fore
+            local index, buff, buffI, back, fore, texts
             local i = updatedBufferFrom
             local pixels = {}
             local chr
@@ -442,7 +441,7 @@ function vgpu.create(gpu, screen)
 
                     buff = {}
                     buffI = 1
-                    index = i
+                    index = i - 1
                     while true do
                         chr = chars[i]
                         
@@ -461,8 +460,11 @@ function vgpu.create(gpu, screen)
                     end
 
                     pixels[back] = pixels[back] or {}
-                    pixels[back][fore] = pixels[back][fore] or {}
-                    pixels[back][fore][index - 1] = concat(buff)
+                    pixels[back][fore] = pixels[back][fore] or {[0] = 1}
+                    texts = pixels[back][fore]
+                    texts[texts[0]] = index
+                    texts[texts[0] + 1] = concat(buff)
+                    texts[0] = texts[0] + 2
                 end
 
                 currentBackgrounds[i] = backgrounds[i]
@@ -471,20 +473,16 @@ function vgpu.create(gpu, screen)
                 i = i + 1
             end
 
+            local idx
             for bg, fgs in pairs(pixels) do
-                if bg ~= oldBg then
-                    setBackground(bg)
-                    oldBg = bg
-                end
+                setBackground(bg)
 
                 for fg, sets in pairs(fgs) do
-                    if fg ~= oldFg then
-                        setForeground(fg)
-                        oldFg = fg
-                    end
+                    setForeground(fg)
 
-                    for idx, text in pairs(sets) do
-                        set((idx % rx) + 1, (idx // rx) + 1, text)
+                    for i = 1, sets[0] - 1, 2 do
+                        idx = sets[i]
+                        set((idx % rx) + 1, (idx // rx) + 1, sets[i + 1])
                     end
                 end
             end
