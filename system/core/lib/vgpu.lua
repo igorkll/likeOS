@@ -3,7 +3,7 @@ local graphic = require("graphic")
 local vgpu = {}
 
 local pairs = pairs
-local floor = math.floor
+--local floor = math.floor
 local concat = table.concat
 local huge = math.huge
 
@@ -137,8 +137,8 @@ function vgpu.create(gpu, screen)
     end
     init()
 
-    local updatedBufferFrom = math.huge
-    local updatedBufferTo = -math.huge
+    local updatedBufferFrom = huge
+    local updatedBufferTo = -huge
     local forceUpdate = true
     local updated = false
 
@@ -266,8 +266,8 @@ function vgpu.create(gpu, screen)
     end
 
     function obj.setResolution(x, y)
-        x = floor(x)
-        y = floor(y)
+        x = x // 1
+        y = y // 1
 
         init()
         setResolution(x, y)
@@ -294,8 +294,8 @@ function vgpu.create(gpu, screen)
     end
 
     function obj.get(x, y)
-        x = floor(x)
-        y = floor(y)
+        x = x // 1
+        y = y // 1
 
         local index = x + ((y - 1) * rx)
         return chars[index], foregrounds[index], backgrounds[index]
@@ -303,8 +303,8 @@ function vgpu.create(gpu, screen)
 
     function obj.set(x, y, text, vertical)
         local currentBack, _, currentFore, _, text = formatColor(obj, currentBack, currentBackPal, currentFore, currentForePal, text, true, depth)
-        x = floor(x)
-        y = floor(y)
+        x = x // 1
+        y = y // 1
 
         local index
         if vertical then
@@ -347,10 +347,10 @@ function vgpu.create(gpu, screen)
 
     function obj.fill(x, y, sizeX, sizeY, char)
         local currentBack, _, currentFore, _, char = formatColor(obj, currentBack, currentBackPal, currentFore, currentForePal, char, true, depth)
-        x = floor(x)
-        y = floor(y)
-        sizeX = floor(sizeX)
-        sizeY = floor(sizeY)
+        x = x // 1
+        y = y // 1
+        sizeX = sizeX // 1
+        sizeY = sizeY // 1
 
         local index
         for ix = x, x + (sizeX - 1) do
@@ -373,12 +373,12 @@ function vgpu.create(gpu, screen)
     end
 
     function obj.copy(x, y, sx, sy, ox, oy)
-        x = floor(x)
-        y = floor(y)
-        sx = floor(sx)
-        sy = floor(sy)
-        ox = floor(ox)
-        oy = floor(oy)
+        x = x // 1
+        y = y // 1
+        sx = sx // 1
+        sy = sy // 1
+        ox = ox // 1
+        oy = oy // 1
 
         --обновляем картинку на экране
         if updated then
@@ -487,8 +487,8 @@ function vgpu.create(gpu, screen)
                 end
             end
 
-            updatedBufferFrom = math.huge
-            updatedBufferTo = -math.huge
+            updatedBufferFrom = huge
+            updatedBufferTo = -huge
             updated = false
             forceUpdate = false
         end
