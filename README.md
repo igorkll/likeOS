@@ -1,13 +1,13 @@
 # likeOS
-likeOS, "чистая" ос без оболочьки, с низкими сис требованиями, предназначена для автоматизации(роботов, упровления аэс)
-имееться умная автовыгрузка библиотек
-ядро ос содержит простой api для работы с графикой, который поможет вам в осрисовки интерфейсов
-данный api позволит вам работать на нескольких мониторах, а заботу переключения gpu возмет на себя сам api
-однако для работы на нескольких мониторах стоит использовать несколько видеокарт(так будет быстрее)
-если вы хотите использовать ос на компьютере, могу посоветовать дистрибутив liked(https://github.com/igorkll/liked) официальный дистрибутив likeOS для компьютеров и планшетов
+likeOS, a "clean" OS without a shell, with low system requirements, designed for automation (robots, NPP control),
+there is a smart auto-loading of libraries
+the OS kernel contains a simple api for working with graphics that will help you draw interfaces.
+this api will allow you to work on multiple monitors, and the api itself will take care of GPU switching.
+However, to work on multiple monitors, you should use multiple graphics cards (it will be faster this way)
+if you want to use the OS on your computer, i can recommend a liked distribution (https://github.com/igorkl/liked) the official distribution of likeOS for computers and tablets
 
-структура файловой системмы
-/system/core - ядро ос, туда лутще не лезть без крайней необходимости
-/system - файлы дистрибутива, при создании дистрибутива программы и библиотеки закидывайте сюда
-/data - данные ос и юзера(расположения файлов юзера зависит от дистрибутива, но всегда расположены в папке data в liked это /data/userdata)
-/init.lua - базовый загрузчик, ссылающийся на загрузчик ядра "/system/bootloader.lua" этот скрипт умеет подгружать bootmanager из соответствующей папки
+## the structure of the filesystem
+* /system/core - the OS kernel, it's better not to go there unless absolutely necessary.
+* /system - the distribution files, when creating the distribution of the program and library, drop them here
+* /data - os and userdata (the location of the user's files depends on the distribution, but they are always located in the data folder in liked, this is /data/userdata)
+* /init.lua - the basic loader, referring to the kernel loader "/system/bootloader.lua" this script is able to load the bootmanager from the appropriate folder
