@@ -8,8 +8,8 @@ if not file then return nil, err end
 
 local buffer = ""
 repeat
-	local data = fs.read(file, math.huge)
-	buffer = buffer .. (data or "")
+local data = fs.read(file, math.huge)
+buffer = buffer .. (data or "")
 until not data
 fs.close(file)
 
@@ -25,10 +25,10 @@ end
 local function unserialize(str)
 local code = load("return " .. str, "=unserialize", "t", {math={huge=math.huge}})
 if code then
-	local result = {pcall(code)}
-	if result[1] and type(result[2]) == "table" then
-		return result[2]
-	end
+local result = {pcall(code)}
+if result[1] and type(result[2]) == "table" then
+return result[2]
+end
 end
 end
 
@@ -55,7 +55,7 @@ local bootproxy
 if tmpfs.exists(bootloaderSettingsPath_bootaddr) then
 local bootaddr = assert(readFile(tmpfs, bootloaderSettingsPath_bootaddr))
 computer.getBootAddress = function()
-	return bootaddr
+return bootaddr
 end
 bootproxy = assert(component.proxy(bootaddr))
 else
@@ -69,18 +69,18 @@ bootargs = unserialize(assert(readFile(tmpfs, bootloaderSettingsPath_bootargs)))
 else
 local params
 if tmpfs.exists("/bootloader/unpack") then
-	params = unserialize(readFile(tmpfs, "/bootloader/unpack"))
+params = unserialize(readFile(tmpfs, "/bootloader/unpack"))
 else
-	params = {}
+params = {}
 end
 if tmpfs.exists("/bootloader/recovery") then
-	params.forceRecovery = readFile(tmpfs, "/bootloader/recovery")
+params.forceRecovery = readFile(tmpfs, "/bootloader/recovery")
 end
 if tmpfs.exists("/bootloader/unpackBootloader") then
-	params.unpackBootloader = unserialize(readFile(tmpfs, "/bootloader/unpackBootloader"))
+params.unpackBootloader = unserialize(readFile(tmpfs, "/bootloader/unpackBootloader"))
 end
 if tmpfs.exists("/bootloader/noRecovery") then
-	params.noRecovery = true
+params.noRecovery = true
 end
 bootargs = {params}
 end
@@ -94,6 +94,6 @@ assert(load(assert(readFile(bootproxy, bootfile)), "=" .. bootfile, nil, _ENV))(
 else
 local lowLevelInitializer = "/likeOS_startup.lua" --может использоваться для запуска обновления системы
 if bootproxy.exists(lowLevelInitializer) then
-	assert(loadfile(bootproxy, lowLevelInitializer))()
+assert(loadfile(bootproxy, lowLevelInitializer))()
 end
 end

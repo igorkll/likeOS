@@ -6,7 +6,7 @@ local function fold(init, op, ...)
 local result = init
 local args = table.pack(...)
 for i = 1, args.n do
-result = op(result, args[i])
+	result = op(result, args[i])
 end
 return result
 end
@@ -64,13 +64,13 @@ end
 
 function bit32.lrotate(x, disp)
 if disp == 0 then
-return x
+	return x
 elseif disp < 0 then
-return bit32.rrotate(x, -disp)
+	return bit32.rrotate(x, -disp)
 else
-disp = disp & 31
-x = trim(x)
-return trim((x << disp) | (x >> (32 - disp)))
+	disp = disp & 31
+	x = trim(x)
+	return trim((x << disp) | (x >> (32 - disp)))
 end
 end
 
@@ -80,13 +80,13 @@ end
 
 function bit32.rrotate(x, disp)
 if disp == 0 then
-return x
+	return x
 elseif disp < 0 then
-return bit32.lrotate(x, -disp)
+	return bit32.lrotate(x, -disp)
 else
-disp = disp & 31
-x = trim(x)
-return trim((x >> disp) | (x << (32 - disp)))
+	disp = disp & 31
+	x = trim(x)
+	return trim((x >> disp) | (x << (32 - disp)))
 end
 end
 
@@ -104,11 +104,11 @@ function bit32.writebit(byte, index, newstate)
 local current = bit32.readbit(byte, index)
 
 if current ~= newstate then
-if newstate then
-byte = byte + (2 ^ index)
-else
-byte = byte - (2 ^ index)
-end
+	if newstate then
+	byte = byte + (2 ^ index)
+	else
+	byte = byte - (2 ^ index)
+	end
 end
 
 return math.floor(byte)
