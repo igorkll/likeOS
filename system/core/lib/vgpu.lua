@@ -182,6 +182,11 @@ function vgpu.create(gpu, screen)
 		forceUpdate = true
 	end
 
+	function obj.updateZone(index)
+		if index > updatedBufferTo then updatedBufferTo = index end
+		if index < updatedBufferFrom then updatedBufferFrom = index end
+	end
+
 	function obj.setDepth(d)
 		local out = gpu.setDepth(d)
 		depth = d
