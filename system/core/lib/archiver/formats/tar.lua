@@ -5,14 +5,14 @@ local unicode = require("unicode")
 --------------------------------------------
 
 local function tableRemove(tbl, dat)
-	local count = 0
-	for k, v in pairs(tbl) do
-	    if v == dat then
-	        count = count + 1
-	        tbl[k] = nil
-	    end
+local count = 0
+for k, v in pairs(tbl) do
+	if v == dat then
+		count = count + 1
+		tbl[k] = nil
 	end
-	return count > 0
+end
+return count > 0
 end
 
 --------------------------------------------
@@ -20,13 +20,13 @@ end
 local tar = {}
 
 function tar.pack(dir, outputpath)
-	dir = paths.canonical(dir)
-	outputpath = paths.canonical(outputpath)
+dir = paths.canonical(dir)
+outputpath = paths.canonical(outputpath)
 end
 
 function tar.unpack(inputpath, dir)
-	inputpath = paths.canonical(inputpath)
-	dir = paths.canonical(dir)
+inputpath = paths.canonical(inputpath)
+dir = paths.canonical(dir)
 end
 
 tar.unloadable = true

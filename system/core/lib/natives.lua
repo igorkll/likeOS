@@ -3,28 +3,28 @@ local natives = {}
 --например если нужно исключить влияния vcomponent
 
 local function deepclone(tbl, newtbl)
-	local cache = {}
-	local function recurse(tbl, newtbl)
-	    newtbl = newtbl or {}
+local cache = {}
+local function recurse(tbl, newtbl)
+	newtbl = newtbl or {}
 
-	    for k, v in pairs(tbl) do
-	        if type(v) == "table" then
-	            local ltbl = cache[v]
-	            if not ltbl then
-	                cache[v] = {}
-	                ltbl = cache[v]
-	                recurse(v, cache[v])
-	            end
-	            newtbl[k] = ltbl
-	        else
-	            newtbl[k] = v
-	        end
-	    end
-
-	    return newtbl
+	for k, v in pairs(tbl) do
+		if type(v) == "table" then
+			local ltbl = cache[v]
+			if not ltbl then
+				cache[v] = {}
+				ltbl = cache[v]
+				recurse(v, cache[v])
+			end
+			newtbl[k] = ltbl
+		else
+			newtbl[k] = v
+		end
 	end
 
-	return recurse(tbl, newtbl)
+	return newtbl
+end
+
+return recurse(tbl, newtbl)
 end
 
 -- clone
