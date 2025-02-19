@@ -368,6 +368,8 @@ end
 local shutdown = computer.shutdown
 function computer.shutdown(mode)
 	if mode == "recovery" then
+		fs.writeFile("/tmp/bootloader/bootaddr", require("bootloader").bootaddress)
+		
 		local graphic = package.get("graphic")
 		if graphic then
 			fs.writeFile("/tmp/bootloader/recovery", graphic.lastScreen or "")
@@ -375,6 +377,7 @@ function computer.shutdown(mode)
 			fs.writeFile("/tmp/bootloader/recovery", "")
 		end
 	elseif mode == "fast" then
+		fs.writeFile("/tmp/bootloader/bootaddr", require("bootloader").bootaddress)
 		fs.writeFile("/tmp/bootloader/noRecovery", "")
 	elseif mode == "faster" then
 		mode = "fast"
