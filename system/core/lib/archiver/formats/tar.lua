@@ -19,53 +19,6 @@ local unicode = require("unicode")
 
 local BLOCK_SIZE = 512
 local NULL_BLOCK = ("\0"):rep(BLOCK_SIZE)
-local WORKING_DIRECTORY = fs.canonical(shell.getWorkingDirectory()):gsub("/$","")
-
---load auto_progress library if possible
-local auto_progress
-if true then
-  local ok
-  ok, auto_progress = pcall(require, "mpm.auto_progress")
-  if not ok then
-    auto_progress = {}
-    function auto_progress.new()
-      --library not available, create stub
-      return {
-        update = function() end,
-        finish = function() end,
-      }
-    end
-  end
-end
-
---error information
-local USAGE_TEXT = [[
-Usage:
-tar <function letter> [other options] FILES...
-function letter    description
--c --create         creates a new archive
--r --append         appends to existing archive
--t --list           lists contents from archive
--x --extract --get  extracts from archive
-other options      description
--f --file FILE      first FILE is archive, else:
-                    uses primary tape drive
--h --dereference    follows symlinks
---exclude=FILE;...  excludes FILE from archive
--v --verbose        lists processed files, also
-                    shows progress for large files
-]]
-local function addUsage(text)
-  return text .. "\n" .. USAGE_TEXT
-end
-local ERRORS = {
-  missingAction   = addUsage("Error: Missing function letter!"),
-  multipleActions = addUsage("Error: Multiple function letters!"),
-  missingFiles    = addUsage("Error: Missing file names!"),
-  invalidChecksum = "Error: Invalid checksum!",
-  noHeaderName    = "Error: No file name in header!",
-  invalidTarget   = "Error: Invalid target!",
-}
 
 
 --formats numbers and stringvalues to comply to the tar format
@@ -173,13 +126,13 @@ function header:read()
     data.filePrefix   = self:extract      (345, 155)
   end
   
-  assert(self:verify(data.checksum), ERRORS.invalidChecksum)
+  --assert(self:verify(data.checksum), ERRORS.invalidChecksum)
   --assemble raw file name, normally relative to working dir
   if data.filePrefix then
     data.name = data.filePrefix .. "/" .. data.name
     data.filePrefix = nil
   end
-  assert(data.name, ERRORS.noHeaderName)
+  --assert(data.name, ERRORS.noHeaderName)
   return data
 end
 --returns the whole 512 bytes of the header
@@ -229,36 +182,19 @@ function header:verify(checksum)
   return checkedSums[checksum] or false
 end
 
-
-local function makeRelative(path, reference)
-  --The path and the reference directory must have a common reference. (e.g. root)
-  --The default reference is the current working directory.
-  reference = reference or WORKING_DIRECTORY
-  --1st: split paths into segments
-  local returnDirectory = path:sub(-1,-1) == "/" --?
-  path = fs.segments(path)
-  reference = fs.segments(reference)
-  --2nd: remove common directories
-  while path[1] and reference[1] and path[1] == reference[1] do
-    table.remove(path, 1)
-    table.remove(reference, 1)
-  end
-  --3rd: add ".."s to leave that what's left of the working directory
-  local path = ("../"):rep(#reference) .. table.concat(path, "/")
-  --4th: If there is nothing remaining, we are at the current directory.
-  if path == "" then
-    path = "."
-  end
-  return path
-end
-
-
-local function tarFiles(files, mode, ignoredObjects, isDirectoryContent)
+local function tarFiles(files, ignoredObjects, isDirectoryContent, dir)
   --combines files[2], files[3], ... into files[1]
   --prepare output stream
-  local targetFile = files[1]
+	local target, closeAtExit
+  if type(files[1]) == "string" then
+    local targetFile = files[1]
     ignoredObjects[targetFile] = ignoredObjects[targetFile] or true
-    local target = assert(fs.open(targetFile, mode))
+    target = assert(fs.open(targetFile, "wb"))
+    closeAtExit = true
+  else
+    target = files[1]
+    closeAtExit = false
+  end
 
   for i = 2, #files do
 
@@ -275,23 +211,19 @@ local function tarFiles(files, mode, ignoredObjects, isDirectoryContent)
     if objectType == "dir" and ignoredObjects[file] ~= "strict" then
       local list = {target}
       local i = 2
-      for containedFile in fs.list(file) do
-        list[i] = fs.concat(file, containedFile)
+      for _, containedFile in ipairs(fs.list(file)) do
+        list[i] = paths.concat(file, containedFile)
         i = i + 1
       end
-      tarFiles(list, nil, ignoredObjects, true)
+      tarFiles(list, ignoredObjects, true, dir)
     end
     --Ignored objects are not added to the tar.
     if not ignoredObjects[file] then
       local data = {}
       --get relative path to current directory
-      data.name = makeRelative(file)
+      data.name = file:sub(#dir + 2, #file)
       --add object specific data
-      if objectType == "link" then
-        --It's a symbolic link.
-        data.typeFlag = "2"
-        data.linkName = makeRelative(linkTarget, paths.path(file)):gsub("/$","") --force relative links
-      else
+
         data.lastModified = math.floor(fs.lastModified(file) / 1000) --Java returns milliseconds...
         if objectType == "dir" then
           --It's a directory.
@@ -303,28 +235,31 @@ local function tarFiles(files, mode, ignoredObjects, isDirectoryContent)
           data.size = fs.size(file)
           data.mode = 384 --> 600 in octal -> rw-------
         end
-      end
 
       --assemble header
       header:assemble(data)
       --write header
-      assert(target:write(header:getBytes()))
+      assert(target.write(header:getBytes()))
       --copy file contents
       if objectType == "file" then
         --open source file
-        local source = assert(io.open(file, "rb"))
+        local source = assert(fs.open(file, "rb"))
         --keep track of what has to be copied
         local bytesToCopy = data.size
-        --init progress bar
-        local progressBar = auto_progress.new(bytesToCopy)
         --copy file contents
-        for block in source:lines(BLOCK_SIZE) do
-          assert(target:write(block))
+		local function iterator()
+			local str = source.read(BLOCK_SIZE)
+			if str ~= "" then
+				return str
+			end
+		end
+        for block in iterator do
+          assert(target.write(block))
           bytesToCopy = bytesToCopy - #block
           assert(bytesToCopy >= 0, "Error: File grew while copying! Is it the output file?")
 
           if #block < BLOCK_SIZE then
-            assert(target:write(("\0"):rep(BLOCK_SIZE - #block)))
+            assert(target.write(("\0"):rep(BLOCK_SIZE - #block)))
             break
           end
         end
@@ -336,10 +271,12 @@ local function tarFiles(files, mode, ignoredObjects, isDirectoryContent)
     end
   end
   if not isDirectoryContent then
-    assert(target:write(NULL_BLOCK)) --Why wasting 0.5 KiB if you can waste a full KiB? xD
-    assert(target:write(NULL_BLOCK)) --(But that's the standard!)
+    assert(target.write(NULL_BLOCK)) --Why wasting 0.5 KiB if you can waste a full KiB? xD
+    assert(target.write(NULL_BLOCK)) --(But that's the standard!)
   end
-	target:close()
+  if closeAtExit then
+    target:close()
+  end
 end
 
 
@@ -362,7 +299,7 @@ local extractingExtractors = {
       if #block > bytesToCopy then
         block = block:sub(1, bytesToCopy)
       end
-      assert(target:write(block))
+      assert(target.write(block))
       bytesToCopy = bytesToCopy - #block
       if bytesToCopy <= 0 then
         target:close()
@@ -393,7 +330,13 @@ local function untarFiles(file, dir, extractorList)
 	local source = assert(fs.open(file, "rb"))
 	local extractor = nil
 	local hasDoubleNull = false
-	for block in source:lines(BLOCK_SIZE) do
+	local function iterator()
+		local str = source.read(BLOCK_SIZE)
+		if str ~= "" then
+			return str
+		end
+	end
+	for block in iterator do
 		if #block < BLOCK_SIZE then
 		error("Error: Unfinished Block; missing "..(BLOCK_SIZE-#block).." bytes!")
 		end
@@ -402,7 +345,7 @@ local function untarFiles(file, dir, extractorList)
 		header:init(block)
 		if header:isNull() then
 			--check for second null block
-			if source:read(BLOCK_SIZE) == NULL_BLOCK then
+			if source.read(BLOCK_SIZE) == NULL_BLOCK then
 			hasDoubleNull = true
 			end
 			--exit/close file when there is a NULL header
@@ -442,7 +385,7 @@ local tar = {}
 function tar.pack(dir, outputpath)
 	dir = paths.canonical(dir)
 	outputpath = paths.canonical(outputpath)
-	tarFiles({outputpath, dir}, "rb", {})
+	tarFiles({outputpath, dir}, {}, nil, paths.path(dir))
 end
 
 function tar.unpack(inputpath, dir)

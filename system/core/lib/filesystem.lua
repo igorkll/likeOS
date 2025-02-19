@@ -496,7 +496,7 @@ function filesystem.open(path, mode, bufferSize, noXor, noHook)
 				else
 					out = proxy.read(result, readsize)
 				end
-				if xorcode then
+				if out and xorcode then
 					out = xorfs.toggleData(out, xorcode, fileOffset)
 					fileOffset = fileOffset + #out
 				end
