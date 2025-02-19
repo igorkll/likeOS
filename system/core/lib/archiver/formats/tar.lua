@@ -385,13 +385,13 @@ local tar = {}
 function tar.pack(dir, outputpath)
 	dir = paths.canonical(dir)
 	outputpath = paths.canonical(outputpath)
-	tarFiles({outputpath, dir}, {}, nil, paths.path(dir))
+	return pcall(tarFiles, {outputpath, dir}, {}, nil, paths.path(dir))
 end
 
 function tar.unpack(inputpath, dir)
 	inputpath = paths.canonical(inputpath)
 	dir = paths.canonical(dir)
-	untarFiles(inputpath, dir, extractingExtractors)
+	return pcall(untarFiles, inputpath, dir, extractingExtractors)
 end
 
 tar.unloadable = true
