@@ -280,6 +280,10 @@ function vgpu.create(gpu, screen)
 		rx, ry = x, y
 		rsmax = rx + ((ry - 1) * rx)
 		
+		if updatedBufferTo > rsmax then
+			updatedBufferTo = rsmax
+		end
+
 		for i = 1, rsmax do
 			if not backgrounds[i] then
 				backgrounds[i] = 0
