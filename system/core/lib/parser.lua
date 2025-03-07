@@ -45,18 +45,7 @@ end
 
 function parser.fastChange(str, list)
 	for from, to in pairs(list) do
-		local lfrom, lto
-		if #from == 1 then
-			lfrom = "%" .. from
-		else
-			lfrom = text.escapePattern(from)
-		end
-		if #to == 1 then
-			lto = "%" .. to
-		else
-			lto = text.escapePattern(to)
-		end
-		str = str:gsub(lfrom, lto)
+		str = str:gsub(from, to)
 	end
 	return str
 end
