@@ -42,9 +42,4 @@
 /system/core/lib/archiver/formats/tar.lua
 /system/core/luaenv/a_base.lua
 /system/core/luaenv/b_os.lua
-/system/core/unittests/a_readbit.lua
-/system/core/unittests/b_writebit.lua
-/system/core/unittests/c_split.lua
-/system/core/unittests/d_toParts.lua
-/system/core/unittests/e_sha256.lua
 /init.lua

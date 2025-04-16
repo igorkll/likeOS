@@ -12,7 +12,7 @@ local unicode = require("unicode")
 --[[
   tar archiver for OpenComputers
   for further information check the usage text or man page
-  
+
   TODO: support non primary tape drives
   TODO: detect symbolic link cycles (-> remember already visited, resolved paths)
 ]]
@@ -49,6 +49,7 @@ function header:init(block)
     --remember the current block
     self.block = block
 end
+
 --takes the given data and creates a header from it
 --the resulting block can be retrieved via header:getBytes()
 function header:assemble(data)
@@ -73,15 +74,15 @@ function header:assemble(data)
         data.ustarVersion = "00"
     end
     local tokens = {
-        formatValue(data.name, 100), --1
-        formatValue(data.mode, 8), --2
-        formatValue(data.owner, 8), --3
-        formatValue(data.group, 8), --4
-        formatValue(data.size, 12), --5
+        formatValue(data.name, 100),        --1
+        formatValue(data.mode, 8),          --2
+        formatValue(data.owner, 8),         --3
+        formatValue(data.group, 8),         --4
+        formatValue(data.size, 12),         --5
         formatValue(data.lastModified, 12), --6
         "        ",
-         --8 spaces                 --7
-        formatValue(data.typeFlag, 1), --8
+        --8 spaces                 --7
+        formatValue(data.typeFlag, 1),  --8
         formatValue(data.linkName, 100) --9
     }
     --ustar extension?
@@ -101,6 +102,7 @@ function header:assemble(data)
     --assemble final header
     header:init(tokens)
 end
+
 --extracts the information from the given header
 function header:read()
     local data = {}
@@ -134,26 +136,31 @@ function header:read()
     --assert(data.name, ERRORS.noHeaderName)
     return data
 end
+
 --returns the whole 512 bytes of the header
 function header:getBytes()
     return header.block
 end
+
 --returns if the header is a null header
 function header:isNull()
     return self.block == NULL_BLOCK
 end
+
 --extracts a 0 terminated string from the given area
 function header:extract(offset, size)
     --extract size bytes from the given offset, strips every NULL character
     --returns a string
     return self.block:sub(1 + offset, size + offset):match("[^\0]+")
 end
+
 --extracts an octal number from the given area
 function header:extractNumber(offset, size)
     --extract size bytes from the given offset
     --returns the first series of octal digits converted to a number
     return tonumber(self.block:sub(1 + offset, size + offset):match("[0-7]+") or "", 8)
 end
+
 --calculates the checksum for the given area
 function header:checksum(offset, size, signed)
     --calculates the checksum of a given range
@@ -172,6 +179,7 @@ function header:checksum(offset, size, signed)
     --used signed bytes instead of unsigned ones and therefore computed 'wrong' checksums.
     return sum % 0x40000
 end
+
 --checks if the given checksum is valid for the loaded header
 function header:verify(checksum)
     local checkedSums = {
@@ -201,13 +209,13 @@ local function tarFiles(files, ignoredObjects, isDirectoryContent, dir, outputFi
             local objectType
 
             if fs.isDirectory(file) then
-                objectType = "dir" --It's a directory.
+                objectType = "dir"  --It's a directory.
             else
                 objectType = "file" --It's a normal file.
             end
 
             if objectType == "dir" and ignoredObjects[file] ~= "strict" then
-                local list = {target}
+                local list = { target }
                 local i = 2
                 for _, containedFile in ipairs(fs.list(file)) do
                     list[i] = paths.concat(file, containedFile)
@@ -379,15 +387,15 @@ end
 local tar = {}
 
 function tar.pack(dir, outputpath)
-	dir = paths.canonical(dir)
-	outputpath = paths.canonical(outputpath)
-	return pcall(tarFiles, {outputpath, dir}, {}, nil, dir, outputpath)
+    dir = paths.canonical(dir)
+    outputpath = paths.canonical(outputpath)
+    return pcall(tarFiles, { outputpath, dir }, {}, nil, dir, outputpath)
 end
 
 function tar.unpack(inputpath, dir)
-	inputpath = paths.canonical(inputpath)
-	dir = paths.canonical(dir)
-	return pcall(untarFiles, inputpath, dir, extractingExtractors)
+    inputpath = paths.canonical(inputpath)
+    dir = paths.canonical(dir)
+    return pcall(untarFiles, inputpath, dir, extractingExtractors)
 end
 
 tar.unloadable = true
