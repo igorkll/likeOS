@@ -260,17 +260,17 @@ function filesystem.exists(path)
     return proxy.exists(proxyPath)
 end
 
-function filesystem.size(path)
+function filesystem.size(path, contentOnly)
     local proxy, proxyPath = filesystem.get(path)
     local size, sizeWithBaseCost = 0, 0
     local filesCount, dirsCount = 0, 0
 
     local function recurse(lpath)
-        sizeWithBaseCost = sizeWithBaseCost + filesystem.baseFileDirectorySize
         for _, filename in ipairs(proxy.list(lpath)) do
             local fullpath = paths.concat(lpath, filename)
             if proxy.isDirectory(fullpath) then
                 recurse(fullpath)
+                sizeWithBaseCost = sizeWithBaseCost + filesystem.baseFileDirectorySize
                 dirsCount = dirsCount + 1
             else
                 local lsize = proxy.size(fullpath)
@@ -283,7 +283,10 @@ function filesystem.size(path)
 
     if proxy.isDirectory(proxyPath) then
         recurse(proxyPath)
-        dirsCount = dirsCount + 1
+        if not contentOnly then
+            dirsCount = dirsCount + 1
+            sizeWithBaseCost = sizeWithBaseCost + filesystem.baseFileDirectorySize
+        end
     else
         local lsize = proxy.size(proxyPath)
         size = size + lsize
