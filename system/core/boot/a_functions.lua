@@ -22,7 +22,6 @@ function math.roundTo(number, numbers)
     return tonumber(string.format("%." .. tostring(math.floor(numbers)) .. "f", number))
 end
 
-
 function math.mapRound(value, low, high, low_2, high_2)
     return math.round(math.map(value, low, high, low_2, high_2))
 end
@@ -31,14 +30,19 @@ function math.clampRound(value, min, max)
     return math.round(math.clamp(value, min, max))
 end
 
-
 ------------------------------------------------ table
-function table.clone(tbl)
-    local newtbl = {}
+function table.clone(tbl, newtbl)
+    newtbl = newtbl or {}
     for k, v in pairs(tbl) do
         newtbl[k] = v
     end
     return newtbl
+end
+
+function table.add(base, add)
+    for _, v in ipairs(add) do
+        table.insert(base, v)
+    end
 end
 
 function table.exists(tbl, val)
@@ -68,7 +72,7 @@ end
 function table.deepclone(tbl, newtbl)
     local cache = {}
     local function recurse(tbl, newtbl)
-        local newtbl = newtbl or {}
+        newtbl = newtbl or {}
 
         for k, v in pairs(tbl) do
             if type(v) == "table" then
@@ -109,7 +113,7 @@ end
 function table.fromIterator(...)
     local tbl = {}
     for a, b, c, d, e, f, g, h, j, k in ... do
-        table.insert(tbl, {a, b, c, d, e, f, g, h, j, k})
+        table.insert(tbl, { a, b, c, d, e, f, g, h, j, k })
     end
     return tbl
 end
@@ -135,7 +139,7 @@ end
 
 function xor(...)
     local state = false
-    for _, flag in ipairs({...}) do
+    for _, flag in ipairs({ ... }) do
         if flag then
             state = not state
         end

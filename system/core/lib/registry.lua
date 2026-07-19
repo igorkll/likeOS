@@ -7,7 +7,7 @@ local function new(path, data)
     checkArg(1, path, "string")
     checkArg(2, data, "table", "nil")
 
-    local lreg = {path = path, data = data or {}}
+    local lreg = { path = path, data = data or {} }
     if fs.exists(lreg.path) then
         local tbl = serialization.load(lreg.path)
         if tbl then
@@ -29,11 +29,15 @@ local function new(path, data)
         end
         local bl = {
             ["reg_rm_list"] = true,
-            ["reg_rm_all"] = true
+            ["reg_rm_all"] = true,
+            ["reg_adds"] = true
         }
         local function recurse(ltbl, native)
             for _, reg_rm in ipairs(ltbl.reg_rm_list or {}) do
                 native[reg_rm] = nil
+            end
+            for _, reg_add in ipairs(ltbl.reg_adds or {}) do
+                table.insert(native, reg_add)
             end
             if ltbl.reg_rm_all then
                 for key in pairs(native) do
@@ -65,15 +69,18 @@ local function new(path, data)
             lreg.data = {}
         end
     end
-    
-    setmetatable(lreg, {__newindex = function(_, key, value)
-        if lreg.data[key] ~= value then
-            lreg.data[key] = value
-            lreg.save()
+
+    setmetatable(lreg, {
+        __newindex = function(_, key, value)
+            if lreg.data[key] ~= value then
+                lreg.data[key] = value
+                lreg.save()
+            end
+        end,
+        __index = function(_, key)
+            return lreg.data[key]
         end
-    end, __index = function(_, key)
-        return lreg.data[key]
-    end})
+    })
 
     return lreg
 end

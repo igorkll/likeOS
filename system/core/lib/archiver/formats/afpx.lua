@@ -66,7 +66,7 @@ function afpx.pack(dir, outputpath)
         outputfile.close()
     end
 
-    local ret = {pcall(process)}
+    local ret = { pcall(process) }
     for i, v in ipairs(files) do
         v.close()
     end
@@ -118,7 +118,7 @@ function afpx.unpack(inputpath, dir)
         inputfile.close()
     end
 
-    local ret = {pcall(process)}
+    local ret = { pcall(process) }
     for i, v in ipairs(files) do
         v.close()
     end

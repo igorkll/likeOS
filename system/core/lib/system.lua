@@ -8,7 +8,7 @@ local component = require("component")
 local fs = require("filesystem")
 local paths = require("paths")
 local unicode = require("unicode")
-local system = {unloadable = true}
+local system = { unloadable = true }
 
 -------------------------------------------------
 
@@ -19,7 +19,7 @@ function system.getResourcePath(name)
     if unicode.sub(name, 1, 1) == "/" then
         return name
     end
-    
+
     return paths.concat(paths.path(system.getSelfScriptPath()), name)
 end
 
@@ -49,15 +49,16 @@ function system.getDeviceType()
     local function isType(ctype)
         return natives.component.list(ctype)() and ctype
     end
-    
+
     local function isServer()
         local obj = lastinfo.deviceinfo[computer.address()]
         if obj and obj.description and obj.description:lower() == "server" then
             return "server"
         end
     end
-    
-    return isType("tablet") or isType("microcontroller") or isType("drone") or isType("robot") or isServer() or isType("computer") or "unknown"
+
+    return isType("tablet") or isType("microcontroller") or isType("drone") or isType("robot") or isServer() or
+    isType("computer") or "unknown"
 end
 
 function system.getCpuLevel()
@@ -68,7 +69,7 @@ function system.getCpuLevel()
             local creativeApu = value.clock == "1500+2560/2560/320/5120/1280/2560"
             local apu3 = value.clock == "1000+1280/1280/160/2560/640/1280"
             local apu2 = value.clock == "500+640/640/40/1280/320/640"
-            
+
             if creativeApu then
                 isCreative = true
                 isAPU = true
@@ -151,7 +152,7 @@ function system.isLikeOSDisk(address)
 end
 
 function system.checkExitinfo(...)
-    local result = {...}
+    local result = { ... }
     if not result[1] and type(result[2]) == "table" and result[2].reason == "interrupted" then
         if result[2].code == 0 then
             return true

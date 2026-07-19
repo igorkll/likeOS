@@ -3,7 +3,7 @@ local fs = require("filesystem")
 local paths = require("paths")
 local event = require("event")
 local computer = require("computer")
-local internet = {settings = {}}
+local internet = { settings = {} }
 internet.settings.timeout = 3
 internet.settings.downloadPart = 1024 * 32
 internet.settings.pingHost = "http://google.com"
@@ -65,12 +65,12 @@ end
 function internet.readAll(handle)
     local data = {}
     while true do
-        local result, reason = handle.read(math.huge) 
+        local result, reason = handle.read(math.huge)
         if result then
             table.insert(data, result)
         else
             handle.close()
-            
+
             if reason then
                 return nil, reason
             else
@@ -117,11 +117,11 @@ function internet.download(url, path)
         if not file then
             return nil, err
         end
-        
+
         local data = {}
         local dataSize = 0
         while true do
-            local result, reason = handle.read(math.huge) 
+            local result, reason = handle.read(math.huge)
             if result then
                 table.insert(data, result)
                 dataSize = dataSize + #result
@@ -137,7 +137,7 @@ function internet.download(url, path)
                 end
                 file.close()
                 handle.close()
-                
+
                 if reason then
                     return nil, reason
                 else

@@ -20,7 +20,7 @@ graphic.allowSoftwareBuffer = false
 
 graphic.screensBuffers = {}
 graphic.updated = {}
-graphic.windows = setmetatable({}, {__mode = "v"})
+graphic.windows = setmetatable({}, { __mode = "v" })
 graphic.inputHistory = {}
 
 graphic.cursorChar = "|"
@@ -82,7 +82,8 @@ end
 local function copy(self, x, y, sizeX, sizeY, offsetX, offsetY)
     local gpu = graphic.findGpu(self.screen)
     if gpu then
-        gpu.copy(valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), valueCheck(sizeX), valueCheck(sizeY), valueCheck(offsetX), valueCheck(offsetY))
+        gpu.copy(valueCheck(self.x + (x - 1)), valueCheck(self.y + (y - 1)), valueCheck(sizeX), valueCheck(sizeY),
+            valueCheck(offsetX), valueCheck(offsetY))
     end
 
     graphic.updated[self.screen] = true
@@ -139,7 +140,7 @@ local function write(self, data, background, foreground, autoln, pal)
 
         applyBuffer()
     end
-    
+
     graphic.updated[self.screen] = true
     graphic.lastScreen = self.screen
 end
@@ -148,7 +149,7 @@ local function uploadEvent(self, eventData)
     local newEventData
     if eventData then
         if eventData[2] == self.screen and
-        (eventData[1] == "touch" or eventData[1] == "drop" or eventData[1] == "drag" or eventData[1] == "scroll") then
+            (eventData[1] == "touch" or eventData[1] == "drop" or eventData[1] == "drag" or eventData[1] == "scroll") then
             local oldSelected = self.selected
             local rePosX = (eventData[3] - self.x) + 1
             local rePosY = (eventData[4] - self.y) + 1
@@ -159,14 +160,14 @@ local function uploadEvent(self, eventData)
             local inside = crePosX >= 1 and crePosY >= 1 and crePosX <= self.sizeX and crePosY <= self.sizeY
             if inside or self.outsideEvents then
                 self.selected = true
-                newEventData = {eventData[1], eventData[2], rePosX, rePosY, eventData[5], eventData[6]}
+                newEventData = { eventData[1], eventData[2], rePosX, rePosY, eventData[5], eventData[6] }
             end
 
             if eventData[1] == "drop" then
                 self.selected = oldSelected
             end
         elseif eventData[1] == "key_down" or eventData[1] == "key_up" or eventData[1] == "clipboard" then
-            if table.exists(lastinfo.keyboards[self.screen], eventData[2]) then 
+            if table.exists(lastinfo.keyboards[self.screen], eventData[2]) then
                 newEventData = eventData
             end
         elseif eventData[1] == "softwareInsert" then --для подключения виртуальных клавиатур
@@ -205,7 +206,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
     local whitelist
 
     local maxX, maxY = self.x + (x - 1) + (sizeX - 1), self.y + (y - 1) + (sizeY - 1)
-    
+
     local disHistory = not not hidden
     local disableClipboard = not not hidden
     local maxDataSize = math.huge
@@ -214,7 +215,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
     local lastBuffer = ""
     local allowUse = not clickCheck and self.selected
     local historyIndex
-    
+
     local gpu = graphic.findGpu(self.screen)
     local depth = gpu.getDepth()
 
@@ -244,15 +245,15 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
         end
     end
 
-    background = background or graphic.defaultInputBackground or findColor(0x000000, colors.black, 0x000000)
-    foreground = foreground or graphic.defaultInputForeground or findColor(0xffffff, colors.white, 0xffffff)
-    local cursorColor     = graphic.cursorColor     or findColor(0x00ff00, colors.lightgreen, foreground)
-    local selectColor     = graphic.selectColor     or findColor(0x0000ff, colors.blue,       foreground)
+    background            = background or graphic.defaultInputBackground or findColor(0x000000, colors.black, 0x000000)
+    foreground            = foreground or graphic.defaultInputForeground or findColor(0xffffff, colors.white, 0xffffff)
+    local cursorColor     = graphic.cursorColor or findColor(0x00ff00, colors.lightgreen, foreground)
+    local selectColor     = graphic.selectColor or findColor(0x0000ff, colors.blue, foreground)
     local selectColorFore = graphic.selectColorFore
     if depth == 1 and not selectColorFore then
         selectColorFore = background
     end
-    
+
     if not selectColor then
         if self.isPal and depth > 1 then
             selectColor = colors.blue
@@ -297,7 +298,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
             return def
         end
     end
-    
+
     local function redraw()
         if drawLock then
             return drawLock
@@ -323,55 +324,65 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
             str = str .. lastBuffer
 
             --[[
-            local num = (unicode.len(str) - sizeX) + 1
-            if num < 1 then num = 1 end
-            str = unicode.sub(str, num, unicode.len(str))
+			local num = (unicode.len(str) - sizeX) + 1
+			if num < 1 then num = 1 end
+			str = unicode.sub(str, num, unicode.len(str))
 
-            str = str .. newLastBuffer
-            if unicode.len(str) < sizeX then
-                str = str .. string.rep(" ", sizeX - unicode.len(str))
-            elseif unicode.len(str) > sizeX then
-                str = unicode.sub(str, 1, sizeX)
-            end
-            ]]
+			str = str .. newLastBuffer
+			if unicode.len(str) < sizeX then
+				str = str .. string.rep(" ", sizeX - unicode.len(str))
+			elseif unicode.len(str) > sizeX then
+				str = unicode.sub(str, 1, sizeX)
+			end
+			]]
 
             --local newstr = {}
             --[[
-            local cursorPos
-            for i = 1, unicode.len(str) do
-                if unicode.sub(str, i, i) == "\0" then
-                    cursorPos = i
-                else
-                    table.insert(newstr, unicode.sub(str, i, i))
-                end
-            end
-            ]]
+			local cursorPos
+			for i = 1, unicode.len(str) do
+				if unicode.sub(str, i, i) == "\0" then
+					cursorPos = i
+				else
+					table.insert(newstr, unicode.sub(str, i, i))
+				end
+			end
+			]]
 
 
             local chars = {}
             for i = 1, unicode.len(str) do
-                table.insert(chars, {hidden and graphic.hideChar or unicode.sub(str, i, i), getForeCol(i, foreground), getBackCol(i)})
+                table.insert(chars,
+                    { hidden and graphic.hideChar or unicode.sub(str, i, i), getForeCol(i, foreground), getBackCol(i) })
             end
             if syntax == "lua" and isSyntaxInstalled then
                 for index, value in ipairs(require("syntax").parse(str)) do
                     local isBreak
                     for i = 1, unicode.len(value[3]) do
                         local setTo = value[5] + (i - 1)
-                        if not chars[setTo] then isBreak = true break end
-                        chars[setTo] = {unicode.sub(value[3], i, i), getForeCol(i, value[4], true), getBackCol(setTo)}
+                        if not chars[setTo] then
+                            isBreak = true
+                            break
+                        end
+                        local lfore, lforePal
+                        if value[4] == true then
+                            lfore, lforePal = foreground, self.isPal
+                        else
+                            lfore, lforePal = value[4], true
+                        end
+                        chars[setTo] = { unicode.sub(value[3], i, i), getForeCol(i, lfore, lforePal), getBackCol(setTo) }
                     end
                     if isBreak then break end
                 end
             end
 
             if cursorPos then
-                local cursorChar = {graphic.cursorChar, getForeCol(cursorPos, cursorColor), getBackCol(cursorPos)}
+                local cursorChar = { graphic.cursorChar, getForeCol(cursorPos, cursorColor), getBackCol(cursorPos) }
                 if not pcall(table.insert, chars, cursorPos, cursorChar) then
                     table.insert(chars, cursorChar)
                 end
             elseif #chars == 0 and title and titleColor then
                 for i = 1, unicode.len(title) do
-                    table.insert(chars, {unicode.sub(title, i, i), getForeCol(i, titleColor), getBackCol(i)})
+                    table.insert(chars, { unicode.sub(title, i, i), getForeCol(i, titleColor), getBackCol(i) })
                 end
             end
 
@@ -392,40 +403,40 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
             end
 
             --[[
-            if chars[1] then
-                local lines = {{}}
-                for _, chr in ipairs(chars) do
-                    if chr[1] == "\n" then
-                        table.insert(lines, {})
-                    else
-                        table.insert(lines[#lines], chr)
-                    end
-                end
-                while #lines[1] == 0 do
-                    table.remove(lines, 1)
-                    ypos = ypos + 1
-                end
+			if chars[1] then
+				local lines = {{}}
+				for _, chr in ipairs(chars) do
+					if chr[1] == "\n" then
+						table.insert(lines, {})
+					else
+						table.insert(lines[#lines], chr)
+					end
+				end
+				while #lines[1] == 0 do
+					table.remove(lines, 1)
+					ypos = ypos + 1
+				end
 
-                if lines[1][1] then
-                    for offY, line in ipairs(lines) do
-                        for offX, chr in ipairs(line) do
-                            local placeX = (xpos + offX + offsetX) - 1
-                            local placeY = (ypos + offY + offsetY) - 1
-                            if placeX >= xpos and placeX < xpos + sizeX then
-                                if placeY >= ypos and placeY < ypos + sizeY then
-                                    gpu.setForeground(chr[2], self.isPal)
-                                    gpu.setBackground(chr[3], self.isPal)
-                                    gpu.set(placeX, placeY, chr[1])
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-            ]]
+				if lines[1][1] then
+					for offY, line in ipairs(lines) do
+						for offX, chr in ipairs(line) do
+							local placeX = (xpos + offX + offsetX) - 1
+							local placeY = (ypos + offY + offsetY) - 1
+							if placeX >= xpos and placeX < xpos + sizeX then
+								if placeY >= ypos and placeY < ypos + sizeY then
+									gpu.setForeground(chr[2], self.isPal)
+									gpu.setBackground(chr[3], self.isPal)
+									gpu.set(placeX, placeY, chr[1])
+								end
+							end
+						end
+					end
+				end
+			end
+			]]
 
             if chars[1] then
-                local lines = {{}}
+                local lines = { {} }
                 for _, chr in ipairs(chars) do
                     if chr[1] == "\n" then
                         table.insert(lines, {})
@@ -448,12 +459,12 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                         for offX, chr in ipairs(line) do
                             if oldFore ~= chr[2] or oldBack ~= chr[3] or ypos ~= oldY then
                                 --[[
-                                local lmax = xpos + (unicode.len(buff) - 1)
-                                if lmax > maxX then
-                                    buff = unicode.sub(buff, 1, math.clamp(unicode.len(buff) - (lmax - maxX), 0, math.huge))
-                                end
-                                if ypos <= maxY then
-                                    ]]
+								local lmax = xpos + (unicode.len(buff) - 1)
+								if lmax > maxX then
+									buff = unicode.sub(buff, 1, math.clamp(unicode.len(buff) - (lmax - maxX), 0, math.huge))
+								end
+								if ypos <= maxY then
+									]]
                                 gpu.setForeground(oldFore, self.isPal)
                                 gpu.setBackground(oldBack, self.isPal)
 
@@ -469,7 +480,7 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                                     end
                                     gpu.set(xplace, yplace, buff)
                                 end
-                                    --graphic._set(gpu, xpos, ypos, oldBack, self.isPal, oldFore, self.isPal, buff)
+                                --graphic._set(gpu, xpos, ypos, oldBack, self.isPal, oldFore, self.isPal, buff)
                                 --end
 
                                 buff = ""
@@ -481,12 +492,12 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                             buff = buff .. chr[1]
                         end
                         --[[
-                        local lmax = xpos + (unicode.len(buff) - 1)
-                        if lmax > maxX then
-                            buff = unicode.sub(buff, 1, math.clamp(unicode.len(buff) - (lmax - maxX), 0, math.huge))
-                        end
-                        if ypos <= maxY then
-                        ]]
+						local lmax = xpos + (unicode.len(buff) - 1)
+						if lmax > maxX then
+							buff = unicode.sub(buff, 1, math.clamp(unicode.len(buff) - (lmax - maxX), 0, math.huge))
+						end
+						if ypos <= maxY then
+						]]
                         gpu.setForeground(oldFore, self.isPal)
                         gpu.setBackground(oldBack, self.isPal)
 
@@ -502,9 +513,9 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
                             end
                             gpu.set(xplace, yplace, buff)
                         end
-                            --graphic._set(gpu, xpos, ypos, oldBack, self.isPal, oldFore, self.isPal, buff)
+                        --graphic._set(gpu, xpos, ypos, oldBack, self.isPal, oldFore, self.isPal, buff)
                         --end
-                    
+
                         ypos = ypos + 1
                         xpos = self.x + (x - 1)
                         buff = ""
@@ -606,205 +617,234 @@ local function readNoDraw(self, x, y, sizeX, background, foreground, preStr, hid
         redraw()
     end
 
-    return {setLock = function(lock)
-        lockState = lock
-    end, getLock = function()
-        return not not lockState
-    end, uploadEvent = function(eventData) --по идеи сюда нужно закидывать эвенты которые прошли через window:uploadEvent
-        --вызывайте функцию и передавайте туда эвенты которые сами читаете, 
-        --если функция чтото вернет, это результат, если он TRUE(не false) значет было нажато ctrl+w
+    return {
+        setLock = function(lock)
+            lockState = lock
+        end,
+        getLock = function()
+            return not not lockState
+        end,
+        uploadEvent = function(eventData) --по идеи сюда нужно закидывать эвенты которые прошли через window:uploadEvent
+            --вызывайте функцию и передавайте туда эвенты которые сами читаете,
+            --если функция чтото вернет, это результат, если он TRUE(не false) значет было нажато ctrl+w
 
-        if lockState then return end
+            if lockState then return end
 
-        if not eventData.windowEventData then --если это не эвент окна то делаем его таковым(потому что я криворукий и забываю об этом постоянно)
-            eventData = self:uploadEvent(eventData)
-        end
+            if not eventData.windowEventData then --если это не эвент окна то делаем его таковым(потому что я криворукий и забываю об этом постоянно)
+                eventData = self:uploadEvent(eventData)
+            end
 
-        if clickCheck then
-            if self.selected then
-                if eventData[1] == "touch" and eventData[2] == self.screen and eventData[5] == 0 then
-                    removeSelect()
-                    if eventData[3] >= x and eventData[3] < x + sizeX and eventData[4] == y then
-                        allowUse = true
-                        redraw()
-                    else
-                        allowUse = false
-                        redraw()
+            if clickCheck then
+                if self.selected then
+                    if eventData[1] == "touch" and eventData[2] == self.screen and eventData[5] == 0 then
+                        removeSelect()
+                        if eventData[3] >= x and eventData[3] < x + sizeX and eventData[4] == y then
+                            allowUse = true
+                            redraw()
+                        else
+                            allowUse = false
+                            redraw()
+                        end
                     end
+                elseif allowUse then
+                    removeSelect()
+                    allowUse = false
+                    redraw()
                 end
-            elseif allowUse then
+            elseif self.selected ~= allowUse then
                 removeSelect()
-                allowUse = false
+                allowUse = not not self.selected
                 redraw()
             end
-        elseif self.selected ~= allowUse then
-            removeSelect()
-            allowUse = not not self.selected
-            redraw()
-        end
 
-        if allowUse then
-            if eventData[1] == "key_down" then
-                if eventData[4] == 28 then
-                    historyIndex = nil
+            if allowUse then
+                if eventData[1] == "key_down" then
+                    if eventData[4] == 28 then
+                        historyIndex = nil
 
-                    if isMultiline then
-                        add("\n")
-                    else
-                        local newBuff = buffer .. lastBuffer
-                        removeSelect()
-                        addToHistory(newBuff)
-                        outFromRead()
-                        return newBuff
-                    end
-                elseif eventData[4] == 200 then --up
-                    if isMultiline then
-                        local cursorPos = #buffer + 1
+                        if isMultiline then
+                            add("\n")
+                        else
+                            local newBuff = buffer .. lastBuffer
+                            removeSelect()
+                            addToHistory(newBuff)
+                            outFromRead()
+                            return newBuff
+                        end
+                    elseif eventData[4] == 200 then --up
+                        if isMultiline then
+                            local cursorPos = #buffer + 1
 
-                        --need write movment code
+                            --need write movment code
 
-                        local newBuff = buffer .. lastBuffer
-                        buffer = newBuff:sub(1, cursorPos - 1)
-                        lastBuffer = newBuff:sub(cursorPos, #newBuff)
-                        redraw()
-                    else
-                        if not disHistory then
-                            historyIndex = (historyIndex or 0) + 1
-                            if not graphic.inputHistory[historyIndex] then
-                                historyIndex = #graphic.inputHistory
+                            local newBuff = buffer .. lastBuffer
+                            buffer = newBuff:sub(1, cursorPos - 1)
+                            lastBuffer = newBuff:sub(cursorPos, #newBuff)
+                            redraw()
+                        else
+                            if not disHistory then
+                                historyIndex = (historyIndex or 0) + 1
+                                if not graphic.inputHistory[historyIndex] then
+                                    historyIndex = #graphic.inputHistory
+                                end
+                                if graphic.inputHistory[historyIndex] then
+                                    buffer = graphic.inputHistory[historyIndex]
+                                    lastBuffer = ""
+                                    removeSelect()
+                                    redraw()
+                                else
+                                    historyIndex = nil
+                                end
                             end
-                            if graphic.inputHistory[historyIndex] then
+                        end
+                    elseif eventData[4] == 208 then --down
+                        if not disHistory and historyIndex then
+                            if graphic.inputHistory[historyIndex - 1] then
+                                historyIndex = historyIndex - 1
                                 buffer = graphic.inputHistory[historyIndex]
                                 lastBuffer = ""
-                                removeSelect()
-                                redraw()
                             else
                                 historyIndex = nil
+                                buffer = ""
+                                lastBuffer = ""
                             end
+                            removeSelect()
+                            redraw()
+                        end
+                    elseif eventData[4] == 203 then -- <
+                        if selectFrom then
+                            lastBuffer = removeSelectedContent()
+                        elseif unicode.len(buffer) > 0 then
+                            lastBuffer = unicode.sub(buffer, -1, -1) .. lastBuffer
+                            buffer = unicode.sub(buffer, 1, unicode.len(buffer) - 1)
+                        end
+                        redraw()
+                    elseif eventData[4] == 205 then -- >
+                        if selectFrom then
+                            buffer = removeSelectedContent()
+                        elseif unicode.len(lastBuffer) > 0 then
+                            buffer = buffer .. unicode.sub(lastBuffer, 1, 1)
+                            lastBuffer = unicode.sub(lastBuffer, 2, unicode.len(lastBuffer))
+                        end
+                        redraw()
+                    elseif eventData[4] == 14 then --backspace
+                        historyIndex = nil
+
+                        if selectFrom then
+                            removeSelectedContent()
+                        elseif unicode.len(buffer) > 0 then
+                            buffer = unicode.sub(buffer, 1, unicode.len(buffer) - 1)
+                            removeSelect()
+                        end
+                        redraw()
+                    elseif eventData[3] == 23 and eventData[4] == 17 then --ctrl+w
+                        historyIndex = nil
+                        removeSelect()
+                        outFromRead()
+                        return true                      --exit ctrl+w
+                    elseif eventData[3] == 1 and eventData[4] == 30 then --ctrl+a
+                        buffer = buffer .. lastBuffer
+                        lastBuffer = ""
+                        selectFrom = 1
+                        selectTo = unicode.len(buffer)
+                        redraw()
+                    elseif eventData[3] == 3 and eventData[4] == 46 then --ctrl+c
+                        if selectFrom and not disableClipboard then
+                            clipboardlib.set(eventData[5], unicode.sub(buffer .. lastBuffer, selectFrom, selectTo))
+                        end
+                    elseif eventData[3] == 24 and eventData[4] == 45 then --ctrl+x
+                        if selectFrom then
+                            clipboardlib.set(eventData[5], removeSelectedContent())
+                            redraw()
+                        end
+                    elseif eventData[3] == 22 and eventData[4] == 47 then --вставка с системного clipboard
+                        local str = clipboard(clipboardlib.get(eventData[5]))
+                        if str then
+                            outFromRead()
+                            return str
+                        end
+                    elseif eventData[4] == 211 then --del
+                        historyIndex = nil
+
+                        if selectFrom then
+                            removeSelectedContent()
+                            redraw()
+                        elseif unicode.len(lastBuffer) > 0 then
+                            lastBuffer = unicode.sub(lastBuffer, 2, unicode.len(lastBuffer))
+                            removeSelect()
+                            redraw()
+                        end
+                    elseif eventData[4] == 15 then --tab
+                        add("  ")
+                    elseif eventData[3] > 0 then --any char
+                        historyIndex = nil
+                        local char = unicode.char(eventData[3])
+                        if not unicode.isWide(char) and wlCheck(char) then
+                            add(char)
                         end
                     end
-                elseif eventData[4] == 208 then --down
-                    if not disHistory and historyIndex then
-                        if graphic.inputHistory[historyIndex - 1] then
-                            historyIndex = historyIndex - 1
-                            buffer = graphic.inputHistory[historyIndex]
-                            lastBuffer = ""
-                        else
-                            historyIndex = nil
-                            buffer = ""
-                            lastBuffer = ""
-                        end
-                        removeSelect()
-                        redraw()
+                elseif eventData[1] == "clipboard" then --вставка с реального clipboard
+                    local str = clipboard(eventData[3])
+                    if str then
+                        outFromRead()
+                        return str
                     end
-                elseif eventData[4] == 203 then -- <
-                    if selectFrom then
-                        lastBuffer = removeSelectedContent()
-                    elseif unicode.len(buffer) > 0 then
-                        lastBuffer = unicode.sub(buffer, -1, -1) .. lastBuffer
-                        buffer = unicode.sub(buffer, 1, unicode.len(buffer) - 1)
-                    end
-                    redraw()
-                elseif eventData[4] == 205 then -- >
-                    if selectFrom then
-                        buffer = removeSelectedContent()
-                    elseif unicode.len(lastBuffer) > 0 then
-                        buffer = buffer .. unicode.sub(lastBuffer, 1, 1)
-                        lastBuffer = unicode.sub(lastBuffer, 2, unicode.len(lastBuffer))
-                    end
-                    redraw()
-                elseif eventData[4] == 14 then --backspace
-                    historyIndex = nil
-
-                    if selectFrom then
-                        removeSelectedContent()
-                    elseif unicode.len(buffer) > 0 then
-                        buffer = unicode.sub(buffer, 1, unicode.len(buffer) - 1)
-                        removeSelect()
-                    end
-                    redraw()
-                elseif eventData[3] == 23 and eventData[4] == 17 then --ctrl+w
-                    historyIndex = nil
-                    removeSelect()
-                    outFromRead()
-                    return true --exit ctrl+w
-                elseif eventData[3] == 1 and eventData[4] == 30 then --ctrl+a
-                    buffer = buffer .. lastBuffer
-                    lastBuffer = ""
-                    selectFrom = 1
-                    selectTo = unicode.len(buffer)
-                    redraw()
-                elseif eventData[3] == 3 and eventData[4] == 46 then --ctrl+c
-                    if selectFrom and not disableClipboard then
-                        clipboardlib.set(eventData[5], unicode.sub(buffer .. lastBuffer, selectFrom, selectTo))
-                    end
-                elseif eventData[3] == 24 and eventData[4] == 45 then --ctrl+x
-                    if selectFrom then
-                        clipboardlib.set(eventData[5], removeSelectedContent())
-                        redraw()
-                    end
-                elseif eventData[3] == 22 and eventData[4] == 47 then --вставка с системного clipboard
-                    local str = clipboard(clipboardlib.get(eventData[5]))
-                    if str then outFromRead() return str end
-                elseif eventData[4] == 211 then  --del
-                    historyIndex = nil
-
-                    if selectFrom then
-                        removeSelectedContent()
-                        redraw()
-                    elseif unicode.len(lastBuffer) > 0 then
-                        lastBuffer = unicode.sub(lastBuffer, 2, unicode.len(lastBuffer))
-                        removeSelect()
-                        redraw()
-                    end
-                elseif eventData[4] == 15 then --tab
-                    add("  ")
-                elseif eventData[3] > 0 then --any char
-                    historyIndex = nil
-                    local char = unicode.char(eventData[3])
-                    if not unicode.isWide(char) and wlCheck(char) then
-                        add(char)
+                elseif eventData[1] == "softwareInsert" then --для подключения виртуальных клавиатур
+                    local str = clipboard(eventData[3], true)
+                    if str then
+                        outFromRead()
+                        return str
                     end
                 end
-            elseif eventData[1] == "clipboard" then --вставка с реального clipboard
-                local str = clipboard(eventData[3])
-                if str then outFromRead() return str end
-            elseif eventData[1] == "softwareInsert" then --для подключения виртуальных клавиатур
-                local str = clipboard(eventData[3], true)
-                if str then outFromRead() return str end
             end
+        end,
+        redraw = redraw,
+        getBuffer = function()
+            return buffer .. lastBuffer
+        end,
+        setBuffer = function(v)
+            buffer = v
+            lastBuffer = ""
+        end,
+        setAllowUse = function(state)
+            allowUse = state
+        end,
+        getAllowUse = function()
+            return allowUse
+        end,
+        setClickCheck = function(state)
+            clickCheck = state
+        end,
+        getClickCheck = function()
+            return clickCheck
+        end,
+        add = add,
+        setOffset = function(x, y)
+            offsetX = x
+            offsetY = y
+        end,
+        getOffset = function()
+            return offsetX, offsetY
+        end,
+        setAllowHistory = function(allow)
+            disHistory = not allow
+        end,
+        setAllowClipboard = function(allow)
+            disableClipboard = not allow
+        end,
+        setMaxStringLen = function(max)
+            maxDataSize = max
+        end,
+        setTitle = function(t, tc)
+            title, titleColor = t, tc
+        end,
+        setWhitelist = function(list)
+            whitelist = list
+        end,
+        setDrawLock = function(state)
+            drawLock = state
         end
-    end, redraw = redraw, getBuffer = function()
-        return buffer .. lastBuffer
-    end, setBuffer = function(v)
-        buffer = v
-        lastBuffer = ""
-    end, setAllowUse = function(state)
-        allowUse = state
-    end, getAllowUse = function ()
-        return allowUse
-    end, setClickCheck = function (state)
-        clickCheck = state
-    end, getClickCheck = function ()
-        return clickCheck
-    end, add = add, setOffset = function (x, y)
-        offsetX = x
-        offsetY = y
-    end, getOffset = function ()
-        return offsetX, offsetY
-    end, setAllowHistory = function (allow)
-        disHistory = not allow
-    end, setAllowClipboard = function (allow)
-        disableClipboard = not allow
-    end, setMaxStringLen = function (max)
-        maxDataSize = max
-    end, setTitle = function (t, tc)
-        title, titleColor = t, tc
-    end, setWhitelist = function(list)
-        whitelist = list
-    end, setDrawLock = function(state)
-        drawLock = state
-    end}
+    }
 end
 
 local function read(...)
@@ -1007,7 +1047,7 @@ function graphic.findGpuAddress(screen, topOnly)
             end
         end
     end
-    
+
     if not topOnly then
         check()
     end
@@ -1123,7 +1163,7 @@ function graphic.setResolution(screen, x, y)
                     table.insert(palette, graphic.getPaletteColor(screen, i) or 0)
                 end
             end
-            
+
             local newBuffer = gpu.allocateBuffer(x, y)
             if newBuffer then
                 graphic.screensBuffers[screen] = newBuffer
@@ -1136,7 +1176,7 @@ function graphic.setResolution(screen, x, y)
                     for i, color in ipairs(palette) do
                         gpu.setPaletteColor(i - 1, color)
                     end
-                    
+
                     gpu.setActiveBuffer(newBuffer)
                     for i, color in ipairs(palette) do
                         gpu.setPaletteColor(i - 1, color)
@@ -1191,14 +1231,14 @@ function graphic.setPalette(screen, palette, fromZero)
     local gpu = graphic.findGpu(screen)
     if gpu then
         local from = fromZero and 0 or 1
-        
+
         local function set()
             for i = from, from + 15 do
                 local index = i
                 if not fromZero then
                     index = i - 1
                 end
-                
+
                 if gpu.getPaletteColor(index) ~= palette[i] then
                     gpu.setPaletteColor(index, palette[i])
                 end
@@ -1363,7 +1403,7 @@ function graphic.saveGpuSettings(gpu)
 
     local screen = gpu.getScreen()
     if not screen then
-        return function () end
+        return function() end
     end
 
     local palette = graphic.getPalette(screen)
@@ -1371,7 +1411,7 @@ function graphic.saveGpuSettings(gpu)
     local rx, ry = gpu.getResolution()
     local buffer = gpu.getActiveBuffer and gpu.getActiveBuffer()
 
-    return function ()
+    return function()
         graphic.setPalette(screen, palette)
         gpu.setDepth(depth)
         gpu.setResolution(rx, ry)

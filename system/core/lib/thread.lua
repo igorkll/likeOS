@@ -10,7 +10,7 @@ function thread.decode(th)
         error("thread.decode only works with dead thread", 2)
     end
 
-    local out = th.out or {true}
+    local out = th.out or { true }
     if out[1] then
         return table.unpack(out)
     else
@@ -21,7 +21,7 @@ end
 function thread.stub(func, ...)
     local th = thread.create(func, ...)
     th:resume()
-    
+
     while th:status() ~= "dead" do
         event.yield()
     end
@@ -30,7 +30,7 @@ function thread.stub(func, ...)
 end
 
 function thread.xpcall(co, ...)
-    local output = {system.checkExitinfo(coroutine.resume(co, ...))}
+    local output = { system.checkExitinfo(coroutine.resume(co, ...)) }
     if not output[1] then
         return nil, output[2], debug.traceback(co)
     end
@@ -61,7 +61,7 @@ end
 
 function thread.all()
     local list = {}
-    
+
     local function find(tbl)
         local parsetbl = tbl.childs
         if not parsetbl then parsetbl = tbl end
@@ -100,7 +100,7 @@ end
 local function create(func, ...)
     local t = coroutine.create(func)
     local obj = {
-        args = {...},
+        args = { ... },
         childs = {},
         thread = t,
         enable = false,
@@ -166,7 +166,7 @@ local function wait(forAny, threads, timeout)
     local results = {}
     for _, th in ipairs(threads) do
         th:kill()
-        table.insert(results, {th:decode()})
+        table.insert(results, { th:decode() })
     end
     return results
 end

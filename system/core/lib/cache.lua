@@ -156,7 +156,7 @@ function cache.createHddCache(folder, base)
         tbl = base
         tbl._folder = paths.canonical(folder)
     else
-        tbl = {_folder = paths.canonical(folder)}
+        tbl = { _folder = paths.canonical(folder) }
     end
     return setmetatable(tbl, cache.hddCacheMt)
 end
@@ -183,8 +183,8 @@ function cache.clearCache()
     cache.cache = {}
 end
 
-cache.cache = {} --can be cleaned at any time
-cache.static = {} --can write the data of the unloadable library in order not to lose it when unloading
+cache.cache = {}                                --can be cleaned at any time
+cache.static = {}                               --can write the data of the unloadable library in order not to lose it when unloading
 cache.data = cache.createHddCache(runtimeCache) --it can be cached on the hard disk if there is a lack of RAM
 
 return cache

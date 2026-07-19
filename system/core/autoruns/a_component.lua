@@ -215,7 +215,7 @@ local function onComponentRemoved(_, address, componentType)
     end
 end
 
-event.hyperListen(function (eventType, ...)
+event.hyperListen(function(eventType, ...)
     if eventType == "component_added" then
         pcall(onComponentAdded, eventType, ...)
     elseif eventType == "component_removed" then

@@ -32,9 +32,10 @@ local function runThreads(eventData)
                     v.thread = nil
                     v.dead = true
                 elseif v.enable then --если поток спит или умер то его потомки так-же не будут работать
-                    v.out = {thread.xpcall(v.thread, table.unpack(v.args or eventData))}
+                    v.out = { thread.xpcall(v.thread, table.unpack(v.args or eventData)) }
                     if not v.out[1] then
-                        event.errLog("thread error: " .. tostring(v.out[2] or "unknown") .. "\n" .. tostring(v.out[3] or "unknown"))
+                        event.errLog("thread error: " ..
+                        tostring(v.out[2] or "unknown") .. "\n" .. tostring(v.out[3] or "unknown"))
                     end
 
                     v.args = nil
@@ -77,7 +78,7 @@ function event.sleep(waitTime)
 
     local startTime = computer.uptime()
     repeat
-        computer.pullSignal(waitTime - (computer.uptime() - startTime))
+        computer.pullSignal(math.max(waitTime - (computer.uptime() - startTime), 0))
     until computer.uptime() - startTime >= waitTime
 end
 
@@ -91,7 +92,7 @@ function event.events(timeout, types, maxcount) --получает эвенты 
     local lastEventTime = computer.uptime()
     while true do
         local ctime = computer.uptime()
-        local eventData = {computer.pullSignal(timeout)}
+        local eventData = { computer.pullSignal(timeout) }
         if #eventData > 0 and (not types or types[eventData[1]]) then
             lastEventTime = ctime
             table.insert(eventList, eventData)
@@ -112,14 +113,15 @@ end
 function event.listen(eventType, func, th)
     checkArg(1, eventType, "string", "nil")
     checkArg(2, func, "function")
-    return tableInsert(event.listens, {th = th, eventType = eventType, func = func, type = true}) --нет класический table.insert не подайдет, так как он не дает понять, нуда вставил значения
+    return tableInsert(event.listens, { th = th, eventType = eventType, func = func, type = true }) --нет класический table.insert не подайдет, так как он не дает понять, нуда вставил значения
 end
 
 function event.timer(time, func, times, th)
     checkArg(1, time, "number")
     checkArg(2, func, "function")
     checkArg(3, times, "number", "nil")
-    return tableInsert(event.listens, {th = th, time = time, func = func, times = times or 1, lastTime = computer.uptime(), type = false})
+    return tableInsert(event.listens,
+        { th = th, time = time, func = func, times = times or 1, lastTime = computer.uptime(), type = false })
 end
 
 function event.cancel(num)
@@ -147,12 +149,12 @@ function event.pull(waitTime, ...) --реализует фильтер
     if filters.n == 0 then
         return computer.pullSignal(waitTime)
     end
-    
+
     local startTime = computer.uptime()
     while true do
         local ltime = waitTime - (computer.uptime() - startTime)
         if ltime <= 0 then break end
-        local eventData = {computer.pullSignal(ltime)}
+        local eventData = { computer.pullSignal(ltime) }
 
         local ok = true
         for i = 1, filters.n do
@@ -187,7 +189,7 @@ local function computer_pullSignal(...)
 end
 
 function computer.pushSignal(...)
-    insert(customQueue, {...})
+    insert(customQueue, { ... })
 end
 
 ------------------------------------------------------------------------ hyper methods
@@ -200,8 +202,8 @@ function event.hyperListen(func)
     checkArg(1, func, "function")
     local pullSignal = computer_pullSignal
     local unpack = table.unpack
-    computer_pullSignal = function (time)
-        local eventData = {pullSignal(time)}
+    computer_pullSignal = function(time)
+        local eventData = { pullSignal(time) }
         func(unpack(eventData))
         return unpack(eventData)
     end
@@ -210,7 +212,7 @@ end
 function event.hyperTimer(func)
     checkArg(1, func, "function")
     local pullSignal = computer_pullSignal
-    computer_pullSignal = function (time)
+    computer_pullSignal = function(time)
         func()
         return pullSignal(time)
     end
@@ -219,7 +221,7 @@ end
 function event.hyperHook(func)
     checkArg(1, func, "function")
     local pullSignal = computer_pullSignal
-    computer_pullSignal = function (time)
+    computer_pullSignal = function(time)
         return func(pullSignal(time))
     end
 end
@@ -227,7 +229,7 @@ end
 function event.hyperCustom(func)
     checkArg(1, func, "function")
     local pullSignal = computer_pullSignal
-    computer_pullSignal = function (time)
+    computer_pullSignal = function(time)
         return func(pullSignal, time)
     end
 end
@@ -282,9 +284,9 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
 
         local eventData
         if current then
-            eventData = {coroutine.yield()}
+            eventData = { coroutine.yield() }
         else
-            eventData = {computer_pullSignal(realWaitTime)} --обязательно повисеть в pullSignal
+            eventData = { computer_pullSignal(realWaitTime) } --обязательно повисеть в pullSignal
             if not isListen then
                 runThreads(eventData)
             end
@@ -294,9 +296,10 @@ function computer.pullSignal(waitTime) --кастомный pullSignal для р
         for k, v in pairs(event.listens) do --таймеры. нет ipairs неподайдет, там могут быть дырки
             if not v.type and not v.killed and v.th == current then
                 if not v.th or v.th:status() == "running" then
-                    local uptime = computer.uptime() 
+                    local uptime = computer.uptime()
                     if uptime - v.lastTime >= v.time then
-                        v.lastTime = uptime --ДО выполнения функции ресатаем таймер, чтобы тайминги не поплывали при долгих функциях
+                        v.lastTime =
+                        uptime --ДО выполнения функции ресатаем таймер, чтобы тайминги не поплывали при долгих функциях
                         if v.times <= 0 then
                             v.killed = true
                             event.listens[k] = nil
@@ -336,7 +339,7 @@ end
 ------------------------------------------------------------------------ shutdown processing
 
 local shutdownHandlers = {
-    [function ()
+    [function()
         local gpu = component.getReal("gpu", true)
 
         if gpu then
@@ -368,6 +371,10 @@ end
 local shutdown = computer.shutdown
 function computer.shutdown(mode)
     if mode == "recovery" then
+        if not fs.exists("/tmp/bootloader/bootaddr") then
+            fs.writeFile("/tmp/bootloader/bootaddr", require("bootloader").bootaddress)
+        end
+
         local graphic = package.get("graphic")
         if graphic then
             fs.writeFile("/tmp/bootloader/recovery", graphic.lastScreen or "")
@@ -375,6 +382,9 @@ function computer.shutdown(mode)
             fs.writeFile("/tmp/bootloader/recovery", "")
         end
     elseif mode == "fast" then
+        if not fs.exists("/tmp/bootloader/bootaddr") then
+            fs.writeFile("/tmp/bootloader/bootaddr", require("bootloader").bootaddress)
+        end
         fs.writeFile("/tmp/bootloader/noRecovery", "")
     elseif mode == "faster" then
         mode = "fast"

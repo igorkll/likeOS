@@ -10,11 +10,13 @@ local filesystem = {}
 filesystem.bootaddress = bootloader.bootaddress
 filesystem.tmpaddress = bootloader.tmpaddress
 filesystem.baseFileDirectorySize = 512 --задаеться к конфиге мода(по умалчанию 512 байт)
+filesystem.openHooks = {}
 
-local srvList = {"/.data"}
+local srvList = { "/.data" }
 local mountList = {}
 local virtualDirectories = {}
 local forceMode = false
+local xorfsData = {}
 
 local function startSlash(path)
     if unicode.sub(path, 1, 1) ~= "/" then
@@ -59,19 +61,43 @@ end
 local function recursionDeleteAttribute(path)
     for _, fullpath in filesystem.recursion(path) do
         filesystem.clearAttributes(fullpath)
+        xorfsData[fullpath] = nil
     end
 end
 
 local function recursionCloneAttribute(path, path2)
     forceMode = true
     for lpath, fullpath in filesystem.recursion(path) do
-        local ok, err = filesystem.setAttributes(paths.concat(path2, lpath), filesystem.getAttributes(fullpath), true)
+        local newPath = paths.concat(path2, lpath)
+        xorfsData[newPath] = xorfsData[fullpath]
+        local ok, err = filesystem.setAttributes(newPath, filesystem.getAttributes(fullpath), true)
         if not ok then
             forceMode = false
             return nil, err
         end
     end
     forceMode = false
+end
+
+local function startwith(str, startCheck)
+    return unicode.sub(str, 1, unicode.len(startCheck)) == startCheck
+end
+
+local function getXorCode(path)
+    path = filesystem.mntPath(path)
+    if not path then return end
+    while true do
+        if xorfsData[path] then
+            if type(xorfsData[path]) == "function" then
+                return xorfsData[path]()
+            end
+            return xorfsData[path]
+        end
+        path = paths.path(path)
+        if path == "/mnt" then
+            return
+        end
+    end
 end
 
 ------------------------------------ mounting functions
@@ -95,7 +121,7 @@ function filesystem.mount(proxy, path)
         end
     end
 
-    table.insert(mountList, {proxy, path, {}})
+    table.insert(mountList, { proxy, path, {} })
     table.sort(mountList, function(a, b) --просто нужно, иначе все по бараде пойдет
         return unicode.len(a[2]) > unicode.len(b[2])
     end)
@@ -128,7 +154,7 @@ function filesystem.umount(pathOrProxy)
     end
 end
 
-function filesystem.mounts()
+function filesystem.mounts(priority)
     local list = {}
     for i, v in ipairs(mountList) do
         local proxy, path = v[1], v[2]
@@ -137,14 +163,46 @@ function filesystem.mounts()
         list[proxy] = v
         list[i] = v
     end
+    if priority then
+        for i, v in ipairs(mountList) do
+            local proxy, path = v[1], v[2]
+            if startwith(path, endSlash(priority)) then
+                list[path] = v
+                list[proxy.address] = v
+                list[proxy] = v
+                list[i] = v
+            end
+        end
+        if paths.equals(priority, "/mnt") then
+            for i, v in ipairs(mountList) do
+                local proxy, path = v[1], v[2]
+                if paths.equals(path, "/mnt/root") or paths.equals(path, "/mnt/tmpfs") then
+                    list[path] = v
+                    list[proxy.address] = v
+                    list[proxy] = v
+                    list[i] = v
+                end
+            end
+        end
+    end
     return list
 end
 
 function filesystem.point(addressOrProxy)
-    local mounts = filesystem.mounts()
+    local mounts = filesystem.mounts("/mnt")
     if mounts[addressOrProxy] then
         return noEndSlash(mounts[addressOrProxy][2])
     end
+end
+
+function filesystem.mntPath(path) --tries to find the path to the disk in the mnt folder where other mount points will not interfere
+    path = paths.absolute(path)
+    if startwith(path, "/mnt/") then return path end
+    local proxy = filesystem.get(path)
+    if not proxy then return end
+    local mntPath = filesystem.point(proxy)
+    if not mntPath or not startwith(mntPath, "/mnt/") then return end
+    return paths.concat(mntPath, path)
 end
 
 function filesystem.get(path, allowProxy)
@@ -164,7 +222,7 @@ function filesystem.get(path, allowProxy)
 
     -- find from path
     path = endSlash(paths.absolute(path))
-    
+
     for i = #mountList, 1, -1 do
         local mount = mountList[i]
         if not mount[1].virtual and component.isConnected and not component.isConnected(mount[1]) then
@@ -174,7 +232,8 @@ function filesystem.get(path, allowProxy)
 
     for i = 1, #mountList do
         if unicode.sub(path, 1, unicode.len(mountList[i][2])) == mountList[i][2] then
-            return returnData(noEndSlash(startSlash(unicode.sub(path, unicode.len(mountList[i][2]) + 1, unicode.len(path)))), i)
+            return returnData(
+            noEndSlash(startSlash(unicode.sub(path, unicode.len(mountList[i][2]) + 1, unicode.len(path)))), i)
         end
     end
 
@@ -190,7 +249,7 @@ function filesystem.exists(path)
     if virtualDirectories[path] or paths.equals(path, "/") then
         return true
     end
-    
+
     for i, v in ipairs(mountList) do
         if v[2] == path then
             return true
@@ -201,17 +260,17 @@ function filesystem.exists(path)
     return proxy.exists(proxyPath)
 end
 
-function filesystem.size(path)
+function filesystem.size(path, contentOnly)
     local proxy, proxyPath = filesystem.get(path)
     local size, sizeWithBaseCost = 0, 0
     local filesCount, dirsCount = 0, 0
 
     local function recurse(lpath)
-        sizeWithBaseCost = sizeWithBaseCost + filesystem.baseFileDirectorySize
         for _, filename in ipairs(proxy.list(lpath)) do
             local fullpath = paths.concat(lpath, filename)
             if proxy.isDirectory(fullpath) then
                 recurse(fullpath)
+                sizeWithBaseCost = sizeWithBaseCost + filesystem.baseFileDirectorySize
                 dirsCount = dirsCount + 1
             else
                 local lsize = proxy.size(fullpath)
@@ -224,7 +283,10 @@ function filesystem.size(path)
 
     if proxy.isDirectory(proxyPath) then
         recurse(proxyPath)
-        dirsCount = dirsCount + 1
+        if not contentOnly then
+            dirsCount = dirsCount + 1
+            sizeWithBaseCost = sizeWithBaseCost + filesystem.baseFileDirectorySize
+        end
     else
         local lsize = proxy.size(proxyPath)
         size = size + lsize
@@ -340,28 +402,53 @@ function filesystem.rename(fromPath, toPath)
     local fromProxy, fromProxyPath = filesystem.get(fromPath)
     local toProxy, toProxyPath = filesystem.get(toPath)
 
-    recursionCloneAttribute(fromPath, toPath)
-
-    if fromProxy.address == toProxy.address then
-        return ifSuccessful(function() recursionDeleteAttribute(fromPath) end, fromProxy.rename(fromProxyPath, toProxyPath))
+    if fromProxy.address == toProxy.address and getXorCode(fromPath) == getXorCode(toPath) then
+        return ifSuccessful(function()
+            recursionCloneAttribute(fromPath, toPath)
+            recursionDeleteAttribute(fromPath)
+        end, fromProxy.rename(fromProxyPath, toProxyPath))
     else
         local success, err = filesystem.copy(fromPath, toPath)
         if not success then
             return nil, err
         end
-        
-        local success, err = filesystem.remove(fromPath)
-        if not success then
-            return nil, err
-        end
 
-        recursionDeleteAttribute(fromPath)
-        return true
+        return filesystem.remove(fromPath)
     end
 end
 
-function filesystem.open(path, mode, bufferSize)
+local hookBusy = false
+function filesystem.open(path, mode, bufferSize, noXor, noHook)
+    if not filesystem.exists(path) then
+        if not mode and mode:sub(1, 1) == "r" then
+            return nil, "file \"" .. path .. "\" not found"
+        end
+    elseif filesystem.isDirectory(path) then
+        return nil, "\"" .. path .. "\" is directory"
+    end
+
+    if not noHook and not hookBusy then
+        hookBusy = true
+        for hook in pairs(filesystem.openHooks) do
+            local result = hook(path, mode, bufferSize, noXor, noHook)
+            if result then
+                hookBusy = false
+                return table.unpack(result)
+            end
+        end
+        hookBusy = false
+    end
+
     mode = mode or "rb"
+    local xorcode
+    if not noXor then
+        xorcode = getXorCode(path)
+    end
+    local xorfs
+    if xorcode then
+        xorfs = require("xorfs")
+    end
+    local fileOffset = 0
     local proxy, proxyPath = filesystem.get(path)
     local result, reason = proxy.open(proxyPath, mode)
     if result then
@@ -398,6 +485,7 @@ function filesystem.open(path, mode, bufferSize)
                     readsize = 1
                 end
 
+                local out
                 if bufferSize then
                     if not readBuffer then
                         readBuffer = proxy.read(result, bufferSize) or ""
@@ -407,13 +495,23 @@ function filesystem.open(path, mode, bufferSize)
                     readBuffer = tool.sub(readBuffer, readsize + 1, tool.len(readBuffer))
                     if tool.len(readBuffer) == 0 then readBuffer = nil end
                     if tool.len(str) > 0 then
-                        return str
+                        out = str
                     end
                 else
-                    return proxy.read(result, readsize)
+                    out = proxy.read(result, readsize)
                 end
+                if out and xorcode then
+                    out = xorfs.toggleData(out, xorcode, fileOffset)
+                    fileOffset = fileOffset + #out
+                end
+                return out
             end,
             write = function(writedata)
+                if xorcode then
+                    writedata = xorfs.toggleData(writedata, xorcode, fileOffset)
+                    fileOffset = fileOffset + #xorcode
+                end
+
                 if bufferSize then
                     writeBuffer = (writeBuffer or "") .. writedata
                     if tool.len(writeBuffer) > bufferSize then
@@ -430,6 +528,11 @@ function filesystem.open(path, mode, bufferSize)
             seek = function(whence, offset)
                 if whence then
                     readBuffer = nil
+                    if whence == "set" then
+                        fileOffset = offset
+                    elseif whence == "cur" then
+                        fileOffset = fileOffset + offset
+                    end
                     if bufferSize and writeBuffer then
                         proxy.write(result, writeBuffer)
                     end
@@ -447,14 +550,29 @@ function filesystem.open(path, mode, bufferSize)
             --don`t use with buffered mode!
             readAll = function()
                 local buffer = ""
-                repeat
-                    local data = proxy.read(result, math.huge)
-                    buffer = buffer .. (data or "")
-                until not data
+                if xorcode then
+                    repeat
+                        local data = proxy.read(result, math.huge)
+                        if data then
+                            buffer = buffer .. xorfs.toggleData(data, xorcode, fileOffset)
+                            fileOffset = fileOffset + #data
+                        end
+                    until not data
+                else
+                    repeat
+                        local data = proxy.read(result, math.huge)
+                        buffer = buffer .. (data or "")
+                    until not data
+                end
                 return buffer
             end,
             readMax = function()
-                return proxy.read(result, math.huge)
+                local str = proxy.read(result, math.huge)
+                if str and xorcode then
+                    str = xorfs.toggleData(str, xorcode, fileOffset)
+                    fileOffset = fileOffset + #str
+                end
+                return str
             end
         }
         return handle
@@ -466,6 +584,7 @@ function filesystem.copy(fromPath, toPath, fcheck)
     fromPath = paths.absolute(fromPath)
     toPath = paths.absolute(toPath)
     if paths.equals(fromPath, toPath) then return end
+
     local function copyRecursively(fromPath, toPath)
         if not fcheck or fcheck(fromPath, toPath) then
             if filesystem.isDirectory(fromPath) then
@@ -474,7 +593,7 @@ function filesystem.copy(fromPath, toPath, fcheck)
                 local list = filesystem.list(fromPath)
                 for i = 1, #list do
                     local from = paths.concat(fromPath, list[i])
-                    local to =  paths.concat(toPath, list[i])
+                    local to = paths.concat(toPath, list[i])
                     local success, err = copyRecursively(from, to)
                     if not success then
                         return nil, err
@@ -486,7 +605,7 @@ function filesystem.copy(fromPath, toPath, fcheck)
                     local toHandle, err = filesystem.open(toPath, "wb")
                     if toHandle then
                         while true do
-                            local chunk = fromHandle.read(math.huge)
+                            local chunk = fromHandle.readMax()
                             if chunk then
                                 if not toHandle.write(chunk) then
                                     return nil, "failed to write file"
@@ -510,7 +629,8 @@ function filesystem.copy(fromPath, toPath, fcheck)
         return true
     end
 
-    return ifSuccessful(function() recursionCloneAttribute(fromPath, toPath) end, copyRecursively(fromPath, toPath))
+    recursionCloneAttribute(fromPath, toPath)
+    return copyRecursively(fromPath, toPath)
 end
 
 ------------------------------------ additional functions
@@ -531,7 +651,7 @@ end
 function filesystem.readFile(path)
     local file, err = filesystem.open(path, "rb")
     if not file then return nil, err or "unknown error" end
-    local result = {file.readAll()}
+    local result = { file.readAll() }
     file.close()
     return table.unpack(result)
 end
@@ -539,7 +659,7 @@ end
 function filesystem.readSignature(path, size)
     local file, err = filesystem.open(path, "rb")
     if not file then return nil, err or "unknown error" end
-    local result = {file.read(size or 8)}
+    local result = { file.read(size or 8) }
     file.close()
     return table.unpack(result)
 end
@@ -565,7 +685,7 @@ end
 function filesystem.recursion(gpath)
     local function process(lpath)
         local fullpath = paths.concat(gpath, lpath)
-        coroutine.yield({lpath, fullpath})
+        coroutine.yield({ lpath, fullpath })
 
         if filesystem.isDirectory(fullpath) then
             for _, llpath in ipairs(filesystem.list(fullpath)) do
@@ -575,7 +695,7 @@ function filesystem.recursion(gpath)
     end
 
     local t = coroutine.create(process)
-    return function ()
+    return function()
         if coroutine.status(t) ~= "dead" then
             local _, info = coroutine.resume(t, "/")
             if type(info) == "table" then
@@ -659,7 +779,7 @@ function filesystem.dump(gpath, readonly, maxSize, readonlyLabel)
     local maxLabelSize = 24
     local parent = filesystem.get(gpath)
     local proxy = {}
-    
+
     local function repath(path)
         return paths.sconcat(gpath, path) or gpath
     end
@@ -726,15 +846,28 @@ function filesystem.dump(gpath, readonly, maxSize, readonlyLabel)
     end
 
     function proxy.remove(path)
-        return parent.remove(lrepath(path))
-    end
-
-    function proxy.remove(path)
-        return parent.remove(lrepath(path))
+        local newPath = lrepath(path)
+        if paths.equals(newPath, gpath) then
+            local state = true
+            for _, p in ipairs(filesystem.list(gpath, true)) do
+                if not filesystem.remove(p) then
+                    state = false
+                end
+            end
+            return state
+        else
+            return parent.remove(newPath)
+        end
     end
 
     function proxy.getLabel()
-        return readonlyLabel or tostring(filesystem.getAttribute(gpath, "label") or "")
+        local label
+        if type(readonlyLabel) == "string" then
+            label = readonlyLabel
+        else
+            label = tostring(filesystem.getAttribute(gpath, "label") or "")
+        end
+        return label
     end
 
     function proxy.setLabel(label)
@@ -788,7 +921,7 @@ function filesystem.makeVirtualDirectory(path)
     if not filesystem.exists(parentPath) then
         filesystem.makeVirtualDirectory(parentPath)
     end
-    
+
     virtualDirectories[path] = true
     return true
 end
@@ -810,7 +943,8 @@ local function getAttributesPath(path)
     end
     attributeNumber = attributeNumber % 64
 
-    return paths.concat(filesystem.point(proxy.address), paths.concat("/.data", ".attributes" .. tostring(math.round(attributeNumber))))
+    return paths.concat(filesystem.point(proxy.address),
+        paths.concat("/.data", ".attributes" .. tostring(math.round(attributeNumber))))
 end
 
 local function checkGlobalAttributes(proxy, globalAttributes)
@@ -911,15 +1045,13 @@ function filesystem.setAttributes(path, data)
     end
 
     if table.len(data) > 0 then
-        globalAttributes[proxyPath] = {attributesSystemData(path, systemData), data}
+        globalAttributes[proxyPath] = { attributesSystemData(path, systemData), data }
     else
         globalAttributes[proxyPath] = nil
     end
 
     return saveGlobalAttributes(attributesPath, globalAttributes)
 end
-
-
 
 function filesystem.getAttribute(path, key)
     return filesystem.getAttributes(path)[key]
@@ -929,6 +1061,12 @@ function filesystem.setAttribute(path, key, value)
     local data = filesystem.getAttributes(path)
     data[key] = value
     return filesystem.setAttributes(path, data)
+end
+
+------------------------------------ service
+
+function filesystem.regXor(path, xorcode)
+    xorfsData[filesystem.mntPath(path)] = xorcode
 end
 
 ------------------------------------ init
@@ -941,7 +1079,7 @@ function filesystem.init()
     assert(filesystem.mount(filesystem.tmpaddress, "/mnt/tmpfs"))
     assert(filesystem.mount(filesystem.bootaddress, "/mnt/root"))
 
-    require("event").hyperListen(function (eventType, componentUuid, componentType)
+    require("event").hyperListen(function(eventType, componentUuid, componentType)
         if componentType == "filesystem" then
             local path = paths.concat("/mnt", componentUuid)
             if eventType == "component_added" then

@@ -47,7 +47,7 @@ function serialization.serialize(value, pretty)
             table.insert(result_pack, (string.format("%q", current_value):gsub("\\\n", "\\n")))
         elseif
             t == "nil" or t == "boolean" or pretty and (t ~= "table" or (getmetatable(current_value) or {}).__tostring)
-         then
+        then
             table.insert(result_pack, tostring(current_value))
         elseif t == "table" then
             if ts[current_value] then
@@ -82,16 +82,16 @@ function serialization.serialize(value, pretty)
                 local n = 0
                 f =
                     table.pack(
-                    function()
-                        n = n + 1
-                        local k = ks[n]
-                        if k ~= nil then
-                            return k, current_value[k]
-                        else
-                            return nil
+                        function()
+                            n = n + 1
+                            local k = ks[n]
+                            if k ~= nil then
+                                return k, current_value[k]
+                            else
+                                return nil
+                            end
                         end
-                    end
-                )
+                    )
             else
                 f = table.pack(pairs(current_value))
             end
@@ -147,16 +147,16 @@ end
 function serialization.unserialize(data)
     checkArg(1, data, "string")
 
-    local result, reason = load("return " .. data, "=unserialize", nil, {math = {huge = math.huge}})
+    local result, reason = load("return " .. data, "=unserialize", nil, { math = { huge = math.huge } })
     if not result then
         return nil, reason
     end
-    
+
     local ok, output = pcall(result)
     if not ok then
         return nil, output
     end
-    
+
     if type(output) == "table" then
         return output
     end
@@ -165,7 +165,7 @@ end
 
 function serialization.load(path)
     checkArg(1, path, "string")
-    
+
     local content, err = fs.readFile(path)
     if not content then return nil, err end
 

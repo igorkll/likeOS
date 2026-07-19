@@ -3,7 +3,7 @@ local component = component
 local computer = computer
 local unicode = unicode
 
-local screen = ...
+local screen, _, params = ...
 local gpu = component.proxy(component.list("gpu")() or "")
 if not gpu then return end
 
@@ -34,12 +34,12 @@ local function wget(url)
     if handle then
         local data = {}
         while true do
-            local result, reason = handle.read(math.huge) 
+            local result, reason = handle.read(math.huge)
             if result then
                 table.insert(data, result)
             else
                 handle.close()
-                
+
                 if reason then
                     return nil, reason
                 else
@@ -56,15 +56,16 @@ local function getDeviceType()
     local function isType(ctype)
         return component.list(ctype)() and ctype
     end
-    
+
     local function isServer()
         local obj = deviceinfo[computer.address()]
         if obj and obj.description and obj.description:lower() == "server" then
             return "server"
         end
     end
-    
-    return isType("tablet") or isType("microcontroller") or isType("drone") or isType("robot") or isServer() or isType("computer") or "unknown"
+
+    return isType("tablet") or isType("microcontroller") or isType("drone") or isType("robot") or isServer() or
+    isType("computer") or "unknown"
 end
 
 local function invertColor()
@@ -108,7 +109,7 @@ local function menu(label, strs, funcs, withoutBackButton, refresh)
     redraw()
 
     while true do
-        local eventData = {computer.pullSignal()}
+        local eventData = { computer.pullSignal() }
         if eventData[1] == "key_down" and isKeyboard(eventData[2]) then
             if eventData[4] == 28 then
                 if funcs[selected] then
@@ -132,7 +133,7 @@ local function menu(label, strs, funcs, withoutBackButton, refresh)
                 selected = selected - 1
                 if selected < 1 then
                     selected = 1
-                else 
+                else
                     redraw()
                 end
             elseif eventData[4] == 208 then
@@ -169,7 +170,7 @@ local function yesno(title)
             nil,
             nil,
             nil,
-            function ()
+            function()
                 result = true
                 return true
             end
@@ -183,7 +184,7 @@ local function info(strs, withoutWaitEnter)
     clearScreen()
 
     if type(strs) ~= "table" then
-        strs = {strs}
+        strs = { strs }
     end
 
     if not withoutWaitEnter then
@@ -192,9 +193,9 @@ local function info(strs, withoutWaitEnter)
     for i, str in ipairs(strs) do
         centerPrint((centerY + (i - 1)) - math.floor((#strs / 2) + 0.5), tostring(str))
     end
-    
+
     while not withoutWaitEnter do
-        local eventData = {computer.pullSignal()}
+        local eventData = { computer.pullSignal() }
         if eventData[1] == "key_down" and isKeyboard(eventData[2]) then
             if eventData[4] == 28 then
                 break
@@ -217,7 +218,7 @@ local function input(str, hidden)
     draw()
 
     while true do
-        local eventData = {computer.pullSignal()}
+        local eventData = { computer.pullSignal() }
         if isKeyboard(eventData[2]) then
             if eventData[1] == "key_down" then
                 if eventData[4] == 28 then
@@ -250,7 +251,7 @@ local function raw_selectfile(proxy, folder)
     for _, filename in ipairs(list) do
         local path = folder .. filename
         table.insert(files, filename)
-        table.insert(funcs, function (_, nickname)
+        table.insert(funcs, function(_, nickname)
             if proxy.isDirectory(path) then
                 rpath, rname = raw_selectfile(proxy, path)
                 if rpath then
@@ -273,8 +274,10 @@ local function selectFilesystem(callback)
     local function add(addr, label)
         if added[addr] then return end
         added[addr] = true
-        table.insert(files, addr:sub(1, 4) .. " " .. (component.invoke(addr, "getLabel") or "no-label") .. (label and (" " .. label) or ""))
-        table.insert(funcs, function ()
+        table.insert(files,
+            addr:sub(1, 4) ..
+            " " .. (component.invoke(addr, "getLabel") or "no-label") .. (label and (" " .. label) or ""))
+        table.insert(funcs, function()
             return callback(component.proxy(addr))
         end)
     end
@@ -288,7 +291,7 @@ end
 
 local function selectfile()
     local rpath, rproxy, rname
-    selectFilesystem(function (proxy)
+    selectFilesystem(function(proxy)
         rpath, rname = raw_selectfile(proxy)
         if rpath then
             rproxy = proxy
@@ -325,7 +328,7 @@ end
 
 local function micro_userControl(str)
     local function refresh()
-        local strs = {"Add User", "Auto User Add"}
+        local strs = { "Add User", "Auto User Add" }
         local function add(nickname)
             if nickname then
                 local ok, err = computer.addUser(nickname)
@@ -334,17 +337,17 @@ local function micro_userControl(str)
                 end
             end
         end
-        local funcs = {function ()
+        local funcs = { function()
             local name = input("Enter Nickname")
             if name then
                 add(name)
             end
-        end, function (_, nickname)
+        end, function(_, nickname)
             add(nickname)
-        end}
-        for _, nickname in ipairs({computer.users()}) do
+        end }
+        for _, nickname in ipairs({ computer.users() }) do
             table.insert(strs, nickname)
-            table.insert(funcs, function ()
+            table.insert(funcs, function()
                 local ok, err = computer.removeUser(nickname)
                 if not ok then
                     info(err or "Unknown Error")
@@ -370,7 +373,7 @@ local function micro_robotMoving(str)
     centerPrint(centerY + 1, "enter - exit")
 
     while true do
-        local eventData = {computer.pullSignal()}
+        local eventData = { computer.pullSignal() }
         if eventData[1] == "key_down" and isKeyboard(eventData[2]) then
             if eventData[4] == 28 then
                 break
@@ -392,7 +395,7 @@ local function micro_robotMoving(str)
 end
 
 local function micro_microprograms(str)
-    menu(str, 
+    menu(str,
         {
             "User Control",
             "Robot Moving"
@@ -446,6 +449,25 @@ end
 
 -------------------------------------------------------------- menu
 
+local function systemRecoveryScript()
+    local path = bootloader.find("recoveryScript.lua") --скрипт востановления системы, у каждой оськи на базе likeOS должен быть
+    if path then
+        local code, err = bootloader.loadfile(path, nil, createSandbox())
+        if code then
+            code()
+        else
+            info(err or "Unknown Syntax Error")
+        end
+    else
+        info("The System Does Not Provide A Script For Recovery")
+    end
+end
+
+if params.recoveryScript then
+    systemRecoveryScript()
+    return
+end
+
 menu(bootloader.coreversion .. " recovery",
     {
         "Run System Recovery Script",
@@ -457,24 +479,12 @@ menu(bootloader.coreversion .. " recovery",
         "Bootstrap",
         "Shutdown",
         "Info",
-    }, 
+    },
     {
-        function ()
-            local path = bootloader.find("recoveryScript.lua") --скрипт востановления системы, у каждой оськи на базе likeOS должен быть
-            if path then
-                local code, err = bootloader.loadfile(path, nil, createSandbox())
-                if code then
-                    code()
-                else
-                    info(err or "Unknown Syntax Error")
-                end
-            else
-                info("The System Does Not Provide A Script For Recovery")
-            end
-        end,
-        function (str)
+        systemRecoveryScript,
+        function(str)
             if yesno(str) then
-                local result = {bootloader.bootfs.remove("/data")}
+                local result = { bootloader.bootfs.remove("/data") }
                 if not result[1] then
                     info(result[2] or "No Data Partition Found")
                 else
@@ -482,21 +492,21 @@ menu(bootloader.coreversion .. " recovery",
                 end
             end
         end,
-        function ()
+        function()
             local script, nickname = input("script")
             if script then
                 local code, err = load(script, nil, nil, createSandbox())
                 if code then
                     local ok, err = pcall(code, screen, nickname)
                     if not ok then
-                        info({"Script Error", err})
+                        info({ "Script Error", err })
                     end
                 else
-                    info({"Script Error(syntax)", err})
+                    info({ "Script Error(syntax)", err })
                 end
             end
         end,
-        function ()
+        function()
             local url, nickname = input("url")
             if url then
                 local chunk, err = wget(url)
@@ -505,33 +515,33 @@ menu(bootloader.coreversion .. " recovery",
                     if code then
                         local ok, err = pcall(code, screen, nickname)
                         if not ok then
-                            info({"Script Error", err})
+                            info({ "Script Error", err })
                         end
                     else
-                        info({"Script Error(syntax)", err})
+                        info({ "Script Error(syntax)", err })
                     end
                 else
-                    info({"Internet Error", err})
+                    info({ "Internet Error", err })
                 end
             end
         end,
-        function ()
+        function()
             local path, proxy, nickname = selectfile()
             if path then
                 local code, err = loadfile(proxy, path, nil, createSandbox())
                 if code then
                     local ok, err = pcall(code, screen, nickname)
                     if not ok then
-                        info({"Script Error", err})
+                        info({ "Script Error", err })
                     end
                 else
-                    info({"Script Error(syntax)", err})
+                    info({ "Script Error(syntax)", err })
                 end
             end
         end,
         micro_microprograms,
-        function ()
-            info({"Initializing The Kernel", "Please Wait"}, true)
+        function()
+            info({ "Initializing The Kernel", "Please Wait" }, true)
             local result = "Successful Kernel Initialization"
             local ok, err = pcall(bootloader.bootstrap)
             if not ok then
@@ -539,7 +549,7 @@ menu(bootloader.coreversion .. " recovery",
             end
             info(result)
         end,
-        function (str)
+        function(str)
             menu(str,
                 {
                     "Shutdown",
@@ -548,26 +558,26 @@ menu(bootloader.coreversion .. " recovery",
                     "Reboot To Bios",
                 },
                 {
-                    function ()
+                    function()
                         offScreens()
                         computer.shutdown()
                     end,
-                    function ()
+                    function()
                         offScreens()
                         computer.shutdown(true)
                     end,
-                    function ()
+                    function()
                         offScreens()
                         computer.shutdown("fast") --поддерживаеться малым количеством bios`ов(по сути только моими)
                     end,
-                    function ()
+                    function()
                         offScreens()
                         computer.shutdown("bios") --поддерживаеться малым количеством bios`ов(по сути только моими)
                     end
                 }
             )
         end,
-        function ()
+        function()
             local deviceType = getDeviceType()
             local function short(str)
                 str = tostring(str)
@@ -578,19 +588,21 @@ menu(bootloader.coreversion .. " recovery",
             end
 
             local ramSize = tostring(math.floor((computer.totalMemory() / 1024) + 0.5)) .. "KB"
-            ramSize = ramSize .. " / " .. tostring(math.floor(((computer.totalMemory() - computer.freeMemory()) / 1024) + 0.5)) .. "KB"
+            ramSize = ramSize ..
+            " / " .. tostring(math.floor(((computer.totalMemory() - computer.freeMemory()) / 1024) + 0.5)) .. "KB"
 
             local hddSize = tostring(math.floor((bootloader.bootfs.spaceTotal() / 1024) + 0.5)) .. "KB"
             hddSize = hddSize .. " / " .. tostring(math.floor((bootloader.bootfs.spaceUsed() / 1024) + 0.5)) .. "KB"
 
             local computerAddr = short(computer.address())
-            
+
             info(
                 {
                     "Computer Address: " .. computerAddr,
                     "Disk     Address: " .. short(bootloader.bootfs.address),
                     "Device      Type: " .. short(deviceType .. string.rep(" ", #computerAddr - #deviceType)),
-                    "System  Runlevel: " .. short(bootloader.runlevel .. string.rep(" ", #computerAddr - #bootloader.runlevel)),
+                    "System  Runlevel: " ..
+                    short(bootloader.runlevel .. string.rep(" ", #computerAddr - #bootloader.runlevel)),
                     "Total/Used   RAM: " .. ramSize .. string.rep(" ", #computerAddr - #ramSize),
                     "Total/Used   HDD: " .. hddSize .. string.rep(" ", #computerAddr - #hddSize)
                 }

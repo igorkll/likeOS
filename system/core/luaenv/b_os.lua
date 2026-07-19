@@ -37,7 +37,7 @@ end
 ------------------------------------------------
 
 function os.exit(code)
-    error({reason = "interrupted", code = code or 0}, 0)
+    error({ reason = "interrupted", code = code or 0 }, 0)
 end
 
 local native_pcall = pcall
