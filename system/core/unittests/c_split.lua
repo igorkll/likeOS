@@ -1,1 +1,0 @@
-return table.concat(require("parser").split(string, ";asd;;123123;00;;;;0l;;;", ";"), " ") == " asd  123123 00    0l   "

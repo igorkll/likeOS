@@ -11,7 +11,7 @@ function component.invoke(address, method, ...)
     checkArg(1, address, "string")
     checkArg(2, method, "string")
 
-    local args = {...}
+    local args = { ... }
     local resultHooks = {}
     local resultHook
     for i, hook in ipairs(globalComponentHooks) do
@@ -30,7 +30,7 @@ function component.invoke(address, method, ...)
     end
 
     if address then
-        local result = {pcall(invoke, address, method, table.unpack(args))} --для правильного разположения ошибки
+        local result = { pcall(invoke, address, method, table.unpack(args)) } --для правильного разположения ошибки
         for i, v in ipairs(resultHooks) do
             result = v(result)
         end

@@ -1,4 +1,4 @@
-local text = {trimLetters = {" ", "\t", "\r", "\n"}}
+local text = { trimLetters = { " ", "\t", "\r", "\n" } }
 
 function text.startwith(tool, str, startCheck)
     return tool.sub(str, 1, tool.len(startCheck)) == startCheck

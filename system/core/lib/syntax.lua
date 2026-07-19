@@ -9,7 +9,7 @@ syntax.keywords = {
     ["true"] = colors.blue,
     ["false"] = colors.blue,
     ["nil"] = colors.blue,
-    
+
     ["local"] = colors.blue,
 
     ["until"] = colors.purple,
@@ -38,7 +38,7 @@ function syntax.parse(code)
                 chrType = 3
             elseif chr == "]" then
                 chrType = 4
-            elseif  chr == "-" then
+            elseif chr == "-" then
                 chrType = 5
             end
 
@@ -55,7 +55,7 @@ function syntax.parse(code)
     local obj = {}
     local gcomment = false
     local counter = 1
-    for posY, str in ipairs(parser.split(unicode, code, {"\n"})) do
+    for posY, str in ipairs(parser.split(unicode, code, { "\n" })) do
         local posX = 1
         local lcomment = false
         local lostr = false
@@ -82,14 +82,14 @@ function syntax.parse(code)
                 elseif lostr or lostr2 or isred then
                     lcolor = colors.orange
                 else
-                    lcolor = syntax.keywords[lstr] or colors.white
+                    lcolor = syntax.keywords[lstr] or true
                 end
-                
+
                 if lstr == "]]" then
                     gcomment = false
                 end
 
-                table.insert(obj, {posX, posY, lstr, lcolor, counter})
+                table.insert(obj, { posX, posY, lstr, lcolor, counter })
             end
             posX = posX + unicode.len(lstr)
             counter = counter + unicode.len(lstr)
@@ -99,9 +99,17 @@ function syntax.parse(code)
     return obj
 end
 
-function syntax.draw(x, y, obj, gpu, palette)
+function syntax.draw(x, y, obj, gpu, palette, defaultColor)
     for index, value in ipairs(obj) do
-        if palette then
+        if value[4] == true then
+            if defaultColor then
+                gpu.setForeground(defaultColor, true)
+            elseif palette then
+                gpu.setForeground(palette[colors.white] or 0)
+            else
+                gpu.setForeground(colors.white, true)
+            end
+        elseif palette then
             gpu.setForeground(palette[value[4]] or 0)
         else
             gpu.setForeground(value[4], true)

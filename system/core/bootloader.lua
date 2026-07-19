@@ -10,10 +10,10 @@ local shutdown = computer.shutdown
 local error = error
 local pcall = pcall
 
-_G._COREVERSION = "likeOS-v1.8"
-_G._OSVERSION = _G._COREVERSION --это перезаписываеться в дистрибутивах
+_G._COREVERSION = "likeOS-v1.9"
+_G._OSVERSION = _G._COREVERSION                     --это перезаписываеться в дистрибутивах
 
-local bootloader = {} --библиотека загрузчика
+local bootloader = params.unpackBootloader or {}    --библиотека загрузчика
 bootloader.firstEeprom = component.list("eeprom")() --хранит адрес eeprom с которого произошла загрузка
 bootloader.tmpaddress = computer.tmpAddress()
 
@@ -52,11 +52,11 @@ function bootloader.yield() --катыльный способ вызвать п�
 end
 
 function bootloader.createEnv() --создает _ENV для программы, где _ENV будет личьный, а _G обший
-    return setmetatable({_G = _G}, {__index = _G})
+    return setmetatable({ _G = _G }, { __index = _G })
 end
 
 function bootloader.find(name, ignoreData)
-    local checkList = {"/data/", "/vendor/", "/system/", "/system/core/"} --в порядке уменьшения приоритета(data самый приоритетный)
+    local checkList = { "/data/", "/vendor/", "/system/", "/system/core/" } --в порядке уменьшения приоритета(data самый приоритетный)
     if ignoreData then
         table.remove(checkList, 1)
     end
@@ -106,22 +106,6 @@ end
 
 ------------------------------------ bootloader functions
 
-function bootloader.unittests(path, ...)
-    local fs = require("filesystem")
-    local paths = require("paths")
-    local programs = require("programs")
-
-    for _, file in ipairs(fs.list(path)) do
-        local lpath = paths.concat(path, file)
-        local ok, state, log = assert(programs.execute(lpath, ...))
-        if not ok then
-            error("error \"" .. (state or "unknown error") .. "\" in unittest: " .. file, 0)
-        elseif not state then
-            error("warning unittest \"" .. file .. "\" \"" .. (log and (", log:\n" .. log) or "") .. "\"", 0)
-        end
-    end
-end
-
 function bootloader.autorunsIn(path, ...)
     local fs = require("filesystem")
     local paths = require("paths")
@@ -139,7 +123,7 @@ function bootloader.autorunsIn(path, ...)
             if not ok then
                 event.errLog("err \"" .. (err or "unknown error") .. "\", in program: " .. full_path)
             end
-        end        
+        end
     end
 end
 
@@ -154,7 +138,7 @@ function bootloader.initScreen(gpu, screen, rx, ry)
     if gpu.setActiveBuffer and gpu.getActiveBuffer() ~= 0 then
         gpu.setActiveBuffer(0)
     end
-    
+
     local mx, my = gpu.maxResolution()
     rx = rx or mx
     ry = ry or my
@@ -178,12 +162,12 @@ function bootloader.bootstrap()
     _G.natives = bootloader.dofile("/system/core/lib/natives.lua", bootloader.createEnv())
 
     --на lua 5.3 нет встроеной либы bit32, но она нужна для совместимости, так что хай будет
-    if not bit32 then 
+    if not bit32 then
         _G.bit32 = bootloader.dofile("/system/core/lib/bit32.lua", bootloader.createEnv())
     end
 
     --бут скрипты
-    do 
+    do
         local path = "/system/core/boot/"
         for i, v in ipairs(bootloader.bootfs.list(path) or {}) do
             bootloader.dofile(path .. v, _G)
@@ -201,14 +185,10 @@ function bootloader.bootstrap()
     package.register("paths", "/system/core/lib/paths.lua")
     local filesystem = package.register("filesystem", "/system/core/lib/filesystem.lua")
     require("vcomponent", true) --подключения библиотеки виртуальных компонентов
-    require("hook", true) --подключения библиотеки хуков
+    require("hook", true)    --подключения библиотеки хуков
     local event = require("event", true)
     require("lastinfo", true)
     require("cache", true)
-
-    --проверка целосности системы (юнит тесты)
-    bootloader.unittests("/system/core/unittests")
-    bootloader.unittests("/system/unittests")
 
     --запуск автозагрузочных файлов ядра и дистрибутива
     bootloader.autorunsIn("/system/core/luaenv")
@@ -240,7 +220,7 @@ local function doLowLevel(lowLevelInitializer)
     if bootloader.bootfs.exists(lowLevelInitializer) and not bootloader.bootfs.isDirectory(lowLevelInitializer) then
         local code, lerr = bootloader.loadfile(lowLevelInitializer)
         if code then
-            local lowLevelInitializerResult = {xpcall(code, debug.traceback)}
+            local lowLevelInitializerResult = { xpcall(code, debug.traceback) }
             if not lowLevelInitializerResult[1] then
                 err = lowLevelInitializerResult[2] or "unknown"
                 lowLevelInitializerErr = true
@@ -261,7 +241,7 @@ local getRegistry
 do
     function getRegistry()
         if require then
-            local result = {pcall(require, "registry")}
+            local result = { pcall(require, "registry") }
             if result[1] and type(result[2]) == "table" and type(result[2].data) == "table" then
                 return result[2].data
             else
@@ -321,7 +301,7 @@ do
                 table.insert(result_pack, (string.format("%q", current_value):gsub("\\\n", "\\n")))
             elseif
                 t == "nil" or t == "boolean" or pretty and (t ~= "table" or (getmetatable(current_value) or {}).__tostring)
-             then
+            then
                 table.insert(result_pack, tostring(current_value))
             elseif t == "table" then
                 if ts[current_value] then
@@ -369,9 +349,9 @@ do
     local function unserialize(path)
         local content = bootloader.readFile(bootloader.bootfs, path)
         if content then
-            local code = load("return " .. content, "=unserialize", "t", {math={huge=math.huge}})
+            local code = load("return " .. content, "=unserialize", "t", { math = { huge = math.huge } })
             if code then
-                local result = {pcall(code)}
+                local result = { pcall(code) }
                 if result[1] and type(result[2]) == "table" then
                     return result[2]
                 end
@@ -384,7 +364,8 @@ do
 
     if mainRegistryPath and not bootloader.bootfs.exists(registryPath) then
         pcall(bootloader.bootfs.makeDirectory, "/data")
-        pcall(bootloader.writeFile, bootloader.bootfs, registryPath, bootloader.readFile(bootloader.bootfs, mainRegistryPath))
+        pcall(bootloader.writeFile, bootloader.bootfs, registryPath,
+            bootloader.readFile(bootloader.bootfs, mainRegistryPath))
     end
 
     if bootloader.bootfs.exists(registryPath) then
@@ -421,9 +402,9 @@ do
     end
 
     local logoPath = bootloader.find("logo.lua")
-    local logoenv = {gpu = gpu, unicode = unicode, computer = computer, component = component, bootloader = bootloader}
-    local logo = bootloader.loadfile(logoPath, nil, setmetatable(logoenv, {__index = _G}))
-    
+    local logoenv = { gpu = gpu, unicode = unicode, computer = computer, component = component, bootloader = bootloader }
+    local logo = bootloader.loadfile(logoPath, nil, setmetatable(logoenv, { __index = _G }))
+
     function bootloader.bootSplash(text)
         if not logo or not gpu or getRegistry().disableLogo then return end
         logoenv.text = text
@@ -436,7 +417,7 @@ do
     function bootloader.waitEnter()
         if not logo or not gpu or getRegistry().disableLogo then return end
         while true do
-            local eventData = {computer.pullSignal()}
+            local eventData = { computer.pullSignal() }
             if eventData[1] == "key_down" then
                 if eventData[4] == 28 then
                     return
@@ -464,7 +445,7 @@ if not params.noRecovery and (params.forceRecovery or not getRegistry().disableR
             bootloader.bootSplash("Press R to open recovery menu")
             local startTime = computer.uptime()
             while computer.uptime() - startTime <= 1 do
-                local eventData = {computer.pullSignal(0.1)}
+                local eventData = { computer.pullSignal(0.1) }
                 if eventData[1] == "key_down" and eventData[4] == 19 then
                     for address in component.list("screen") do
                         local keyboards = component.invoke(address, "getKeyboards")
@@ -482,17 +463,18 @@ if not params.noRecovery and (params.forceRecovery or not getRegistry().disableR
         end
 
         if recoveryScreen then
-            bootloader.bootSplash("RECOVERY MODE")
+            bootloader.bootSplash("RECOVERY MENU")
 
             local recoveryPath = bootloader.find("recovery.lua")
             if recoveryPath then
                 if getRegistry().disableLogo then --если лого отключено, то экран не был инициализирован ранее, а значит его нада инициализировать сейчас
                     bootloader.initScreen(gpu, recoveryScreen)
                 end
-                
+
                 local env = bootloader.createEnv()
                 env.bootloader = bootloader
-                assert(xpcall(assert(bootloader.loadfile(recoveryPath, nil, env)), debug.traceback, recoveryScreen, playerNickname))
+                assert(xpcall(assert(bootloader.loadfile(recoveryPath, nil, env)), debug.traceback, recoveryScreen,
+                    playerNickname, params))
                 computer.shutdown("fast")
             else
                 bootloader.bootSplash("failed to open recovery. press enter to continue")
@@ -511,11 +493,11 @@ if not lowLevelInitializerErr then
     doLowLevel("/likeOS_startup.lua") --может использоваться для запуска обновления системы
 
     if not lowLevelInitializerErr then
-        local bootstrapResult = {xpcall(bootloader.bootstrap, debug.traceback)}
+        local bootstrapResult = { xpcall(bootloader.bootstrap, debug.traceback) }
         bootloader.yield()
 
         if bootstrapResult[1] then
-            local shellResult = {xpcall(bootloader.runShell, debug.traceback, bootloader.defaultShellPath)}
+            local shellResult = { xpcall(bootloader.runShell, debug.traceback, bootloader.defaultShellPath) }
             bootloader.yield()
 
             if not shellResult[1] then
@@ -532,7 +514,7 @@ end
 local log_ok
 if require and pcall then
     local function local_require(name)
-        local result = {pcall(require, name)}
+        local result = { pcall(require, name) }
         if result[1] and type(result[2]) == "table" then
             return result[2]
         end

@@ -140,8 +140,10 @@ local vcomponent = {}
 local componentCallback =
 {
     __call = function(self, ...) return proxylist[self.address][self.name](...) end,
-    __tostring = function(self) return (doclist[self.address] ~= nil and doclist[self.address][self.name] ~= nil) and
-        doclist[self.address][self.name] or "function" end
+    __tostring = function(self)
+        return (doclist[self.address] ~= nil and doclist[self.address][self.name] ~= nil) and
+            doclist[self.address][self.name] or "function"
+    end
 }
 
 function vcomponent.register(address, ctype, proxy, doc, info)

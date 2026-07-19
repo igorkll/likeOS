@@ -8,7 +8,7 @@ local event = require("event")
 ------------------------------------
 
 local programs = {}
-programs.paths = {"/data/bin", "/vendor/bin", "/system/bin", "/system/core/bin"} --позиция по мере снижения приоритета(первый элемент это самый высокий приоритет)
+programs.paths = { "/data/bin", "/vendor/bin", "/system/bin", "/system/core/bin" } --позиция по мере снижения приоритета(первый элемент это самый высокий приоритет)
 programs.mainFile = "main.lua"
 programs.extension = ".app"
 
@@ -50,7 +50,7 @@ end
 function programs.execute(name, ...)
     local code, err = programs.load(name)
     if not code then return nil, err end
-    
+
     local thread = package.get("thread")
     if not thread then
         return pcall(code, ...)
@@ -58,7 +58,22 @@ function programs.execute(name, ...)
         local t = thread.create(code, ...)
         t:resume() --потому что по умолчанию поток спит
         while t:status() ~= "dead" do event.yield() end
-        return table.unpack(t.out or {true})
+        return table.unpack(t.out or { true })
+    end
+end
+
+function programs.xexecute(name, ...)
+    local code, err = programs.load(name)
+    if not code then return nil, err end
+
+    local thread = package.get("thread")
+    if not thread then
+        return xpcall(code, debug.traceback, ...)
+    else
+        local t = thread.create(code, ...)
+        t:resume() --потому что по умолчанию поток спит
+        while t:status() ~= "dead" do event.yield() end
+        return thread.decode(t)
     end
 end
 

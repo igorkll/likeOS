@@ -82,7 +82,7 @@ function colors.blend(r, g, b)
 end
 
 function colors.unBlend(color)
-    color =  math.floor(color)
+    color = math.floor(color)
     local blue = color % 256
     local green = (color // 256) % 256
     local red = (color // (256 * 256)) % 256

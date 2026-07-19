@@ -2,9 +2,9 @@ local event = require("event")
 local computer = require("computer")
 local component = require("component")
 local bootloader = require("bootloader")
-local lastinfo = {keyboards = {}}
+local lastinfo = { keyboards = {} }
 
-event.hyperListen(function (eventType, componentUuid, componentType)
+event.hyperListen(function(eventType, componentUuid, componentType)
     if bootloader.runlevel ~= "init" then
         if eventType == "component_added" then
             lastinfo.deviceinfo = nil
@@ -21,17 +21,21 @@ event.hyperListen(function (eventType, componentUuid, componentType)
     end
 end)
 
-setmetatable(lastinfo, {__index = function(self, key)
-    if key == "deviceinfo" then
-        self.deviceinfo = computer.getDeviceInfo()
-        return self.deviceinfo
+setmetatable(lastinfo, {
+    __index = function(self, key)
+        if key == "deviceinfo" then
+            self.deviceinfo = computer.getDeviceInfo()
+            return self.deviceinfo
+        end
     end
-end})
-setmetatable(lastinfo.keyboards, {__index = function(self, address)
-    local result = {pcall(component.invoke, address, "getKeyboards")}
-    if result[1] and type(result[2]) == "table" then
-        self[address] = result[2]
-        return result[2]
+})
+setmetatable(lastinfo.keyboards, {
+    __index = function(self, address)
+        local result = { pcall(component.invoke, address, "getKeyboards") }
+        if result[1] and type(result[2]) == "table" then
+            self[address] = result[2]
+            return result[2]
+        end
     end
-end})
+})
 return lastinfo
